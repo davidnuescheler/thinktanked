@@ -231,8 +231,9 @@ function createHeroSection() {
     createHeroSection();
     decorateBlocks();
     setLCPTrigger();
+    const $main = document.querySelector('main'); 
+    $main.classList.add('ready');
     document.body.classList.add('appear');
-    document.body.classList.add('ready');
   }
   
   window.spark = {};
