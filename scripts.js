@@ -31,6 +31,7 @@ async function isResourceCached(url, waitTimeMs = 4) {
     const link = document.createElement('link');
     link.setAttribute('rel', 'stylesheet');
     link.setAttribute('href', href);
+    link.setAttribute('importance', 'low');
     link.onload = () => {
     };
     link.onerror = () => {
@@ -81,7 +82,7 @@ export function toClassName(name) {
   function loadBlocks() {
     document.querySelectorAll('main div.section-wrapper > div > .block').forEach(async ($block) => {
       const blockName = $block.getAttribute('data-block-name');
-      import(`/express/blocks/${blockName}/${blockName}.js`)
+      import(`/blocks/${blockName}/${blockName}.js`)
         .then((mod) => {
           if (mod.default) {
             mod.default($block, blockName, document);
@@ -89,7 +90,7 @@ export function toClassName(name) {
         })
         .catch((err) => console.log(`failed to load module for ${blockName}`, err));
   
-      loadCSS(`/express/blocks/${blockName}/${blockName}.css`);
+      loadCSS(`/blocks/${blockName}/${blockName}.css`);
     });
   }
   
