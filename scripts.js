@@ -297,7 +297,7 @@ function createHeroSection() {
     createHeroSection();
     decorateBlocks();
     setLCPTrigger();
-    preloadFonts();
+    //preloadFonts();
 
     const $main = document.querySelector('main'); 
     $main.classList.add('appear');
