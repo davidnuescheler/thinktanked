@@ -230,3 +230,14 @@ html {
         margin: auto;
     }    
 }
+
+.banner {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100px;
+    right: 0;
+    background-color: red;
+    color: white;
+
+}

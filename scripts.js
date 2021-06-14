@@ -334,4 +334,15 @@ function createHeroSection() {
   }
 
   if (window.name.includes('performance')) registerPerformanceLogger();
+
+
+  const sst = sessionStorage.getItem('drinks');
+  if (sst) {
+      const $banner = createTag('div', { class: 'banner'});
+      $banner.innerHTML = `Welcome back ${sst}`;
+      document.body.appendChild($banner);
+      console.log($banner);    
+  }
+  sessionStorage.setItem('drinks', `drink ${Math.random()}`);
+
   

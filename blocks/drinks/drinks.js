@@ -18,7 +18,6 @@ async function displayDrinks($block) {
         <div class="glass">${row.Glass}</div>`;
         $block.appendChild($row);
     })
-    console.log('hello');
 } 
 
 export default function decorate($block) {
