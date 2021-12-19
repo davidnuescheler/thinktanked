@@ -13,14 +13,46 @@
           FontFace, sessionStorage, Image */
 /* eslint-disable no-console */
 
-async function isResourceCached(url, waitTimeMs = 4) {
-  const ac = new AbortController()
-  const cachePromise = fetch(url, {signal: ac.signal})
-    .then(() => true)
-    .catch(() => false)
-  setTimeout(() => ac.abort(), waitTimeMs)
-  return cachePromise
+/**
+ * log RUM if part of the sample.
+ * @param {string} checkpoint identifies the checkpoint in funnel
+ * @param {Object} data additional data for RUM sample
+ */
+
+// eslint-disable-next-line object-curly-newline
+if (!navigator.sendBeacon) { window.data = JSON.stringify({ referer: window.location.href, checkpoint: 'unsupported', weight: 1 }); new Image().src = `https://rum.hlx3.page/.rum/1?data=${window.data}`; }
+
+export function sampleRUM(checkpoint, data = {}) {
+  try {
+    window.hlx = window.hlx || {};
+    if (!window.hlx.rum) {
+      const usp = new URLSearchParams(window.location.search);
+      const weight = (usp.get('rum') === 'on') ? 1 : 100; // with parameter, weight is 1. Defaults to 100.
+      // eslint-disable-next-line no-bitwise
+      const hashCode = (s) => s.split('').reduce((a, b) => (((a << 5) - a) + b.charCodeAt(0)) | 0, 0);
+      const id = `${hashCode(window.location.href)}-${new Date().getTime()}-${Math.random().toString(16).substr(2, 14)}`;
+      const random = Math.random();
+      const isSelected = (random * weight < 1);
+      // eslint-disable-next-line object-curly-newline
+      window.hlx.rum = { weight, id, random, isSelected };
+    }
+    const { random, weight, id } = window.hlx.rum;
+    if (random && (random * weight < 1)) {
+      // eslint-disable-next-line object-curly-newline
+      const body = JSON.stringify({ weight, id, referer: window.location.href, generation: 'mcqueen-gen1', checkpoint, ...data });
+      const url = `https://rum.hlx3.page/.rum/${weight}`;
+      // eslint-disable-next-line no-unused-expressions
+      navigator.sendBeacon(url, body); // we should probably use XHR instead of fetch
+    }
+  } catch (e) {
+    // somethign went wrong
+  }
 }
+
+sampleRUM('top');
+window.addEventListener('load', () => sampleRUM('load'));
+document.addEventListener('click', () => sampleRUM('click'));
+
 
 /**
  * Loads a CSS file.
@@ -231,7 +263,8 @@ export function toClassName(name) {
  */
 
 function createHeroSection() {
-    const $headerImg = document.querySelector('main>div:first-of-type>div>:first-child>img');
+    const $h1 = document.querySelector('h1');
+    const $headerImg = $h1.parentElement.querySelector('img');
     if ($headerImg) {
       const src = $headerImg.getAttribute('src');
       const $wrapper = $headerImg.closest('.section-wrapper');
@@ -251,44 +284,16 @@ function createHeroSection() {
     });
   }
 
-  async function loadFont(name, url, weight) {
-    const font = new FontFace(name, url, { weight });
-    const fontLoaded = await font.load();
-    return (fontLoaded);
-  }
-  
-  async function preloadFonts() {
-    stamp('checking for fonts');
-    const fonts = [
-      {
-        name: 'adobe-clean',
-        url: 'https://use.typekit.net/af/b0c5f5/00000000000000003b9b3f85/27/l?primer=7cdcb44be4a7db8877ffa5c0007b8dd865b3bbc383831fe2ea177f62257a9191&fvd=n4&v=3',
-        weight: 400
-      }, {
-        name: 'adobe-clean',
-        url: 'https://use.typekit.net/af/ad2a79/00000000000000003b9b3f8c/27/l?primer=7cdcb44be4a7db8877ffa5c0007b8dd865b3bbc383831fe2ea177f62257a9191&fvd=n9&v=3',
-        weight: 900
-      }, {
-        name: 'adobe-clean',
-        url: 'https://use.typekit.net/af/97fbd1/00000000000000003b9b3f88/27/l?primer=7cdcb44be4a7db8877ffa5c0007b8dd865b3bbc383831fe2ea177f62257a9191&fvd=n7&v=3',
-        weight: 700
+  function decorateImageOnlySections() {
+    document.querySelectorAll('main div.section-wrapper').forEach(($section) => {
+      console.log($section.textContent);
+      const text = $section.textContent.replace(/(\r\n|\n|\r)/gm, '').trim();
+      if (text.length < 3 && $section.querySelector('img')) {
+        console.log('gallery found');
+        $section.classList.add('gallery');
       }
-    ]; 
-    isResourceCached(fonts[0].url, 20).then(async (p) => {
-      stamp(p);
-      if (p === true) {
-        try {
-          fonts.forEach((fontSpec) => {
-            const {name, url, weight} = fontSpec;
-            const font = new FontFace(name, `url("${url}")`, { weight });
-            font.load();  
-          })
-        } catch (e) {
-          console.log(`font load error: ${e}`);
-        }
-      }    
-    });
-  };
+    })
+  }
   
   async function decoratePage() {
     wrapSections('main > div');
@@ -297,6 +302,7 @@ function createHeroSection() {
     });
     createHeroSection();
     decorateBlocks();
+    decorateImageOnlySections();
     setLCPTrigger();
     //preloadFonts();
 
@@ -304,7 +310,6 @@ function createHeroSection() {
     $main.classList.add('appear');
   }
   
-  window.spark = {};
   decoratePage();
   
   /* performance instrumentation */
@@ -334,15 +339,5 @@ function createHeroSection() {
   }
 
   if (window.name.includes('performance')) registerPerformanceLogger();
-
-
-  const sst = sessionStorage.getItem('drinks');
-  if (sst) {
-      const $banner = createTag('div', { class: 'banner'});
-      $banner.innerHTML = `Welcome back ${sst}`;
-      document.body.appendChild($banner);
-      console.log($banner);    
-  }
-  sessionStorage.setItem('drinks', `drink ${Math.random()}`);
 
   
