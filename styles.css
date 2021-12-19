@@ -230,6 +230,11 @@ main > div.section-wrapper.gallery > div p {
     line-height: 0;
 }
 
+main .section-wrapper.gallery img {
+    width: 100%;
+}
+
+
 @media (min-width: 600px) {
     html {
         font-size: 85%;
