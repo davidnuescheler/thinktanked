@@ -1,5 +1,15 @@
 <html>
 <head>
+    <style>
+    #number {
+        display: block;
+        height: 100%;
+        width: 100%;
+        font-size: 80vh;
+        margin: auto;
+        text-align: center;
+    }
+    </style>
 </head>
 <body>
     <script>
@@ -9,16 +19,30 @@
             const g = (x / window.innerWidth)*255;
             const b = (y / window.innerHeight)*255;
             body.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
+            const $number = document.getElementById('number');
+            $number.style.color = `rgb(${255-r}, ${255-g}, ${255-b})`;
         }
+
+        function setNumber(x,y) {
+            const $number = document.getElementById('number');
+            $number.textContent = Math.floor(x / window.innerWidth * 10.9);
+        }
+
+    
         const body = document.body;
+        document.addEventListener('click', (e) => {
+            setNumber(e.offsetX, e.offsetY);
+        });
         document.addEventListener('mousemove', (e) => {
             color(body, e.offsetX, e.offsetY);
+            setNumber(e.offsetX, e.offsetY);
         });
         document.addEventListener('touchmove', (e) => {
             const touch = e.touches.item(0);
             color(body, touch.screenX, touch.screenY);
+            setNumber(touch.screenX, touch.screenY);
         });
     </script>
-
+<p id="number"></p>
 </body>
 </html>
