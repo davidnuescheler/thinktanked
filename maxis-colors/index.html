@@ -2,12 +2,15 @@
 <head>
     <style>
     #number {
-        display: block;
-        height: 100%;
-        width: 100%;
-        font-size: 80vh;
+        font-family: Helvetica, sans-serif;
+        font-size: 40vh;
         margin: auto;
         text-align: center;
+        box-sizing: border-box;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
     }
     </style>
 </head>
@@ -33,10 +36,12 @@
         document.addEventListener('click', (e) => {
             setNumber(e.offsetX, e.offsetY);
         });
+        
         document.addEventListener('mousemove', (e) => {
             color(body, e.offsetX, e.offsetY);
             setNumber(e.offsetX, e.offsetY);
         });
+
         document.addEventListener('touchmove', (e) => {
             const touch = e.touches.item(0);
             color(body, touch.screenX, touch.screenY);
