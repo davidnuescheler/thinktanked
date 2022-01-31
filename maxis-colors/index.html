@@ -28,7 +28,10 @@
 
         function setNumber(x,y) {
             const $number = document.getElementById('number');
-            $number.textContent = Math.floor(x / window.innerWidth * 10.9);
+            const ones = Math.floor(x / window.innerWidth * 10.9);
+            const tens = Math.floor(y / window.innerHeight * 10);
+        
+            $number.textContent = `${tens * 10 + ones}`;
         }
 
     
