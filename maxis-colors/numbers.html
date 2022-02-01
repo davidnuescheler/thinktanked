@@ -10,20 +10,24 @@
     }
 
     .number {
-        font-family: Helvetica, sans-serif;
-        font-size: 40px;
-        width: 60px;
-        height: 60px;
+        font-size: 30px;
+        width: 90px;
+        height: 90px;
         text-align: center;
-        border-radius: 30px;
-        border: 2px solid currentColor;
-        padding: 5px;
+        padding: 27px;
         box-sizing: border-box;
-        margin: 20px;
+        margin: 4px;
+        background: center / contain no-repeat url("./diamond-heart.png");
     }
 
     .number.wrong {
-        background-color: blue;
+        animation: wobble-hor-bottom 0.8s both;
+        background-image: url("./diamond-heart-blue.png");
+    }
+
+    .number.checked {
+        opacity: 0.3;
+        animation: heartbeat 1.5s ease-in-out 2 both;
     }
 
     .box {
@@ -38,11 +42,10 @@
 
     .box .number {
         font-size: 15px;
-        width: 30px;
-        height: 30px;
-        border-radius: 15px;
-        color: white;
-        margin: 5px;
+        width: 40px;
+        height: 40px;
+        margin: 2px;
+        padding: 12px 12px;
     }
 
     .clock {
@@ -58,8 +61,59 @@
 
     }
 
+    @keyframes heartbeat {
+        from {
+            transform: scale(1);
+            transform-origin: center center;
+            animation-timing-function: ease-out;
+        }
+        10% {
+            transform: scale(0.91);
+            animation-timing-function: ease-in;
+        }
+        17% {
+            transform: scale(0.98);
+            animation-timing-function: ease-out;
+        }
+        33% {
+            transform: scale(0.87);
+            animation-timing-function: ease-in;
+        }
+        45% {
+            transform: scale(1);
+            animation-timing-function: ease-out;
+        }
+    }
+
+    @keyframes wobble-hor-bottom {
+        0%,
+        100% {
+            transform: translateX(0%);
+            transform-origin: 50% 50%;
+        }
+        15% {
+            transform: translateX(-30px) rotate(-6deg);
+        }
+        30% {
+            transform: translateX(15px) rotate(6deg);
+        }
+        45% {
+            transform: translateX(-15px) rotate(-3.6deg);
+        }
+        60% {
+            transform: translateX(9px) rotate(2.4deg);
+        }
+        75% {
+            transform: translateX(-6px) rotate(-1.2deg);
+        }
+    }
+
+
+
     html, body {
         overscroll-behavior-y: none;
+        font-family: Helvetica, sans-serif;
+        color: black;
     }
     </style>
 </head>
@@ -85,7 +139,7 @@
             const g = (x / window.innerWidth)*255;
             const b = (y / window.innerHeight)*255;
             body.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
-            $numbers.style.color = `rgb(${255-r}, ${255-g}, ${255-b})`;
+            //$numbers.style.color = `rgb(${255-r}, ${255-g}, ${255-b})`;
         }
 
         function createNumbers() {
@@ -101,13 +155,26 @@
                 div.textContent = n; 
                 $numbers.append(div);
                 div.addEventListener(('click'), () => {
+                    const audio = document.createElement('audio');
+                    audio.src = `sounds/${n}.m4a`;
+                    audio.load();
+                    audio.play();
+
                     if (!startTime) {
                         startTime = new Date();
-                        console.log('starting');
                     }
                     if ($box.children.length == div.textContent) {
-                        $box.append(div);
-                        if (!$numbers.firstChild) finishTime = new Date();
+                        $box.append(div.cloneNode(true));
+                        div.classList.add('checked');
+                        if ([...$box.children].length === 11) {
+                            finishTime = new Date();
+                            setTimeout(() => {
+                                const audio = document.createElement('audio');
+                                audio.src = `sounds/done.m4a`;
+                                audio.load();
+                                audio.play();
+                            }, 1000);
+                        }
                     } else {
                         div.classList.add('wrong');
                     }
@@ -135,13 +202,13 @@
         setInterval(() => {
             if (startTime) {
                 if (finishTime) {
-                    $clock.textContent = ''+Math.floor((finishTime - startTime)/100)/10;
+                    $clock.textContent = ''+((finishTime - startTime)/1000).toFixed(2);
                 } else {
-                    $clock.textContent = ''+Math.floor((new Date() - startTime)/100)/10;
+                    $clock.textContent = ''+((new Date() - startTime)/1000).toFixed(2);
                 }
 
             }
-        }, 300)
+        }, 137)
 
     </script>
 </body>
