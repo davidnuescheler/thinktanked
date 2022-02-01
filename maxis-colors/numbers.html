@@ -1,0 +1,147 @@
+<html>
+<head>
+    <style>
+    .numbers {
+        display: flex;
+        flex-wrap: wrap;
+        width: 300px;
+        margin: auto;
+    }
+
+    .number {
+        font-family: Helvetica, sans-serif;
+        font-size: 40px;
+        width: 60px;
+        height: 60px;
+        text-align: center;
+        border-radius: 30px;
+        border: 2px solid currentColor;
+        padding: 5px;
+        box-sizing: border-box;
+        margin: 20px;
+    }
+
+    .number.wrong {
+        background-color: blue;
+    }
+
+    .box {
+        position: absolute;
+        bottom: 0;
+        display: flex;
+        justify-content: center;
+        margin: auto;
+        left: 50%;
+        transform: translate(-50%)
+    }
+
+    .box .number {
+        font-size: 15px;
+        width: 30px;
+        height: 30px;
+        border-radius: 15px;
+        color: white;
+        margin: 5px;
+    }
+
+    .clock {
+        position: absolute;
+        bottom: 50;
+        display: flex;
+        justify-content: center;
+        margin: auto;
+        left: 50%;
+        transform: translate(-50%);
+        color: white;
+        font-size: 60px;
+
+    }
+
+    html, body {
+        overscroll-behavior-y: none;
+    }
+    </style>
+</head>
+<body>
+    <div class="numbers">
+
+    </div>
+
+
+    <div class="clock">
+
+    </div>    
+    
+    <div class="box">; 
+    </div>
+    <script>
+        $numbers = document.querySelector('.numbers');
+        $box = document.querySelector('.box');
+        $clock = document.querySelector('.clock');
+
+        function color(body, x, y) {
+            const r = 255;
+            const g = (x / window.innerWidth)*255;
+            const b = (y / window.innerHeight)*255;
+            body.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
+            $numbers.style.color = `rgb(${255-r}, ${255-g}, ${255-b})`;
+        }
+
+        function createNumbers() {
+            const numbers = [];
+            for (let i = 0; i <= 10; i += 1) {
+                numbers.push(i);
+            }
+            numbers.sort((e1, e2) => Math.random()-0.5);
+            $numbers.textContent = '';
+            numbers.forEach((n) => {
+                const div = document.createElement('div');
+                div.className = 'number';
+                div.textContent = n; 
+                $numbers.append(div);
+                div.addEventListener(('click'), () => {
+                    if (!startTime) {
+                        startTime = new Date();
+                        console.log('starting');
+                    }
+                    if ($box.children.length == div.textContent) {
+                        $box.append(div);
+                        if (!$numbers.firstChild) finishTime = new Date();
+                    } else {
+                        div.classList.add('wrong');
+                    }
+                });
+            });
+        }
+
+        createNumbers()
+
+        let startTime;
+        let finishTime;
+
+    
+        const body = document.body;
+
+        document.addEventListener('mousemove', (e) => {
+            color(body, e.clientX, e.clientY);
+        });
+
+        document.addEventListener('touchmove', (e) => {
+            const touch = e.touches.item(0);
+            color(body, touch.screenX, touch.screenY);
+        });
+
+        setInterval(() => {
+            if (startTime) {
+                if (finishTime) {
+                    $clock.textContent = ''+Math.floor((finishTime - startTime)/100)/10;
+                } else {
+                    $clock.textContent = ''+Math.floor((new Date() - startTime)/100)/10;
+                }
+
+            }
+        }, 300)
+
+    </script>
+</body>
+</html>
