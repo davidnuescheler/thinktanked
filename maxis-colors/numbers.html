@@ -156,7 +156,7 @@
                 $numbers.append(div);
                 div.addEventListener(('click'), () => {
                     const audio = document.createElement('audio');
-                    audio.src = `sounds/${n}.m4a`;
+                    audio.src = `sounds/${n}.mp3`;
                     audio.load();
                     audio.play();
 
@@ -170,7 +170,7 @@
                             finishTime = new Date();
                             setTimeout(() => {
                                 const audio = document.createElement('audio');
-                                audio.src = `sounds/done.m4a`;
+                                audio.src = `sounds/done.mp3`;
                                 audio.load();
                                 audio.play();
                             }, 1000);
