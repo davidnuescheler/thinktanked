@@ -1,0 +1,76 @@
+<html>
+<head>
+    <style>
+    #number {
+        font-family: Helvetica, sans-serif;
+        font-size: calc(min(80vh, 80vw));
+        margin: auto;
+        text-align: center;
+        box-sizing: border-box;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+    }
+
+    #number.digits-2 {
+        font-size: calc(min(80vh, 120vw/2));
+    }
+
+    #number.digits-3 {
+        font-size: calc(min(80vh, 150vw/3));
+    }
+
+    #number.digits-4 {
+        font-size: calc(min(80vh, 180vw/4));
+    }
+
+    html, body {
+        overscroll-behavior-y: none;
+    }
+    </style>
+</head>
+<body>
+    <p id="number"></p>
+    <script>
+        function color(body, x, y) {
+            console.log(x,y);
+            const r = 255;
+            const g = (x / window.innerWidth)*255;
+            const b = (y / window.innerHeight)*255;
+            body.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
+            const $number = document.getElementById('number');
+            $number.style.color = `rgb(${255-r}, ${255-g}, ${255-b})`;
+        }
+
+        function increaseNumber() {
+            const $number = document.getElementById('number');
+            $number.textContent = +$number.textContent + 1;
+            $number.className = `digits-${$number.textContent.length}`;
+        }
+
+    
+        let scrubbing = false;
+        const $number = document.getElementById('number');
+        $number.addEventListener('click', () => {
+            scrubbing = !scrubbing;
+        })
+
+        const body = document.body;
+        document.addEventListener('click', (e) => {
+            increaseNumber();
+        });
+        
+        document.addEventListener('mousemove', (e) => {
+            color(body, e.offsetX, e.offsetY);
+            if (scrubbing) increaseNumber();
+        });
+
+        document.addEventListener('touchmove', (e) => {
+            const touch = e.touches.item(0);
+            color(body, touch.screenX, touch.screenY);
+            if (scrubbing) increaseNumber();
+        });
+    </script>
+</body>
+</html>
