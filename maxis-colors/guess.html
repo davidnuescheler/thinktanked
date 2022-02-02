@@ -1,0 +1,238 @@
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+    .numbers {
+        display: flex;
+        flex-wrap: wrap;
+        width: 300px;
+        margin: auto;
+    }
+
+    .number {
+        font-size: 30px;
+        width: 90px;
+        height: 90px;
+        text-align: center;
+        padding: 27px;
+        box-sizing: border-box;
+        margin: 4px;
+        background: center / contain no-repeat url("./diamond-heart.png");
+    }
+
+    .number.wrong {
+        animation: wobble-hor-bottom 0.8s both;
+        background-image: url("./diamond-heart-blue.png");
+    }
+
+    .number.checked {
+        opacity: 0.3;
+        animation: heartbeat 1.5s ease-in-out 2 both;
+    }
+
+    .box {
+        position: absolute;
+        bottom: 0;
+        display: flex;
+        justify-content: center;
+        margin: auto;
+        left: 50%;
+        transform: translate(-50%)
+    }
+
+    .box .number {
+        font-size: 15px;
+        width: 40px;
+        height: 40px;
+        margin: 2px;
+        padding: 12px 12px;
+    }
+
+    .clock {
+        position: absolute;
+        bottom: 50;
+        display: flex;
+        justify-content: center;
+        margin: auto;
+        left: 50%;
+        transform: translate(-50%);
+        color: white;
+        font-size: 60px;
+
+    }
+
+    @keyframes heartbeat {
+        from {
+            transform: scale(1);
+            transform-origin: center center;
+            animation-timing-function: ease-out;
+        }
+        10% {
+            transform: scale(0.91);
+            animation-timing-function: ease-in;
+        }
+        17% {
+            transform: scale(0.98);
+            animation-timing-function: ease-out;
+        }
+        33% {
+            transform: scale(0.87);
+            animation-timing-function: ease-in;
+        }
+        45% {
+            transform: scale(1);
+            animation-timing-function: ease-out;
+        }
+    }
+
+    @keyframes wobble-hor-bottom {
+        0%,
+        100% {
+            transform: translateX(0%);
+            transform-origin: 50% 50%;
+        }
+        15% {
+            transform: translateX(-30px) rotate(-6deg);
+        }
+        30% {
+            transform: translateX(15px) rotate(6deg);
+        }
+        45% {
+            transform: translateX(-15px) rotate(-3.6deg);
+        }
+        60% {
+            transform: translateX(9px) rotate(2.4deg);
+        }
+        75% {
+            transform: translateX(-6px) rotate(-1.2deg);
+        }
+    }
+
+
+
+    html, body {
+        overscroll-behavior-y: none;
+        font-family: Helvetica, sans-serif;
+        color: black;
+    }
+    </style>
+</head>
+<body>
+    <div class="numbers">
+
+    </div>
+
+
+    <div class="clock">
+
+    </div>    
+    
+    <div class="box">; 
+    </div>
+    <script>
+        $numbers = document.querySelector('.numbers');
+        $box = document.querySelector('.box');
+        $clock = document.querySelector('.clock');
+
+        function color(body, x, y) {
+            const r = 255;
+            const g = (x / window.innerWidth)*255;
+            const b = (y / window.innerHeight)*255;
+            body.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
+            //$numbers.style.color = `rgb(${255-r}, ${255-g}, ${255-b})`;
+        }
+        function createShuffleNumbers() {
+            const numbers = [];
+            for (let i = 0; i <= 10; i += 1) {
+                numbers.push(i);
+            }
+            numbers.sort((e1, e2) => Math.random()-0.5);
+            return (numbers);
+
+        }
+
+        function createNumbers() {
+            const numbers = createShuffleNumbers();
+            $numbers.textContent = '';
+            numbers.forEach((n) => {
+                const div = document.createElement('div');
+                div.className = 'number';
+                div.textContent = n; 
+                $numbers.append(div);
+                div.addEventListener(('click'), () => {
+                    if (sequence[0] == div.textContent) {
+                        $box.append(div.cloneNode(true));
+                        div.classList.add('checked');
+                        sequence.shift();
+                        sayHihi(); 
+                        setTimeout(() => sayNext(), 500);
+                        if (sequence.length === 0) {
+                            finishTime = new Date();
+                            setTimeout(() => {
+                                const audio = document.createElement('audio');
+                                audio.src = `sounds/done2.mp3`;
+                                audio.load();
+                                audio.play();
+                            }, 1000);
+                        }
+                    } else {
+                        div.classList.add('wrong');
+                    }
+                });
+            });
+        }
+
+        createNumbers();
+
+        const sequence = createShuffleNumbers();
+
+        let startTime;
+        let finishTime;
+
+    
+        const body = document.body;
+
+        async function sayHihi() {
+            const audio = document.createElement('audio');
+            audio.src = `sounds/hihi.m4a`;
+            await audio.load();
+            await audio.play();
+        }
+
+        function sayNext() {
+            const audio = document.createElement('audio');
+            audio.src = `sounds/${sequence[0]}.mp3`;
+            audio.load();
+            audio.play();
+        }
+
+        document.addEventListener('click', (e) => {
+            setTimeout(() => sayNext(), 500);
+            if (!startTime) {
+                startTime = new Date();
+            }
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            color(body, e.clientX, e.clientY);
+        });
+
+        document.addEventListener('touchmove', (e) => {
+            const touch = e.touches.item(0);
+            color(body, touch.screenX, touch.screenY);
+        });
+
+        setInterval(() => {
+            if (startTime) {
+                if (finishTime) {
+                    $clock.textContent = ''+((finishTime - startTime)/1000).toFixed(2);
+                } else {
+                    $clock.textContent = ''+((new Date() - startTime)/1000).toFixed(2);
+                }
+
+            }
+        }, 137)
+
+    </script>
+</body>
+</html>
