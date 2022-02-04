@@ -31,10 +31,21 @@
             $word.style.color = `rgb(${255-r}, ${255-g}, ${255-b})`;
         }
 
-        function pickWord() {
-            const words = ['a', 'I', 'me', 'house', 'can', 'dog', 'cat', 'mom', 'dad']
+        function pickWord(x) {
+            const words = [
+                'a', 'me', 'the',
+                'I', 'like', 'my', 
+                'at','look', 'see',
+                'here', 'is', 'this',
+                'an', 'in', 'it',
+                'and', 'dad', 'house',
+                'mom', 'park', 'can',
+                'do', 'to', 'be',
+                'we', 'got', 'was',
+                'went', 'she', 'he',
+                'boy', 'cat', 'dog']
             const $word = document.getElementById('word');
-            $word.textContent = words[Math.floor(Math.random() * words.length)];
+            $word.textContent = words[Math.floor(x/window.innerWidth * words.length)];
         }
 
     
@@ -51,13 +62,13 @@
         
         document.addEventListener('mousemove', (e) => {
             color(body, e.offsetX, e.offsetY);
-            if (scrubbing) pickWord();
+            pickWord(e.clientX);
         });
 
         document.addEventListener('touchmove', (e) => {
             const touch = e.touches.item(0);
             color(body, touch.screenX, touch.screenY);
-            if (scrubbing) pickWord();
+            pickWord(touch.screenX);
         });
     </script>
 </body>
