@@ -1,0 +1,64 @@
+<html>
+<head>
+    <style>
+    #word {
+        font-family: Helvetica, sans-serif;
+        font-size: calc(min(30vh, 30vw));
+        margin: auto;
+        text-align: center;
+        box-sizing: border-box;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+    }
+
+    html, body {
+        overscroll-behavior-y: none;
+    }
+    </style>
+</head>
+<body>
+    <p id="word"></p>
+    <script>
+        function color(body, x, y) {
+            console.log(x,y);
+            const r = 255;
+            const g = (x / window.innerWidth)*255;
+            const b = (y / window.innerHeight)*255;
+            body.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
+            const $word = document.getElementById('word');
+            $word.style.color = `rgb(${255-r}, ${255-g}, ${255-b})`;
+        }
+
+        function pickWord() {
+            const words = ['a', 'I', 'me', 'house', 'can', 'dog', 'cat', 'mom', 'dad']
+            const $word = document.getElementById('word');
+            $word.textContent = words[Math.floor(Math.random() * words.length)];
+        }
+
+    
+        let scrubbing = false;
+        const $word = document.getElementById('word');
+        $word.addEventListener('click', () => {
+            scrubbing = !scrubbing;
+        })
+
+        const body = document.body;
+        document.addEventListener('click', (e) => {
+            pickWord();
+        });
+        
+        document.addEventListener('mousemove', (e) => {
+            color(body, e.offsetX, e.offsetY);
+            if (scrubbing) pickWord();
+        });
+
+        document.addEventListener('touchmove', (e) => {
+            const touch = e.touches.item(0);
+            color(body, touch.screenX, touch.screenY);
+            if (scrubbing) pickWord();
+        });
+    </script>
+</body>
+</html>
