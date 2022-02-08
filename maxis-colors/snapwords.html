@@ -32,7 +32,8 @@
         }
 
         function pickWord(x) {
-            const words = [
+            const collections = { 
+            all: [     
                 'a', 'me', 'the',
                 'I', 'like', 'my', 
                 'at','look', 'see',
@@ -43,7 +44,18 @@
                 'do', 'to', 'be',
                 'we', 'got', 'was',
                 'went', 'she', 'he',
-                'boy', 'cat', 'dog']
+                'boy', 'cat', 'dog' 
+            ],
+            first: [
+                'a', 'me', 
+                'I', 'my', 
+                'dad', 'house',
+                'mom', 'park',
+                'boy', 'cat', 'dog', 
+            ],
+            };
+            const collection  = new URLSearchParams(window.location.search).get('collection');
+            const words = collections[collection ? collection : 'first'];
             const $word = document.getElementById('word');
             $word.textContent = words[Math.floor(x/window.innerWidth * words.length)];
         }
