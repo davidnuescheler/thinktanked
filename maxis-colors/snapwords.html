@@ -20,9 +20,9 @@
 </head>
 <body>
     <p id="word"></p>
+    <p id="hints"></p>
     <script>
         function color(body, x, y) {
-            console.log(x,y);
             const r = 255;
             const g = (x / window.innerWidth)*255;
             const b = (y / window.innerHeight)*255;
@@ -31,7 +31,7 @@
             $word.style.color = `rgb(${255-r}, ${255-g}, ${255-b})`;
         }
 
-        function pickWord(x) {
+        function pickWord( x = Math.random()*window.innerWidth) {
             const collections = { 
             all: [     
                 'a', 'me', 'the',
@@ -53,22 +53,51 @@
                 'mom', 'park',
                 'boy', 'cat', 'dog', 
             ],
+            is: [
+                'I', 'in', 'is', 'it',
+            ]
             };
+
             const collection  = new URLSearchParams(window.location.search).get('collection');
             const words = collections[collection ? collection : 'first'];
             const $word = document.getElementById('word');
             $word.textContent = words[Math.floor(x/window.innerWidth * words.length)];
+            const $hints = document.getElementById('hints');
+            $hints.textContent = '';
+        }
+
+        function displayHints() {
+            const hints = {
+                I: 'eye',
+                i: 'igloo',
+                s: 'snake',
+                t: 'tree',
+                n: 'nest',
+            }
+            const $hints = document.getElementById('hints');
+            $hints.textContent = '';
+            const word = document.getElementById('word').textContent;
+            letters = word.split('');
+            letters.forEach((letter) => {
+                console.log(letter);
+                const hint = hints[letter];
+                console.log(hint);
+                if (hint) {
+                    $hints.innerHTML = $hints.innerHTML + `<img src="hints/${hint}.png">`;
+                }
+            })
         }
 
     
         let scrubbing = false;
         const $word = document.getElementById('word');
-        $word.addEventListener('click', () => {
-            scrubbing = !scrubbing;
-        })
 
         const body = document.body;
         document.addEventListener('click', (e) => {
+            displayHints();
+        });
+
+        document.addEventListener('keypress', (e) => {
             pickWord();
         });
         
