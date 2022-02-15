@@ -3,7 +3,7 @@
     <style>
     #word {
         font-family: Helvetica, sans-serif;
-        font-size: calc(min(30vh, 30vw));
+        font-size: calc(min(20vh, 20vw));
         margin: auto;
         text-align: center;
         box-sizing: border-box;
@@ -43,12 +43,13 @@
     <p id="word"></p>
     <p id="hints"></p>
     <script>
+        const $word = document.getElementById('word');
+
         function color(body, x, y) {
             const r = 255;
             const g = (x / window.innerWidth)*255;
             const b = (y / window.innerHeight)*255;
             body.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
-            const $word = document.getElementById('word');
             $word.style.color = `rgb(${255-r}, ${255-g}, ${255-b})`;
         }
 
@@ -98,7 +99,6 @@
             const filter  = new URLSearchParams(window.location.search).get('filter');
             let words = collections[collection ? collection : 'first'];
             if (filter) words = words.filter((w) => w.includes(filter));
-            const $word = document.getElementById('word');
             const word = words[Math.floor(x/window.innerWidth * words.length)];
             const letters = word.split('');
             $word.innerHTML = letters.map((l) => `<span>${l}${hints[l]? '<img src="hints/'+hints[l].file+'.png" style="transform:'+hints[l].transform+'">':''}</span>`).join('');
@@ -106,14 +106,11 @@
         }
 
         function displayHints() {
-            const $word = document.getElementById('word');
             $word.classList.toggle('appear');
         }
 
     
         let scrubbing = false;
-        const $word = document.getElementById('word');
-
         function sayLetter(letter) {
             const audio = document.createElement('audio');
             audio.src = `sounds/${letter}.mp3`;
@@ -128,9 +125,24 @@
             sayLetter(e.target.textContent);
         });
 
-        document.addEventListener('keypress', (e) => {
-            sayLetter(e.key);
-            pickWord();
+        document.addEventListener('keydown', (e) => {
+            const l = e.key;
+            console.log(l);
+            if (l === 'Enter' || l === 'Escape') {
+                $word.textContent = '';
+                sayLetter('=');
+            } else if (l === ' ') {
+                console.log('space');
+                $word.innerHTML +=`<span>&nbsp;</span>`            
+            } else if (l === 'Backspace') {
+                $word.lastChild.remove();
+            } else if (l === 'Shift' || l === 'Meta') {
+
+            } else {
+                sayLetter(l);
+                $word.innerHTML +=`<span>${l}${hints[l]? '<img src="hints/'+hints[l].file+'.png" style="transform:'+hints[l].transform+'">':''}</span>`;
+            }
+
         });
         
         document.addEventListener('mousemove', (e) => {
