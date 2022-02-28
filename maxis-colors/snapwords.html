@@ -19,6 +19,10 @@
         
     }
 
+    #word span.perfect {
+        color: #888;
+    }
+
     #word img {
         width: 100%;
         position: absolute;
@@ -37,11 +41,29 @@
     html, body {
         overscroll-behavior-y: none;
     }
+
+    .overlay {
+        background-color: #ffffff80;
+        justify-content: center;
+        align-items: center;
+        position: absolute;
+        top: 0;
+        right: 0;
+        left: 0;
+        bottom: 0;
+        display: none;
+    }
+
+    .overlay.appear {
+        display: flex;
+    }
     </style>
 </head>
 <body>
     <p id="word"></p>
     <p id="hints"></p>
+    <div class="otter overlay"><img src="otter.png"></div>
+    <div class="red-x overlay"><img src="red-x.png"></div>
     <script>
         function color(body, x, y) {
             const r = 255;
@@ -73,6 +95,7 @@
                 'dad', 'house',
                 'mom', 'park',
                 'boy', 'cat', 'dog', 
+                'and', 'it'
             ],
             is: [
                 'I', 'in', 'is', 'it',
@@ -101,7 +124,7 @@
             const $word = document.getElementById('word');
             const word = words[Math.floor(x/window.innerWidth * words.length)];
             const letters = word.split('');
-            $word.innerHTML = letters.map((l) => `<span>${l}${hints[l]? '<img src="hints/'+hints[l].file+'.png" style="transform:'+hints[l].transform+'">':''}</span>`).join('');
+            $word.innerHTML = letters.map((l) => `<span class="open">${l}${hints[l]? '<img src="hints/'+hints[l].file+'.png" style="transform:'+hints[l].transform+'">':''}</span>`).join('');
 
         }
 
@@ -114,7 +137,14 @@
         let scrubbing = false;
         const $word = document.getElementById('word');
 
-        function sayLetter(letter) {
+        function flash(object) {
+            document.querySelector(`.${object}`).classList.add('appear');
+                        setTimeout(() => { 
+                            document.querySelector(`.${object}`).classList.remove('appear');                        
+                        }, 1000);    
+        }
+
+        function sayWord(letter) {
             const audio = document.createElement('audio');
             audio.src = `sounds/${letter}.mp3`;
             audio.load();
@@ -125,12 +155,39 @@
         document.addEventListener('click', (e) => {
             // displayHints();
             console.log(e.target);
-            sayLetter(e.target.textContent);
+            sayWord(e.target.textContent);
         });
 
         document.addEventListener('keypress', (e) => {
-            sayLetter(e.key);
-            pickWord();
+            const l = e.key;
+            if (l !== ' ') {
+                const span = document.querySelector('.open');
+                if (span) {
+                    if (span.textContent === l) {
+                        span.className = 'perfect';
+                        flash('otter');
+                        if (!document.querySelector('.open')) {
+                            const word = document.querySelector('#word').textContent;
+                            sayWord(word);
+                        } else {
+                            sayWord(e.key);
+                            setTimeout(() => { 
+                                sayWord('perfect');
+                            }, 500);
+                        }
+                    } else {
+                        setTimeout(() => { sayWord('er') }, 500);
+                        flash('red-x');
+                    }
+                }
+            }
+            if (l === ' ') {
+                const word = document.querySelector('#word').textContent;
+                sayWord(word);
+                pickWord();
+                
+            }
+
         });
         
         document.addEventListener('mousemove', (e) => {
