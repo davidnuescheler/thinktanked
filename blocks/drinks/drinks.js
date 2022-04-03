@@ -13,8 +13,9 @@ async function displayDrinks($block) {
     const drinks = await fetchDrinks(name);
     drinks.data.forEach((row) => {
         const $row = createTag('div', { class: 'drink'});
-        $row.innerHTML = `<div class="name">${row.Drink}</div>
-        <div class="recipe">${row.Recipe}</div>
+        const recipe = row.Recipe.includes(',') ? row.Recipe.split(',').join('<br>') : row.Recipe.split('\n').join('<br>');
+        $row.innerHTML = `<div class="name"><h3>${row.Drink}</h3></div>
+        <div class="recipe">${recipe}</div>
         <div class="glass">${row.Glass}</div>`;
         $block.appendChild($row);
     })
