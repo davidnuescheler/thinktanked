@@ -146,7 +146,7 @@
 
         function sayWord(letter) {
             const audio = document.createElement('audio');
-            audio.src = `sounds/${letter}.mp3`;
+            audio.src = `sounds/${letter.toLowerCase()}.mp3`;
             audio.load();
             audio.play();
         }

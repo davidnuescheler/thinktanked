@@ -177,6 +177,12 @@
                         }
                     } else {
                         div.classList.add('wrong');
+                        setTimeout(() => {
+                                const audio = document.createElement('audio');
+                                audio.src = `sounds/oops.mp3`;
+                                audio.load();
+                                audio.play();
+                            }, 1000);
                     }
                 });
             });
