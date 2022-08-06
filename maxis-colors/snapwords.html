@@ -163,7 +163,7 @@
             if (l !== ' ') {
                 const span = document.querySelector('.open');
                 if (span) {
-                    if (span.textContent === l) {
+                    if (span.textContent.toLowerCase() === l) {
                         span.className = 'perfect';
                         flash('otter');
                         if (!document.querySelector('.open')) {
