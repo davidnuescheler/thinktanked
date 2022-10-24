@@ -31,7 +31,11 @@
               return result.lighthouseResult.audits[categ].numericValue;
             }).join(',');
           }).join('\n');
-          
+          output.innerHTML += '\n\n';
+          const avgs = categs.map((categ, i) => {
+            return (results.reduce((a,b) => a + b.lighthouseResult.audits[categ].numericValue, 0) / results.length) 
+          });
+          output.innerHTML += `https://googlechrome.github.io/lighthouse/scorecalc/#FCP=${avgs[0]}&TTI=${avgs[3]}&SI=${avgs[1]}&TBT=${avgs[4]}&LCP=${avgs[2]}&CLS=${avgs[5]}&device=mobile&version=9.6.6\n`;
         }   
 
 
