@@ -1,0 +1,64 @@
+<html>
+    <head>
+        <title>Deep PSI</title>
+    </head>
+    <script>
+        async function getResult(url) {
+          const resp = await fetch(`https://thinktanked.org/deep-psi?url=${encodeURI(url)}`);
+          const json = await resp.json();
+          console.log(json);
+          return json;
+        }
+
+        async function getResults(url, samples) {
+          const reqs=[];
+          for (let i = 0; i < samples; i+=1) {
+              reqs.push(getResult(url));
+          }
+          return await Promise.all(reqs);
+        }
+
+        async function executePSI() {
+          console.log('execute');
+          const url = document.getElementById('url').value;
+          const output = document.getElementById('output');
+          output.innerHTML += `fetching report for: ${url}\n`;
+          const results = await getResults(url, 10);
+          const categs = ['first-contentful-paint', 'speed-index', 'largest-contentful-paint', 'interactive', 'total-blocking-time', 'cumulative-layout-shift'];
+          output.innerHTML += categs.join(',') + '\n';
+          output.innerHTML += results.map((result) => {
+            return categs.map((categ) => {
+              return result.lighthouseResult.audits[categ].numericValue;
+            }).join(',');
+          }).join('\n');
+          
+        }   
+
+
+    </script>
+    <style>
+      input {
+        padding: 5px;
+        font-size: 16px;
+        width: 100%;
+        margin-right: 10px;
+      }
+
+      .form {
+        display: flex;
+        max-width: 800px;
+        margin: auto;
+      }
+
+      code {
+        font-size: 16px;
+      }
+    </style>
+    <body>
+        <div class="form">
+        <input id="url">
+        <button onClick="executePSI()">Submit</button>
+        </div>
+        <code><pre id="output"></pre></code>
+    </body>
+</html>
