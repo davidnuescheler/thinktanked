@@ -4,43 +4,107 @@
     </head>
     <script>
         async function getResult(url) {
+          console.log(`fetching: ${url}`)
           const resp = await fetch(`https://thinktanked.org/deep-psi?url=${encodeURI(url)}`);
           const json = await resp.json();
-          console.log(json);
           return json;
         }
 
         async function getResults(url, samples) {
-          const reqs=[];
+          const reqs = [];
           for (let i = 0; i < samples; i+=1) {
-              reqs.push(getResult(url));
+              reqs.push(getResult(`${url}?${Math.random()}`));
           }
           return await Promise.all(reqs);
         }
 
-        async function executePSI() {
+        function createTable(results, averages) {
+          const table = document.createElement('table');
+          const tr = document.createElement('tr');
+          const keys = Object.keys(results[0]);
+          keys.forEach((key) => {
+            const th = document.createElement('th');
+            th.textContent = key;
+            tr.append(th);
+          });
+          table.append(tr);
+
+          const totals = {};
+          results.forEach((result) => {
+            const tr = document.createElement('tr');
+            keys.forEach((key) => {
+              const td = document.createElement('td');
+              let value = result[key];
+              totals[key] = totals[key] ? totals[key] + value : value;
+              if (key === 'CLS') {
+                value = Math.round(value * 1000)/1000;
+              } else {
+                value = Math.round(value);
+              }
+              td.textContent = value;
+              tr.append(td);
+            });
+            table.append(tr);
+          });
+
+          const avg = document.createElement('tr');
+
+          keys.forEach((key) => {
+            const td = document.createElement('td');
+            let value = totals[key]/results.length;
+            averages[key] = value;
+            if (key === 'CLS') {
+              value = Math.round(value * 1000)/1000;
+            } else {
+              value = Math.round(value);
+            }
+            td.textContent = value;
+            avg.append(td);
+          });
+
+          avg.className = 'average';
+
+          table.append(avg);
+          return table;
+        }
+
+      async function executePSI() {
           console.log('execute');
           const url = document.getElementById('url').value;
           const output = document.getElementById('output');
           output.innerHTML += `fetching report for: ${url}\n`;
-          const results = await getResults(url, 10);
+          const rawResults = await getResults(url, 20);
           const categs = ['first-contentful-paint', 'speed-index', 'largest-contentful-paint', 'interactive', 'total-blocking-time', 'cumulative-layout-shift'];
-          output.innerHTML += categs.join(',') + '\n';
-          output.innerHTML += results.map((result) => {
-            return categs.map((categ) => {
-              return result.lighthouseResult.audits[categ].numericValue;
-            }).join(',');
-          }).join('\n');
-          output.innerHTML += '\n\n';
-          const avgs = categs.map((categ, i) => {
-            return (results.reduce((a,b) => a + b.lighthouseResult.audits[categ].numericValue, 0) / results.length) 
+          const names = ['FCP', 'SI', 'LCP', 'TTI', 'TBT', 'CLS'];
+          const results = rawResults.map((result) => {
+            const cleaned = {};
+            categs.forEach((categ, i) => {
+              cleaned[names[i]] = result.lighthouseResult.audits[categ].numericValue;
+            });
+            return cleaned;
           });
-          output.innerHTML += `https://googlechrome.github.io/lighthouse/scorecalc/#FCP=${avgs[0]}&TTI=${avgs[3]}&SI=${avgs[1]}&TBT=${avgs[4]}&LCP=${avgs[2]}&CLS=${avgs[5]}&device=mobile&version=9.6.6\n`;
+          console.log(results);
+          const avgs = {};
+          output.append(createTable(results, avgs));
+          const link = document.createElement('a');
+          a.href = `https://googlechrome.github.io/lighthouse/scorecalc/#FCP=${avgs.FCP}&TTI=${avgs.TTI}&SI=${avgs.SI}&TBT=${avgs.TBT}&LCP=${avgs.LCP}&CLS=${avgs.CLS}&device=mobile&version=9.6.6`
+          a.textContent = 'Average Score';
+          output.append(a)
+
         }   
 
 
     </script>
     <style>
+      body {
+        font-family: 'Helvetica';
+      }
+
+      main {
+        max-width: 800px;
+        margin: auto;
+      }
+
       input {
         padding: 5px;
         font-size: 16px;
@@ -50,19 +114,38 @@
 
       .form {
         display: flex;
-        max-width: 800px;
-        margin: auto;
       }
 
-      code {
-        font-size: 16px;
+      table {
+        font-size: 25px;
+        width: 100%;
       }
+
+      td {
+        text-align: center;
+        padding: 5px;
+      }
+
+      tr:nth-child(odd) {
+        background-color: #eee;
+      }
+
+      tr.average {
+        font-weight: 600;
+        background-color: #ddd;
+      }
+
+
     </style>
     <body>
+      <main>
         <div class="form">
         <input id="url">
         <button onClick="executePSI()">Submit</button>
         </div>
-        <code><pre id="output"></pre></code>
+        <div id="output">
+
+        </div>
+      </main>
     </body>
 </html>
