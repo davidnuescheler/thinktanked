@@ -86,7 +86,7 @@
           console.log(results);
           const avgs = {};
           output.append(createTable(results, avgs));
-          const link = document.createElement('a');
+          const a = document.createElement('a');
           a.href = `https://googlechrome.github.io/lighthouse/scorecalc/#FCP=${avgs.FCP}&TTI=${avgs.TTI}&SI=${avgs.SI}&TBT=${avgs.TBT}&LCP=${avgs.LCP}&CLS=${avgs.CLS}&device=mobile&version=9.6.6`
           a.textContent = 'Average Score';
           output.append(a)
