@@ -4,10 +4,15 @@
   <title>Deep PSI</title>
 </head>
 <script src="//cdn.jsdelivr.net/npm/jstat@latest/dist/jstat.min.js"></script>
-<script>
+<script type="module">
+  import pLimit from 'https://cdn.skypack.dev/p-limit';
+  const parallelism = new URL(window.location.href).searchParams.get('parallelism');
+  // parse number
+  const limit = pLimit(parallelism ? parseInt(parallelism) : 10);
+
   async function getResult(url) {
     console.log(`fetching: ${url}`);
-    const resp = await fetch(`https://thinktanked.org/deep-psi?url=${encodeURI(url)}`);
+    const resp = await limit(() => fetch(`https://thinktanked.org/deep-psi?url=${encodeURI(url)}`));
     const json = await resp.json();
     return json;
   }
@@ -139,6 +144,8 @@
     return results;
   }
 
+  document.getElementById("button").addEventListener("click", comparePSI);
+
 
 </script>
 <style>
@@ -187,7 +194,7 @@
     <div class="form">
       <input id="url1" value="https://main--thinktanked--davidnuescheler.hlx.live/hello-world/index.html">
       <input id="url2" value="https://thinktanked.org/hello-world/index.html">
-      <button onClick="comparePSI()">Submit</button>
+      <button id="button">Submit</button>
     </div>
     <div id="output1">
 
