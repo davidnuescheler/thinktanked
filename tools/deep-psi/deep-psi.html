@@ -58,15 +58,18 @@
 
     keys.forEach((key) => {
       const td = document.createElement('td');
+      let psiVal = lowestCluster(keytoarray(results, key));
       let value = mean(keytoarray(results, key));
       let deviation = stddev(keytoarray(results, key));
       averages[key] = value;
       if (key === 'CLS') {
         value = Math.round(value * 1000) / 1000;
+        psiVal = Math.round(psiVal * 1000) / 1000;
       } else {
         value = Math.round(value);
+        psiVal = Math.round(psiVal);
       }
-      td.textContent = value + ' ± ' + Intl.NumberFormat({ maximumSignificantDigits: 1 }).format(deviation);
+      td.innerHTML = psiVal + '<br><code>(' + value + ' ± ' + Intl.NumberFormat({ maximumSignificantDigits: 1 }).format(deviation) + ')</code>';
       avg.append(td);
     });
 
@@ -74,6 +77,21 @@
 
     table.append(avg);
     return table;
+  }
+
+  function lowestCluster(arr) {
+    const sorted = arr.sort();
+    let clusterVal = 0;
+    console.log(sorted);
+    for (let i = 0; i < (sorted.length - 2); i += 1 ) {
+      if (sorted[i] === sorted[i + 1] && sorted[i] === sorted[i + 2]) {
+        console.log(clusterVal);
+        clusterVal = sorted[i];
+        break;
+      }
+    if (!clusterVal) clusterVal = (sorted[0] + sorted[1] + sorted[2]) / 3;
+    }
+    return clusterVal;
   }
 
   function keytoarray(arr, key) {
@@ -144,7 +162,19 @@
     return results;
   }
 
-  document.getElementById("button").addEventListener("click", comparePSI);
+  document.getElementById("button").addEventListener("click", () => {
+    const url = new URL(window.location);
+    url.searchParams.set('url1', document.getElementById('url1').value);
+    url.searchParams.set('url2', document.getElementById('url2').value);
+    window.history.pushState({}, '', url);
+    comparePSI();
+  });
+
+  const params = new URLSearchParams(window.location.search);
+  const url1 = params.get('url1');
+  const url2 = params.get('url2');
+  if (url1) document.getElementById('url1').value = url1;
+  if (url2) document.getElementById('url2').value = url2;
 
 
 </script>
@@ -192,8 +222,8 @@
 <body>
   <main>
     <div class="form">
-      <input id="url1" value="https://main--thinktanked--davidnuescheler.hlx.live/hello-world/index.html">
-      <input id="url2" value="https://thinktanked.org/hello-world/index.html">
+      <input id="url1" value="">
+      <input id="url2" value="">
       <button id="button">Submit</button>
     </div>
     <div id="output1">
