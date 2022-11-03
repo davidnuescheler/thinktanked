@@ -184,8 +184,6 @@
   }
 
   main {
-    max-width: 800px;
-    margin: auto;
   }
 
   input {
@@ -196,6 +194,12 @@
   }
 
   .form {
+    display: flex;
+    max-width: 800px;
+    margin: auto;
+  }
+
+  .results {
     display: flex;
   }
 
@@ -226,11 +230,13 @@
       <input id="url2" value="">
       <button id="button">Submit</button>
     </div>
+    <div class="results">
     <div id="output1">
 
     </div>
     <div id="output2">
 
+    </div>
     </div>
     <ul id="significancetestresults">
 
