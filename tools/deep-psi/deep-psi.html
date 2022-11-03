@@ -61,7 +61,6 @@
       let psiVal = lowestCluster(keytoarray(results, key));
       let value = mean(keytoarray(results, key));
       let deviation = stddev(keytoarray(results, key));
-      averages[key] = value;
       if (key === 'CLS') {
         value = Math.round(value * 1000) / 1000;
         psiVal = Math.round(psiVal * 1000) / 1000;
@@ -69,6 +68,7 @@
         value = Math.round(value);
         psiVal = Math.round(psiVal);
       }
+      averages[key] = psiVal;
       td.innerHTML = psiVal + '<br><code>(' + value + ' ± ' + Intl.NumberFormat({ maximumSignificantDigits: 1 }).format(deviation) + ')</code>';
       avg.append(td);
     });
@@ -156,7 +156,7 @@
     const avgs = {};
     output.append(createTable(results, avgs));
     const p = document.createElement('p');
-    p.innerHTML = `<a target="_blank" href="https://googlechrome.github.io/lighthouse/scorecalc/#FCP=${avgs.FCP}&TTI=${avgs.TTI}&SI=${avgs.SI}&TBT=${avgs.TBT}&LCP=${avgs.LCP}&CLS=${avgs.CLS}&device=mobile&version=9.6.6">Average Score</a>`;
+    p.innerHTML = `<a target="_blank" href="https://googlechrome.github.io/lighthouse/scorecalc/#FCP=${avgs.FCP}&TTI=${avgs.TTI}&SI=${avgs.SI}&TBT=${avgs.TBT}&LCP=${avgs.LCP}&CLS=${avgs.CLS}&device=mobile&version=9.6.6">Overall Best Stable Score</a>`;
     output.append(p);
 
     return results;
