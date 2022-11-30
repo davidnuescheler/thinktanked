@@ -80,7 +80,7 @@
   }
 
   function lowestCluster(arr) {
-    const sorted = arr.sort();
+    const sorted = arr.sort((a, b) => a - b);
     let clusterVal = 0;
     console.log(sorted);
     for (let i = 0; i < (sorted.length - 2); i += 1 ) {
@@ -201,6 +201,7 @@
 
   .results {
     display: flex;
+    margin: auto;
   }
 
   table {
@@ -231,12 +232,12 @@
       <button id="button">Submit</button>
     </div>
     <div class="results">
-    <div id="output1">
+      <div id="output1">
 
-    </div>
-    <div id="output2">
+      </div>
+      <div id="output2">
 
-    </div>
+      </div>
     </div>
     <ul id="significancetestresults">
 
