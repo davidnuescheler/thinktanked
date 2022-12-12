@@ -22,6 +22,7 @@ async function traverseCurrentFolder() {
       let cleanPath = '';
       if (file.endsWith('.docx')) cleanPath = file.split('.')[0].substring(rootPath.length);
       if (file.endsWith('.xlsx')) cleanPath = file.split('.')[0].substring(rootPath.length) + '.json';
+      if (file.endsWith('.pdf')) cleanPath = file.split('.')[0].substring(rootPath.length) + '.pdf';
   
       URLs.push(`${window.domainPrefix}${cleanPath}`);
     });
