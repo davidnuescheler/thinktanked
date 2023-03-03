@@ -1,0 +1,19 @@
+<html>
+    <head>
+        <title>canonical checker</title>
+        <link rel="canonical" href="https://thinktanked.com/markup-source">
+        <script>
+            const params = new URLSearchParams(window.location.search);
+            const domCan = params.get('dom-canonical');
+            console.log(domCan);
+            if (domCan) {
+                const link = document.querySelector('link');
+                link.href = domCan;
+            }
+        </script>
+        </head>
+        <body>
+            <h1>canonical checker</h1>
+        </body>
+    
+</html>
