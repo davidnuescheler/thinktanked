@@ -111,7 +111,7 @@ async function loadLazy(doc) {
   sampleRUM.observe(main.querySelectorAll('picture > img'));
 
     // Load jobs-switcher preview overlay
-    if (window.location.hostname === 'localhost' || window.location.hostname.endsWith('.hlx.page')) {
+    if (window.location.hostname === 'localhost' || window.location.hostname.endsWith('.hlx.page')  || window.location.hostname.endsWith('.hlx.reviews')) {
       const preview = await import(`${window.hlx.codeBasePath}/tools/preview/preview.js`);
       await preview.default();
       const jobs = await import(`${window.hlx.codeBasePath}/tools/preview/review-switcher.js`);
