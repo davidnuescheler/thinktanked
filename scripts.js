@@ -162,9 +162,19 @@ export function toClassName(name) {
   }
  
   
-  function postLCP() {
+  async function postLCP() {
     loadBlocks();
     loadCSS('/lazy-styles.css');
+      window.hlx = { codeBasePath: ''};
+
+      // Load jobs-switcher preview overlay
+      if (window.location.hostname === 'localhost' || window.location.hostname.endsWith('.hlx.page') || window.location.hostname.endsWith('.hlx.reviews')) {
+        const preview = await import(`${window.hlx.codeBasePath}/tools/preview/preview.js`);
+        await preview.default();
+        const jobs = await import(`${window.hlx.codeBasePath}/tools/preview/job-switcher.js`);
+        jobs.default();
+      }
+
   }
   
   

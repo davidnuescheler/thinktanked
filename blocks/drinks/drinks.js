@@ -1,4 +1,12 @@
-import { createTag } from '/scripts.js';
+function createTag(name, attrs) {
+    const el = document.createElement(name);
+    if (typeof attrs === 'object') {
+      for (const [key, value] of Object.entries(attrs)) {
+        el.setAttribute(key, value);
+      }
+    }
+    return el;
+  }
 
 async function fetchDrinks(name) {
     const resp = await fetch ('/drinks.json');
@@ -13,6 +21,7 @@ async function displayDrinks($block) {
     const drinks = await fetchDrinks(name);
     drinks.data.forEach((row) => {
         const $row = createTag('div', { class: 'drink'});
+        console.log(row);
         const recipe = row.Recipe.includes(',') ? row.Recipe.split(',').join('<br>') : row.Recipe.split('\n').join('<br>');
         $row.innerHTML = `<div class="name"><h3>${row.Drink}</h3></div>
         <div class="recipe">${recipe}</div>
