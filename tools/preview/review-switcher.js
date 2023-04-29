@@ -17,43 +17,72 @@ import {
   getOverlay,
 } from './preview.js';
 
-function getContentBranch(job) {
-  if (job.reviewId === 'review') return '/drafts/review';
-  if (job.reviewId === 'editorial') return '/drafts/editorial';
-  return (`/drafts/${job.status}/${job.reviewId}`);
+
+function createAddToReview(review, env) {
+  return {
+    label: `Add this page to: ${review.reviewId}`,
+    description: review.description,
+    actions: [
+      {
+        label: 'Add',
+        // href: `${window.location.pathname}?content-branch=/drafts/${review.status}/${review.reviewId}`,
+        href: `javascript:https://${review.reviewId}--${env.ref}--${env.repo}--${env.owner}.hlx.${env.state}${window.location.pathname}`,
+      },
+    ],
+  };
 }
 
-function getRelativePath(pathname) {
-  const removePrefix = (str, remove) => str.substring(remove.length);
-  if (pathname.startsWith('/drafts/review')) return (removePrefix(pathname, '/drafts/review'));
-  if (pathname.startsWith('/drafts/editorial')) return (removePrefix(pathname, '/drafts/editorial'));
-  return pathname;
+function createRemoveFromReview(review, env) {
+  return {
+    label: `Remove this page from the review before submission`,
+    actions: [
+      {
+        label: 'Remove',
+        // href: `${window.location.pathname}?content-branch=/drafts/${review.status}/${review.reviewId}`,
+        href: `javascript:https://${review.reviewId}--${env.ref}--${env.repo}--${env.owner}.hlx.${env.state}${window.location.pathname}`,
+      },
+    ],
+  };
 }
 
-function createJob(job, reviewId, currentJob, env) {
+function createReview(review, reviewId, currentReview, env) {
+  const isSelected = currentReview && currentReview.reviewId === reviewId;
   let buttons = '';
-  if (currentJob && currentJob.reviewId === reviewId) {
-    switch (job.status) {
-      case 'submitted':
-        buttons = '<br><p><a href="#">Reject Review</a> <a href="#">Publish</a><p>';
-        break;
-      default:
-        buttons = '<br><p><a href="#">Submit for Review</a><p>';
-    }
-  }
-  const isSelected = currentJob && currentJob.reviewId === reviewId;
-  const actions = !isSelected ? [
+  let pages = '';
+  let actions = [
     {
       label: 'View',
-      // href: `${window.location.pathname}?content-branch=/drafts/${job.status}/${job.reviewId}`,
-      href: `https://${job.reviewId}--${env.ref}--${env.repo}--${env.owner}.hlx.${env.state}${window.location.pathname}`,
+      // href: `${window.location.pathname}?content-branch=/drafts/${review.status}/${review.reviewId}`,
+      href: `https://${review.reviewId}--${env.ref}--${env.repo}--${env.owner}.hlx.${env.state}${window.location.pathname}`,
     },
-  ] : [];
+  ];
+
+  if (isSelected) {
+    const hrefs = review.pages.split(',').map((e) => e.trim()).map((href) => `<a href="${href}">${href}</a>`).join('\n');
+    pages = `<p class="hlx-pages">Enlisted Pages:<br>${hrefs}</p>`;
+
+    switch (review.status) {
+      case 'submitted':
+        buttons = '<br><p><a href="#">Reject Review</a> <a href="#">Publish</a><p>';
+        actions = [];
+        break;
+      default:
+        buttons = '<br><p><a href="#">Submit for Review</a></p>';
+        actions = [ {
+          label: 'Edit',
+          // href: `${window.location.pathname}?content-branch=/drafts/${review.status}/${review.reviewId}`,
+          href: `https://${review.reviewId}--${env.ref}--${env.repo}--${env.owner}.hlx.${env.state}${window.location.pathname}`,    
+          },
+        ]
+    }
+  }
+
   return {
-    label: `<code>${reviewId}</code>`,
+    label: `<code>${reviewId} (${review.status})</code>`,
     description: `
-      <p>${job.description}</p>
-      <p>Status: ${job.status}</p>${buttons}`,
+      <p>${review.description}</p>
+      ${pages}
+      ${buttons}`,
     actions,
     isSelected,
   };
@@ -68,42 +97,118 @@ function getReviewEnv(hostname) {
   return { review, ref, repo, owner, state };
 }
 
-async function decorateJobSwitcherPill(overlay) {
+async function decoratereviewSwitcherPill(overlay) {
   const resp = await fetch('/drafts/reviews.json');
   const json = await resp.json();
-  const jobs = json.data;
-  const currentJob = window.hlx.contentBranch
-    ? jobs.find((e) => window.hlx.contentBranch.endsWith(e.reviewId)) : undefined;
-  const jobName = currentJob ? `${currentJob.status}` : 'Production / Live';
-  const hostname = 'review002--main--thinktanked--davidnuescheler.hlx.reviews'
+  const reviews = json.data;
+  const hostname = window.location.hostname;
+  // const hostname = 'review002--main--thinktanked--davidnuescheler.hlx.reviews'
+  // const hostname = 'main--thinktanked--davidnuescheler.hlx.page'
   const env = getReviewEnv(hostname);
-  console.log(env);
+  const currentReview = env.review ? reviews.find((e) => env.review === e.reviewId) : undefined;
+  const reviewMode = !!currentReview;
 
-  const pill = createPopupButton(
-    `${jobName}`,
-    {
-      label: 'Pick your environment',
-      description: `
-        <div class="hlx-details">
-          Pick the job you would like to inspect below
-        </div>`,
-      actions: [
-      ],
-    },
-    jobs.map((job) => createJob(job, job.reviewId, currentJob, env)),
-  );
-  pill.classList.add(currentJob ? `is-${currentJob.status}` : 'is-active');
-  overlay.append(pill);
+  const findPageInReviews = (pathname) => {
+    return reviews.find((r) => {
+      const pages = r.pages.split(',').map((p) => p.trim());
+      return (pages.includes(pathname));
+    });
+  }
+
+  if (reviewMode) {
+    const reviewDisplay = currentReview.status ? `Submitted for Review: ${currentReview.reviewId}` : `Ready for Review: ${currentReview.reviewId}`;
+  
+    const pill = createPopupButton(
+      `${reviewDisplay}`,
+      {
+        label: 'Select Current Reviews',
+        description: `
+          <div class="hlx-details">
+            Switch review environments
+          </div>`,
+        actions: [
+        ],
+      },
+      reviews.map((review) => createReview(review, review.reviewId, currentReview, env)),
+    );
+    pill.classList.add(currentReview ? `is-${currentReview.status}` : 'is-active');
+    overlay.append(pill);  
+  } else {
+    const pageInReview = findPageInReviews(window.location.pathname);
+    const pageStatus = pageInReview ? pageInReview.status : '';
+    let pill;
+    switch (pageStatus) {
+      case 'open':
+        pill = createPopupButton(
+          'This page is Ready for Review',
+          {
+            label: `Enlisted in: ${pageInReview.reviewId}`,
+            description: `
+              <div class="hlx-details">
+                ${pageInReview.description}
+              </div>`,
+            actions: [
+              {
+                label: 'View',
+                // href: `${window.location.pathname}?content-branch=/drafts/${review.status}/${review.reviewId}`,
+                href: `https://${pageInReview.reviewId}--${env.ref}--${env.repo}--${env.owner}.hlx.reviews${window.location.pathname}`,
+              },          
+            ],
+          },
+          [createRemoveFromReview(pageInReview.reviewId, env)],
+        );
+        break;
+      case 'submitted':
+        pill = createPopupButton(
+          'This page is locked and Submitted to Review',
+          {
+            label: `Enlisted in: ${pageInReview.reviewId}`,
+            description: `
+              <div class="hlx-details">
+                ${pageInReview.description}
+              </div>`,
+            actions: [
+              {
+                label: 'View',
+                // href: `${window.location.pathname}?content-branch=/drafts/${review.status}/${review.reviewId}`,
+                href: `https://${pageInReview.reviewId}--${env.ref}--${env.repo}--${env.owner}.hlx.reviews${window.location.pathname}`,
+              },          
+            ],
+          },
+        );
+        break;
+      default:
+        pill = createPopupButton(
+          'Editorial',
+          {
+            label: 'This page is not enlisted in any review',
+            description: `
+              <div class="hlx-details">
+                To add this page to a review select from open reviews below or create a new review
+              </div>`,
+            actions: [
+              {
+                label: 'New',
+                // href: `${window.location.pathname}?content-branch=/drafts/${review.status}/${review.reviewId}`,
+                href: `https://${env.ref}--${env.repo}--${env.owner}.hlx.reviews${window.location.pathname}`,  
+              }
+            ],
+          },
+          reviews.filter((r) => r.status === 'open').map((review) => createAddToReview(review, env)),
+        );
+    }
+  overlay.append(pill);  
+  }
 }
 
 /**
  * Decorates Preview mode badges and overlays
  * @return {Object} returns a badge or empty string
  */
-export default async function decorateJobSwitcherOverlay() {
+export default async function decoratereviewSwitcherOverlay() {
   try {
     const overlay = getOverlay();
-    await decorateJobSwitcherPill(overlay);
+    await decoratereviewSwitcherPill(overlay);
   } catch (e) {
     console.log(e);
   }

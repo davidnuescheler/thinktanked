@@ -210,6 +210,19 @@
   flex: 0 0 auto;
 }
 
+p.hlx-pages {
+  background-color: #222;
+  padding: 5px;
+  border-radius: 5px;
+  margin-top: 5px;
+}
+
+p.hlx-pages a:any-link {
+  border: 0;
+  padding-left: 0;
+  font-weight: 400;
+}
+
 @media screen and (min-width: 900px) {
   .hlx-preview-overlay {
     flex-flow: row-reverse wrap-reverse;
