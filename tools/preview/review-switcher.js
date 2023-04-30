@@ -48,7 +48,6 @@ function createRemoveFromReview(review, env) {
 function createReview(review, reviewId, currentReview, env) {
   const isSelected = currentReview && currentReview.reviewId === reviewId;
   let buttons = '';
-  let pages = '';
   let actions = [
     {
       label: 'View',
@@ -58,22 +57,22 @@ function createReview(review, reviewId, currentReview, env) {
   ];
 
   if (isSelected) {
-    const hrefs = review.pages.split(',').map((e) => e.trim()).map((href) => `<a href="${href}">${href}</a>`).join('\n');
-    pages = `<p class="hlx-pages">Enlisted Pages:<br>${hrefs}</p>`;
+    actions = [ {
+      label: 'Manage',
+      // href: `${window.location.pathname}?content-branch=/drafts/${review.status}/${review.reviewId}`,
+      href: `#`,
+      click: () => {
+        openManifest(currentReview, env);
+      }    
+      },
+    ]
 
     switch (review.status) {
       case 'submitted':
         buttons = '<br><p><a href="#">Reject Review</a> <a href="#">Publish</a><p>';
-        actions = [];
         break;
       default:
         buttons = '<br><p><a href="#">Submit for Review</a></p>';
-        actions = [ {
-          label: 'Edit',
-          // href: `${window.location.pathname}?content-branch=/drafts/${review.status}/${review.reviewId}`,
-          href: `https://${review.reviewId}--${env.ref}--${env.repo}--${env.owner}.hlx.${env.state}${window.location.pathname}`,    
-          },
-        ]
     }
   }
 
@@ -81,7 +80,6 @@ function createReview(review, reviewId, currentReview, env) {
     label: `<code>${reviewId} (${review.status})</code>`,
     description: `
       <p>${review.description}</p>
-      ${pages}
       ${buttons}`,
     actions,
     isSelected,
@@ -97,24 +95,43 @@ function getReviewEnv(hostname) {
   return { review, ref, repo, owner, state };
 }
 
+function openManifest(review, env) {
+  const dialog = document.createElement('dialog'); 
+  dialog.className = 'hlx-dialog';
+  const overlay = getOverlay();
+  const edit = review.status === 'open' ? `<textarea rows="10">${review.pages.join('\n')}</textarea><button id="hlx-updateManifest">Update Manifest</button>` : '';
+
+  const pages = review.pages.map((path) => `<p class="hlx-row"><a href="${path}">https://${env.review}--${env.ref}--${env.repo}--${env.owner}.hlx.reviews${path}</a></p>`)
+  dialog.innerHTML = `
+    <form method="dialog">
+      <button class="hlx-close-button">X</button>
+    </form>
+    <h3>Manifest for ${review.reviewId} (${review.status})</h3>
+    <p>${review.description}</p>
+    ${pages.join('')}
+    <hr>
+    ${edit}
+  `;
+  overlay.append(dialog);
+  dialog.showModal();
+}
+
 async function decoratereviewSwitcherPill(overlay) {
   const resp = await fetch('/drafts/reviews.json');
   const json = await resp.json();
   const reviews = json.data;
+  reviews.forEach((review) => {
+    review.pages = review.pages.split(',').map((p) => p.trim());
+  });
   const hostname = window.location.hostname;
-  // const hostname = 'review002--main--thinktanked--davidnuescheler.hlx.reviews'
+  // const hostname = 'review001--main--thinktanked--davidnuescheler.hlx.reviews'
   // const hostname = 'main--thinktanked--davidnuescheler.hlx.page'
   const env = getReviewEnv(hostname);
   const currentReview = env.review ? reviews.find((e) => env.review === e.reviewId) : undefined;
   const reviewMode = !!currentReview;
 
-  const findPageInReviews = (pathname) => {
-    return reviews.find((r) => {
-      const pages = r.pages.split(',').map((p) => p.trim());
-      return (pages.includes(pathname));
-    });
-  }
-
+  const findPageInReviews = (pathname) => reviews.find((r) => reviews.pages.includes(pathname));
+  
   if (reviewMode) {
     const reviewDisplay = currentReview.status ? `Submitted for Review: ${currentReview.reviewId}` : `Ready for Review: ${currentReview.reviewId}`;
   

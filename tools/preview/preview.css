@@ -92,13 +92,14 @@
   white-space: initial;
 }
 
-.hlx-popup a:any-link {
+.hlx-popup a:any-link, .hlx-dialog button {
   color: #eee;
   border: 2px solid;
   padding: 5px 12px;
   display: inline-block;
   border-radius: 20px;
   text-decoration: none;
+  background-color: unset;
 }
 
 .hlx-popup-header {
@@ -210,17 +211,53 @@
   flex: 0 0 auto;
 }
 
-p.hlx-pages {
-  background-color: #222;
-  padding: 5px;
-  border-radius: 5px;
-  margin-top: 5px;
-}
-
 p.hlx-pages a:any-link {
   border: 0;
   padding-left: 0;
   font-weight: 400;
+}
+
+.hlx-dialog {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  height: calc(100% - 140px);
+  width: calc(100% - 64px);
+  margin: 32px;
+  background-color: #444;
+  border-radius: 16px;
+  box-shadow: 0 0 10px #000;
+  font-size: 12px;
+  color: #eee;
+  border: 0;
+  box-sizing: border-box;
+}
+
+.hlx-dialog p.hlx-row {
+  background-color: #666;
+  margin: 0;
+  padding: 8px;
+  border-top: 1px solid #888;
+}
+
+.hlx-dialog p.hlx-row:nth-child(odd) {
+  background-color: #555;
+}
+
+.hlx-row a:any-link {
+  color: white;
+}
+
+.hlx-dialog form {
+  position: absolute;
+  right: 32px;
+}
+
+.hlx-dialog textarea {
+  width: 100%;
+  box-sizing: border-box;
 }
 
 @media screen and (min-width: 900px) {

@@ -28,15 +28,27 @@ export function createButton(label) {
 }
 
 function createPopupItem(item) {
-  const actions = typeof item === 'object'
-    ? item.actions.map((action) => `<div class="hlx-button"><a href="${action.href}">${action.label}</a></div>`)
-    : [];
+  const hasActions = item.actions && item.actions.length;
   const div = document.createElement('div');
   div.className = `hlx-popup-item${item.isSelected ? ' is-selected' : ''}`;
   div.innerHTML = `
     <h5 class="hlx-popup-item-label">${typeof item === 'object' ? item.label : item}</h5>
-    ${item.description ? `<div class="hlx-popup-item-description">${item.description}</div>` : ''}
-    ${actions.length ? `<div class="hlx-popup-item-actions">${actions}</div>` : ''}`;
+    ${item.description ? `<div class="hlx-popup-item-description">${item.description}</div>` : ''}`;
+  if (hasActions) {
+    const actions = document.createElement('div');
+    actions.className = 'hlx-popup-item-actions';
+    item.actions.forEach((action) => {
+      const button = document.createElement('div');
+      button.className = 'hlx-button';
+      const a = document.createElement('a');
+      a.href = action.href;
+      a.textContent = action.label;
+      if (action.click) a.addEventListener('click', action.click);
+      button.append(a);
+      actions.append(button);
+    });
+    div.append(actions);
+  }
   return div;
 }
 
