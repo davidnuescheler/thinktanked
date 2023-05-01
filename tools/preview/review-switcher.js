@@ -185,7 +185,7 @@ async function decorateReviewSwitcherPill(overlay) {
   
   let pill;
   if (reviewMode) {
-    const reviewDisplay = currentReview.status ? `Submitted for Review: ${currentReview.reviewId}` : `Ready for Review: ${currentReview.reviewId}`;
+    const reviewDisplay = currentReview.status === 'submitted' ? `Submitted for Review: ${currentReview.reviewId}` : `Preparing for Review: ${currentReview.reviewId}`;
   
     pill = createPopupButton(
       `${reviewDisplay}`,
