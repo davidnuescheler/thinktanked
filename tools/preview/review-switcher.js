@@ -125,7 +125,7 @@ function openCreateReview(env) {
   `;
   overlay.append(dialog);
   const button = dialog.querySelector('#hlx-create-review');
-  button.addEventListener('click', () => {
+  if (button) button.addEventListener('click', () => {
     const reviewId = dialog.querySelector('#hlx-review-id').value;
     const description = dialog.querySelector('#hlx-review-description').value;
     openReview(reviewId, description, env);
