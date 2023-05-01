@@ -171,9 +171,11 @@ async function decorateReviewSwitcherPill(overlay) {
   reviews.forEach((review) => {
     review.pages = review.pages.split(',').map((p) => p.trim());
   });
-  // const hostname = window.location.hostname;
-  const hostname = 'review002--main--thinktanked--davidnuescheler.hlx.reviews'
-  // const hostname = 'main--thinktanked--davidnuescheler.hlx.page'
+  let hostname = window.location.hostname;
+  if (hostname === 'localhost') {
+    hostname = 'review002--main--thinktanked--davidnuescheler.hlx.reviews';
+    // hostname = 'main--thinktanked--davidnuescheler.hlx.page'
+  }
   const env = getReviewEnv(hostname);
   console.log(env);
   const currentReview = env.review ? reviews.find((e) => env.review === e.reviewId) : undefined;
