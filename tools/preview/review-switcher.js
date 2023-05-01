@@ -139,7 +139,7 @@ function openManifest(review, env) {
   const dialog = document.createElement('dialog'); 
   dialog.className = 'hlx-dialog';
   const overlay = getOverlay();
-  const edit = review.status === 'open' ? `<textarea rows="10">${review.pages.join('\n')}</textarea><button id="hlx-update-manifest">Update Manifest</button>` : '';
+  const edit = review.status === 'open' ? `<textarea rows="10">${review.pages.map((path) => `https://${env.ref}--${env.repo}--${env.owner}.hlx.page${path}`).join('\n')}</textarea><button id="hlx-update-manifest">Update Manifest</button>` : '';
 
   const pages = review.pages.map((path) => `<p class="hlx-row"><a href="${path}">https://${env.review}--${env.ref}--${env.repo}--${env.owner}.hlx.reviews${path}</a></p>`)
   dialog.innerHTML = `
@@ -171,8 +171,8 @@ async function decorateReviewSwitcherPill(overlay) {
   reviews.forEach((review) => {
     review.pages = review.pages.split(',').map((p) => p.trim());
   });
-  const hostname = window.location.hostname;
-  // const hostname = 'review002--main--thinktanked--davidnuescheler.hlx.reviews'
+  // const hostname = window.location.hostname;
+  const hostname = 'review002--main--thinktanked--davidnuescheler.hlx.reviews'
   // const hostname = 'main--thinktanked--davidnuescheler.hlx.page'
   const env = getReviewEnv(hostname);
   console.log(env);
