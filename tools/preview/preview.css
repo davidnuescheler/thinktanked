@@ -229,7 +229,7 @@ p.hlx-pages a:any-link {
   bottom: 0;
   right: 0;
   height: calc(100% - 140px);
-  width: calc(100% - 64px);
+  width: min(calc(100% - 64px), 800px);
   margin: 32px;
   background-color: #444;
   border-radius: 16px;
@@ -239,6 +239,7 @@ p.hlx-pages a:any-link {
   border: 0;
   box-sizing: border-box;
   padding: 32px;
+  margin: 32px auto;
 }
 
 .hlx-dialog p.hlx-row {
