@@ -153,12 +153,13 @@ function openManifest(review, env) {
     ${edit}
   `;
   const update = dialog.querySelector('#hlx-update-manifest');
-  if (update) update.addEventListener('click', () => {
-    const ta = dialog.querySelector('textarea');
-    const pages = ta.value.split('\n').map((url) => new URL(url, window.location.href).pathname);
-    updateReview(pages, review.reviewId, env);
-
-  });
+  if (update) {
+    update.addEventListener('click', () => {
+      const ta = dialog.querySelector('textarea');
+      const pages = ta.value.split('\n').map((url) => new URL(url, window.location.href).pathname);
+      updateReview(pages, review.reviewId, env);
+    });
+  }
   overlay.append(dialog);
   dialog.showModal();
 }
