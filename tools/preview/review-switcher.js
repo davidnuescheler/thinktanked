@@ -17,29 +17,43 @@ import {
   getOverlay,
 } from './preview.js';
 
+import {
+  addPageToReview,
+  removePageFromReview,
+  updateReview,
+  submitForReview,
+  approveReview,
+  rejectReview,
+  openReview,
+} from './review-actions.js';
 
-function createAddToReview(review, env) {
+
+function createAddToReview(pathname, review, env) {
   return {
     label: `Add this page to: ${review.reviewId}`,
     description: review.description,
     actions: [
       {
         label: 'Add',
-        // href: `${window.location.pathname}?content-branch=/drafts/${review.status}/${review.reviewId}`,
-        href: `javascript:https://${review.reviewId}--${env.ref}--${env.repo}--${env.owner}.hlx.${env.state}${window.location.pathname}`,
+        href: `#`,
+        click: () => {
+          addPageToReview(pathname, review.reviewId, env)
+        }
       },
     ],
   };
 }
 
-function createRemoveFromReview(review, env) {
+function createRemoveFromReview(pathname, review, env) {
   return {
     label: `Remove this page from the review before submission`,
     actions: [
       {
         label: 'Remove',
         // href: `${window.location.pathname}?content-branch=/drafts/${review.status}/${review.reviewId}`,
-        href: `javascript:https://${review.reviewId}--${env.ref}--${env.repo}--${env.owner}.hlx.${env.state}${window.location.pathname}`,
+        click: () => {
+          removePageFromReview(pathname, review.reviewId, env)
+        },
       },
     ],
   };
@@ -69,10 +83,10 @@ function createReview(review, reviewId, currentReview, env) {
 
     switch (review.status) {
       case 'submitted':
-        buttons = '<br><p><a href="#">Reject Review</a> <a href="#">Publish</a><p>';
+        buttons = '<br><p><a id="hlx-reject" href="#">Reject Review</a> <a id="hlx-approve" href="#">Publish</a><p>';
         break;
       default:
-        buttons = '<br><p><a href="#">Submit for Review</a></p>';
+        buttons = '<br><p><a id="hlx-submit" href="#">Submit for Review</a></p>';
     }
   }
 
@@ -95,11 +109,37 @@ function getReviewEnv(hostname) {
   return { review, ref, repo, owner, state };
 }
 
+function openCreateReview(env) {
+  const dialog = document.createElement('dialog'); 
+  dialog.className = 'hlx-dialog';
+  const overlay = getOverlay();
+  dialog.innerHTML = `
+    <form method="dialog">
+      <button class="hlx-close-button">X</button>
+    </form>
+    <h3>Create new Review</h3>
+    <p>Add a unique ID and description below</p>
+    <input id="hlx-review-id" placeholder="Review ID">
+    <textarea id="hlx-review-description" placeholder="Review Description" name="description" rows="3"></textarea>
+    <button id="hlx-create-review">Create new Review</button>
+  `;
+  overlay.append(dialog);
+  const button = dialog.querySelector('#hlx-create-review');
+  button.addEventListener('click', () => {
+    const reviewId = dialog.querySelector('#hlx-review-id').value;
+    const description = dialog.querySelector('#hlx-review-description').value;
+    openReview(reviewId, description, env);
+    dialog.close()
+  });
+  dialog.showModal();
+}
+
+
 function openManifest(review, env) {
   const dialog = document.createElement('dialog'); 
   dialog.className = 'hlx-dialog';
   const overlay = getOverlay();
-  const edit = review.status === 'open' ? `<textarea rows="10">${review.pages.join('\n')}</textarea><button id="hlx-updateManifest">Update Manifest</button>` : '';
+  const edit = review.status === 'open' ? `<textarea rows="10">${review.pages.join('\n')}</textarea><button id="hlx-update-manifest">Update Manifest</button>` : '';
 
   const pages = review.pages.map((path) => `<p class="hlx-row"><a href="${path}">https://${env.review}--${env.ref}--${env.repo}--${env.owner}.hlx.reviews${path}</a></p>`)
   dialog.innerHTML = `
@@ -112,30 +152,39 @@ function openManifest(review, env) {
     <hr>
     ${edit}
   `;
+  const update = dialog.querySelector('#hlx-update-manifest');
+  update.addEventListener('click', () => {
+    const ta = dialog.querySelector('textarea');
+    const pages = ta.value.split('\n').map((url) => new URL(url, window.location.href).pathname);
+    updateReview(pages, review.reviewId, env);
+
+  });
   overlay.append(dialog);
   dialog.showModal();
 }
 
-async function decoratereviewSwitcherPill(overlay) {
+async function decorateReviewSwitcherPill(overlay) {
   const resp = await fetch('/drafts/reviews.json');
   const json = await resp.json();
   const reviews = json.data;
   reviews.forEach((review) => {
     review.pages = review.pages.split(',').map((p) => p.trim());
   });
-  const hostname = window.location.hostname;
-  // const hostname = 'review001--main--thinktanked--davidnuescheler.hlx.reviews'
+  // const hostname = window.location.hostname;
+  const hostname = 'review002--main--thinktanked--davidnuescheler.hlx.reviews'
   // const hostname = 'main--thinktanked--davidnuescheler.hlx.page'
   const env = getReviewEnv(hostname);
+  console.log(env);
   const currentReview = env.review ? reviews.find((e) => env.review === e.reviewId) : undefined;
   const reviewMode = !!currentReview;
 
-  const findPageInReviews = (pathname) => reviews.find((r) => reviews.pages.includes(pathname));
+  const findPageInReviews = (pathname) => reviews.find((r) => r.pages.includes(pathname));
   
+  let pill;
   if (reviewMode) {
     const reviewDisplay = currentReview.status ? `Submitted for Review: ${currentReview.reviewId}` : `Ready for Review: ${currentReview.reviewId}`;
   
-    const pill = createPopupButton(
+    pill = createPopupButton(
       `${reviewDisplay}`,
       {
         label: 'Select Current Reviews',
@@ -147,17 +196,24 @@ async function decoratereviewSwitcherPill(overlay) {
         ],
       },
       reviews.map((review) => createReview(review, review.reviewId, currentReview, env)),
+      currentReview.status === 'open' ? 'unlocked' : 'locked',
     );
-    pill.classList.add(currentReview ? `is-${currentReview.status}` : 'is-active');
-    overlay.append(pill);  
+    pill.classList.add(currentReview ? `is-${currentReview.status}` : 'is-editorial');
+    const verbs = [{id: 'reject', f: rejectReview}, {id: 'approve', f: approveReview}, {id: 'submit', f: submitForReview}]
+    
+    verbs.forEach((verb) => {
+      const button = pill.querySelector(`#hlx-${verb.id}`);
+      if (button) button.addEventListener('click', () => {
+        verb.f(currentReview.reviewId, env);
+      });  
+    });
   } else {
     const pageInReview = findPageInReviews(window.location.pathname);
     const pageStatus = pageInReview ? pageInReview.status : '';
-    let pill;
     switch (pageStatus) {
       case 'open':
         pill = createPopupButton(
-          'This page is Ready for Review',
+          'Ready for Review',
           {
             label: `Enlisted in: ${pageInReview.reviewId}`,
             description: `
@@ -167,17 +223,17 @@ async function decoratereviewSwitcherPill(overlay) {
             actions: [
               {
                 label: 'View',
-                // href: `${window.location.pathname}?content-branch=/drafts/${review.status}/${review.reviewId}`,
                 href: `https://${pageInReview.reviewId}--${env.ref}--${env.repo}--${env.owner}.hlx.reviews${window.location.pathname}`,
               },          
             ],
           },
-          [createRemoveFromReview(pageInReview.reviewId, env)],
+          [createRemoveFromReview(window.location.pathname, pageInReview, env)],
+          'unlocked',
         );
         break;
       case 'submitted':
         pill = createPopupButton(
-          'This page is locked and Submitted to Review',
+          'Submitted for Review',
           {
             label: `Enlisted in: ${pageInReview.reviewId}`,
             description: `
@@ -185,20 +241,25 @@ async function decoratereviewSwitcherPill(overlay) {
                 ${pageInReview.description}
               </div>`,
             actions: [
-              {
-                label: 'View',
-                // href: `${window.location.pathname}?content-branch=/drafts/${review.status}/${review.reviewId}`,
-                href: `https://${pageInReview.reviewId}--${env.ref}--${env.repo}--${env.owner}.hlx.reviews${window.location.pathname}`,
-              },          
             ],
           },
+          [{
+            label: 'Go to review',
+            actions: [
+              {
+                label: 'View',
+                href: `https://${pageInReview.reviewId}--${env.ref}--${env.repo}--${env.owner}.hlx.reviews${window.location.pathname}`,
+              }
+            ]
+          }],
+          'locked',
         );
         break;
       default:
         pill = createPopupButton(
           'Editorial',
           {
-            label: 'This page is not enlisted in any review',
+            label: 'This page is not enlisted for review',
             description: `
               <div class="hlx-details">
                 To add this page to a review select from open reviews below or create a new review
@@ -206,26 +267,28 @@ async function decoratereviewSwitcherPill(overlay) {
             actions: [
               {
                 label: 'New',
-                // href: `${window.location.pathname}?content-branch=/drafts/${review.status}/${review.reviewId}`,
-                href: `https://${env.ref}--${env.repo}--${env.owner}.hlx.reviews${window.location.pathname}`,  
+                click: () => {
+                  openCreateReview(env);
+                },
               }
             ],
           },
-          reviews.filter((r) => r.status === 'open').map((review) => createAddToReview(review, env)),
+          reviews.filter((r) => r.status === 'open').map((review) => createAddToReview(window.location.pathname, review, env)),
         );
     }
-  overlay.append(pill);  
+    pill.classList.add(pageInReview ? `is-${pageInReview.status}` : 'is-editorial');
   }
+  overlay.append(pill);  
 }
 
 /**
  * Decorates Preview mode badges and overlays
  * @return {Object} returns a badge or empty string
  */
-export default async function decoratereviewSwitcherOverlay() {
+export default async function decorateReviewSwitcherOverlay() {
   try {
     const overlay = getOverlay();
-    await decoratereviewSwitcherPill(overlay);
+    await decorateReviewSwitcherPill(overlay);
   } catch (e) {
     console.log(e);
   }

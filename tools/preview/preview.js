@@ -41,7 +41,7 @@ function createPopupItem(item) {
       const button = document.createElement('div');
       button.className = 'hlx-button';
       const a = document.createElement('a');
-      a.href = action.href;
+      a.href = action.href || '#';
       a.textContent = action.label;
       if (action.click) a.addEventListener('click', action.click);
       button.append(a);
@@ -53,18 +53,35 @@ function createPopupItem(item) {
 }
 
 export function createPopupDialog(header, items = []) {
-  const actions = typeof header === 'object'
-    ? header.actions.map((action) => `<div class="hlx-button"><a href="${action.href}">${action.label}</a></div>`)
-    : [];
+  const hasActions = header.actions && header.actions.length;
+
   const popup = document.createElement('div');
   popup.className = 'hlx-popup hlx-hidden';
   popup.innerHTML = `
     <div class="hlx-popup-header">
       <h5 class="hlx-popup-header-label">${typeof header === 'object' ? header.label : header}</h5>
       ${header.description ? `<div class="hlx-popup-header-description">${header.description}</div>` : ''}
-      ${actions.length ? `<div class="hlx-popup-header-actions">${actions}</div>` : ''}
     </div>
     <div class="hlx-popup-items"></div>`;
+
+  if (hasActions) {
+    const headerEl = popup.querySelector('.hlx-popup-header');
+
+    const actions = document.createElement('div');
+    actions.className = 'hlx-popup-header-actions';
+    header.actions.forEach((action) => {
+      const button = document.createElement('div');
+      button.className = 'hlx-button';
+      const a = document.createElement('a');
+      a.href = action.href || '#';
+      a.textContent = action.label;
+      if (action.click) a.addEventListener('click', action.click);
+      button.append(a);
+      actions.append(button);
+    });
+    headerEl.append(actions);
+  }
+  
   const list = popup.querySelector('.hlx-popup-items');
   items.forEach((item) => {
     list.append(createPopupItem(item));
@@ -72,10 +89,11 @@ export function createPopupDialog(header, items = []) {
   return popup;
 }
 
-export function createPopupButton(label, header, items) {
+export function createPopupButton(label, header, items, icon) {
   const button = createButton(label);
   const popup = createPopupDialog(header, items);
   button.innerHTML += '<span class="hlx-open"></span>';
+  if (icon) button.innerHTML = `<span class="hlx-badge-${icon}"></span>` + button.innerHTML;
   button.append(popup);
   button.addEventListener('click', () => {
     popup.classList.toggle('hlx-hidden');
