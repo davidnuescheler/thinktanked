@@ -153,7 +153,7 @@ function openManifest(review, env) {
     ${edit}
   `;
   const update = dialog.querySelector('#hlx-update-manifest');
-  update.addEventListener('click', () => {
+  if (update) update.addEventListener('click', () => {
     const ta = dialog.querySelector('textarea');
     const pages = ta.value.split('\n').map((url) => new URL(url, window.location.href).pathname);
     updateReview(pages, review.reviewId, env);
