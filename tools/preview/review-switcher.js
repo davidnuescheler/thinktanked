@@ -171,7 +171,7 @@ async function decorateReviewSwitcherPill(overlay) {
     // hostname = 'main--thinktanked--davidnuescheler.hlx.page'
   }
   const env = getReviewEnv(hostname);
-  const adminHost = env.reviewId ? `${env.reviewId}--${env.ref}--${env.repo}--${env.owner}.hlx.reviews` : `${env.ref}--${env.repo}--${env.owner}.hlx.reviews`;
+  const adminHost = env.review ? `${env.review}--${env.ref}--${env.repo}--${env.owner}.hlx.reviews` : `${env.ref}--${env.repo}--${env.owner}.hlx.reviews`;
   const resp = await fetch(`https://${adminHost}/admin/?ck=${Math.random()}`, {
     cache: 'no-store',
   });
