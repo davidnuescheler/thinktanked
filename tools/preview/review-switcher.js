@@ -172,10 +172,11 @@ async function decorateReviewSwitcherPill(overlay) {
   }
   const env = getReviewEnv(hostname);
   const resp = await fetch(`https://${env.ref}--${env.repo}--${env.owner}.hlx.reviews/admin/?ck=${Math.random()}`, {
-    cache: "no-store"
+    cache: 'no-store',
   });
   const json = await resp.json();
   const reviews = json.data;
+  console.log(reviews);
   reviews.forEach((review) => {
     review.pages = review.pages ? review.pages.split(',').map((p) => p.trim()) : [];
   });
