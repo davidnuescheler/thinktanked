@@ -167,8 +167,8 @@ function openManifest(review, env) {
 async function decorateReviewSwitcherPill(overlay) {
   let hostname = window.location.hostname;
   if (hostname === 'localhost') {
-    hostname = 'review001--main--thinktanked--davidnuescheler.hlx.reviews';
-    //hostname = 'main--thinktanked--davidnuescheler.hlx.page'
+    hostname = 'default--main--thinktanked--davidnuescheler.hlx.reviews';
+    // hostname = 'main--thinktanked--davidnuescheler.hlx.page'
   }
   const env = getReviewEnv(hostname);
   const resp = await fetch(`https://${env.ref}--${env.repo}--${env.owner}.hlx.reviews/admin/`, {
@@ -180,6 +180,10 @@ async function decorateReviewSwitcherPill(overlay) {
     review.pages = review.pages ? review.pages.split(',').map((p) => p.trim()) : [];
   });
   console.log(env);
+
+  let simpleReview = false;
+  if (reviews.length === 1 && reviews[0].reviewId === 'default') simpleReview = true;
+  
   const currentReview = env.review ? reviews.find((e) => env.review === e.reviewId) : undefined;
   const reviewMode = !!currentReview;
 
@@ -187,22 +191,58 @@ async function decorateReviewSwitcherPill(overlay) {
   
   let pill;
   if (reviewMode) {
-    const reviewDisplay = currentReview.status === 'submitted' ? `Submitted for Review: ${currentReview.reviewId}` : `Preparing for Review: ${currentReview.reviewId}`;
+    const reviewIdSuffix = currentReview.reviewId === 'default' ? '' : `: ${currentReview.reviewId}`; 
+    const reviewDisplay = currentReview.status === 'submitted' ? `Submitted for Review ${reviewIdSuffix}` : `Preparing for Review ${reviewIdSuffix}`;
   
-    pill = createPopupButton(
-      `${reviewDisplay}`,
-      {
-        label: 'Select Current Reviews',
-        description: `
-          <div class="hlx-details">
-            Switch review environments
-          </div>`,
-        actions: [
+    if (simpleReview) {
+      let buttons, label;
+      if (currentReview.status === 'submitted') {
+        label = 'Review Submitted';
+        buttons = '<br><p><a id="hlx-reject" href="#">Reject Review</a> <a id="hlx-approve" href="#">Publish</a><p>';
+      } else {
+        label = 'Review in Preparation';
+        buttons = '<br><p><a id="hlx-submit" href="#">Submit for Review</a></p>';
+      }
+
+      pill = createPopupButton(
+        `${reviewDisplay}`,
+        {
+          label,
+          description: `Check and manage Review`,
+          actions: [ {
+              label: 'Manage',
+              // href: `${window.location.pathname}?content-branch=/drafts/${review.status}/${review.reviewId}`,
+              href: `#`,
+              click: () => {
+                openManifest(currentReview, env);
+              }    
+            },
+          ],
+        },
+        [
+          {
+            label: buttons,
+          }      
         ],
-      },
-      reviews.map((review) => createReview(review, review.reviewId, currentReview, env)),
-      currentReview.status === 'open' ? 'unlocked' : 'locked',
-    );
+        currentReview.status === 'open' ? 'unlocked' : 'locked',
+      );  
+
+    } else {
+      pill = createPopupButton(
+        `${reviewDisplay}`,
+        {
+          label: 'Select Current Reviews',
+          description: `
+            <div class="hlx-details">
+              Switch review environments
+            </div>`,
+          actions: [
+          ],
+        },
+        reviews.map((review) => createReview(review, review.reviewId, currentReview, env)),
+        currentReview.status === 'open' ? 'unlocked' : 'locked',
+      );  
+    }
     pill.classList.add(currentReview ? `is-${currentReview.status}` : 'is-editorial');
     const verbs = [{id: 'reject', f: rejectReview}, {id: 'approve', f: approveReview}, {id: 'submit', f: submitForReview}]
     
@@ -261,22 +301,20 @@ async function decorateReviewSwitcherPill(overlay) {
         );
         break;
       default:
+        const actions = simpleReview ? [] : [
+          {
+            label: 'New',
+            click: () => {
+              openCreateReview(env);
+            },
+          }
+        ];
         pill = createPopupButton(
           'Editorial',
           {
             label: 'This page is not enlisted for review',
-            description: `
-              <div class="hlx-details">
-                To add this page to a review select from open reviews below or create a new review
-              </div>`,
-            actions: [
-              {
-                label: 'New',
-                click: () => {
-                  openCreateReview(env);
-                },
-              }
-            ],
+            description: '',
+            actions,
           },
           reviews.filter((r) => r.status === 'open').map((review) => createAddToReview(window.location.pathname, review, env)),
         );

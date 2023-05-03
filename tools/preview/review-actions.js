@@ -84,5 +84,5 @@ export async function approveReview(reviewId, env) {
   });
   const text = await resp.text();
   console.log(text);
-  window.location.reload();
+  window.location.href=`https://${env.ref}--${env.repo}--${env.owner}.hlx.live${window.location.pathname}`;
 }
