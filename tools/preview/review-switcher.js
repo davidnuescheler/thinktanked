@@ -165,18 +165,18 @@ function openManifest(review, env) {
 }
 
 async function decorateReviewSwitcherPill(overlay) {
-  const resp = await fetch('/drafts/reviews.json');
+  let hostname = window.location.hostname;
+  if (hostname === 'localhost') {
+    hostname = 'review001--main--thinktanked--davidnuescheler.hlx.reviews';
+    //hostname = 'main--thinktanked--davidnuescheler.hlx.page'
+  }
+  const env = getReviewEnv(hostname);
+  const resp = await fetch(`https://${env.ref}--${env.repo}--${env.owner}.hlx.reviews/admin/`);
   const json = await resp.json();
   const reviews = json.data;
   reviews.forEach((review) => {
-    review.pages = review.pages.split(',').map((p) => p.trim());
+    review.pages = review.pages ? review.pages.split(',').map((p) => p.trim()) : [];
   });
-  let hostname = window.location.hostname;
-  if (hostname === 'localhost') {
-    hostname = 'review002--main--thinktanked--davidnuescheler.hlx.reviews';
-    // hostname = 'main--thinktanked--davidnuescheler.hlx.page'
-  }
-  const env = getReviewEnv(hostname);
   console.log(env);
   const currentReview = env.review ? reviews.find((e) => env.review === e.reviewId) : undefined;
   const reviewMode = !!currentReview;
