@@ -1,6 +1,6 @@
 export function getReviewEnv() {
   let hostname = window.location.hostname;
-  if (hostname = 'localhost') hostname = 'default--main--thinktanked--davidnuescheler.hlx.reviews';
+  if (hostname === 'localhost') hostname = 'default--main--thinktanked--davidnuescheler.hlx.reviews';
 
   const [env, , state] = hostname.split('.');
   const splits = env.split('--');
