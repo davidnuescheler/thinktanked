@@ -1,0 +1,225 @@
+:host {
+  --review-open-background-color: #f4ad2f;
+  --review-open-color: black;
+  --review-submitted-background-color: #f56544;
+  --review-submitted-color: white;
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 20px;
+  margin: 0 8px 0 24px;
+}
+
+/* Hide default HTML checkbox */
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+/* The slider */
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: .4s;
+}
+
+.slider:before {
+  position: absolute;
+  content: '';
+  height: 16px;
+  width: 16px;
+  left: 2px;
+  bottom: 2px;
+  background-color: white;
+  transition: .4s;
+}
+
+.switch.submitted {
+  
+}
+
+input:checked + .slider {
+  background-color: var(--review-status-background-color);
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 1px var(--review-status-background-color);
+}
+
+.switch.submitted {
+  opacity: 0.5;
+  --review-status-background-color: var(--review-submitted-background-color); 
+}
+
+.switch.open {
+  --review-status-background-color: var(--review-open-background-color); 
+}
+
+
+input:checked + .slider:before {
+  transform: translateX(20px);
+}
+
+/* Rounded sliders */
+.slider.round {
+  border-radius: 12px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
+}
+
+.review {
+  display: flex;
+  align-items: center;
+}
+
+.badge-locked {
+  transform: scale(0.7) translate(0, 3px);
+  box-sizing: border-box;
+  position: relative;
+  display: block;
+  width: 12px;
+  height: 11px;
+  border: 2px solid;
+  border-top-right-radius: 50%;
+  border-top-left-radius: 50%;
+  border-bottom: transparent;
+  margin-top: -12px;
+  margin-right: 12px;
+}
+
+.badge-locked::after {
+  content: '';
+  display: block;
+  box-sizing: border-box;
+  position: absolute;
+  width: 16px;
+  height: 10px;
+  border-radius: 2px;
+  border: 2px solid transparent;
+  box-shadow: 0 0 0 2px;
+  left: -4px;
+  top: 9px;
+}
+
+.badge-unlocked {
+  box-sizing: border-box;
+  position: relative;
+  display: block;
+  transform: scale(0.7) translate(0, 3px);
+  width: 12px;
+  height: 6px;
+  border: 2px solid;
+  border-top-right-radius: 100px;
+  border-top-left-radius: 100px;
+  border-bottom: transparent;
+  margin-top: -18px;
+  margin-left: -2px;
+  margin-right: 12px;
+}
+
+.badge-unlocked::after,
+.badge-unlocked::before {
+  content: "";
+  display: block;
+  box-sizing: border-box;
+  position: absolute
+}
+
+.badge-unlocked::after {
+  border: 2px solid transparent;
+  box-shadow: 0 0 0 2px;
+  width: 16px;
+  height: 10px;
+  border-radius: 2px;
+  left: -4px;
+  top: 10px;
+}
+
+.badge-unlocked::before {
+  width: 2px;
+  height: 6px;
+  background: currentColor;
+  left: -2px;
+  top: 4px;
+}
+
+.review-status a:any-link{
+  color: currentColor;
+  text-decoration: none;
+  display: inline-block;
+}
+.review-status {
+  display: flex;
+  align-items: center;
+  border-radius: 20px;
+  padding: 0 10px;
+  cursor: pointer;
+}
+
+.review-status.open {
+  background-color: var(--review-open-background-color);
+  color: var(--review-open-color);
+}
+
+.review-status.submitted {
+  background-color: var(--review-submitted-background-color);
+  color: var(--review-submitted-color);
+}
+
+.hlx-dialog {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  height: calc(100% - 140px);
+  width: min(calc(100% - 64px), 800px);
+  margin: 32px;
+  background-color: #444;
+  border-radius: 16px;
+  box-shadow: 0 0 10px #000;
+  font-size: 12px;
+  color: #eee;
+  border: 0;
+  box-sizing: border-box;
+  padding: 32px;
+  margin: 32px auto;
+}
+
+.hlx-dialog p.hlx-row {
+  background-color: #666;
+  margin: 0;
+  padding: 8px;
+  border-top: 1px solid #888;
+}
+
+.hlx-dialog p.hlx-row:nth-child(odd) {
+  background-color: #555;
+}
+
+.hlx-row a:any-link {
+  color: white;
+}
+
+.hlx-dialog form {
+  position: absolute;
+  right: 32px;
+}
+
+.hlx-dialog textarea, .hlx-dialog input {
+  width: 100%;
+  box-sizing: border-box;
+  margin: 8px 0;
+  padding: 8px;
+}
