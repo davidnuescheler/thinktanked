@@ -43,10 +43,6 @@
   transition: .4s;
 }
 
-.switch.submitted {
-  
-}
-
 input:checked + .slider {
   background-color: var(--review-status-background-color);
 }
@@ -64,6 +60,9 @@ input:focus + .slider {
   --review-status-background-color: var(--review-open-background-color); 
 }
 
+.hlx-sk .review-status.plugin > span {
+  margin-top: 0;
+}
 
 input:checked + .slider:before {
   transform: translateX(20px);
@@ -84,7 +83,7 @@ input:checked + .slider:before {
 }
 
 .badge-locked {
-  transform: scale(0.7) translate(0, 3px);
+  transform: scale(0.7);
   box-sizing: border-box;
   position: relative;
   display: block;
@@ -116,7 +115,7 @@ input:checked + .slider:before {
   box-sizing: border-box;
   position: relative;
   display: block;
-  transform: scale(0.7) translate(0, 3px);
+  transform: scale(0.7) translate(0, -9px);
   width: 12px;
   height: 6px;
   border: 2px solid;

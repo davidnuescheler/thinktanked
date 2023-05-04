@@ -59,7 +59,7 @@ async function previewMode(plugins) {
   let reviewStatus = await getReviewStatus();
 
   const div = document.createElement('div');
-  div.className = 'review';
+  div.className = 'review plugin';
   div.innerHTML = `
     <label class="switch"><input type="checkbox"><span class="slider round"></span></label>
     <span class="review-status">Not In Review</span><span></span>`;
@@ -147,7 +147,7 @@ async function reviewMode(plugins, sk) {
   console.log(reviewStatus);
   const div = document.createElement('div');
   if (reviewStatus === 'open') {
-    div.className = 'review-status open';
+    div.className = 'review-status open plugin';
     div.innerHTML = '<span class="badge-unlocked"></span><span>Preparing for Review</span>';
   }
   if (reviewStatus === 'submitted') {
