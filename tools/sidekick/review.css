@@ -223,6 +223,6 @@ input:checked + .slider:before {
   padding: 8px;
 }
 
-.plugin-container > span.hlx-label {
+.plugin-container > span.hlx-sk-label {
   display: none;
 }
