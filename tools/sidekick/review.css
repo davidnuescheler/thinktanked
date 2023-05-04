@@ -60,7 +60,7 @@ input:focus + .slider {
   --review-status-background-color: var(--review-open-background-color); 
 }
 
-.hlx-sk .review-status.plugin > span {
+.hlx-sk .review.plugin > span, .hlx-sk .review-status-badge.plugin > span {
   margin-top: 0;
 }
 
@@ -158,7 +158,7 @@ input:checked + .slider:before {
   text-decoration: none;
   display: inline-block;
 }
-.review-status {
+.review-status-badge {
   display: flex;
   align-items: center;
   border-radius: 20px;
@@ -166,12 +166,12 @@ input:checked + .slider:before {
   cursor: pointer;
 }
 
-.review-status.open {
+.review-status-badge.open {
   background-color: var(--review-open-background-color);
   color: var(--review-open-color);
 }
 
-.review-status.submitted {
+.review-status-badge.submitted {
   background-color: var(--review-submitted-background-color);
   color: var(--review-submitted-color);
 }
