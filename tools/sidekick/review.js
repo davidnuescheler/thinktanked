@@ -147,13 +147,14 @@ async function reviewMode(plugins, sk) {
   console.log(reviewStatus);
   const div = document.createElement('div');
   if (reviewStatus === 'open') {
-    div.className = 'review-status open plugin';
+    div.className = 'review-status open';
     div.innerHTML = '<span class="badge-unlocked"></span><span>Preparing for Review</span>';
   }
   if (reviewStatus === 'submitted') {
     div.className = 'review-status submitted';
     div.innerHTML = '<span class="badge-locked"></span><span>Review Submitted</span>'
   }
+  div.classList.add('plugin');
   plugins.append(div);
   div.addEventListener('click', () => {
     openManifest(sk);
