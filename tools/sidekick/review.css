@@ -83,7 +83,7 @@ input:checked + .slider:before {
 }
 
 .badge-locked {
-  transform: scale(0.7);
+  transform: scale(0.7) translate(0, -7px);;
   box-sizing: border-box;
   position: relative;
   display: block;
