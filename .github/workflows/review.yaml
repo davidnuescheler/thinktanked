@@ -1,0 +1,16 @@
+# change this to the event type you want to get the data for
+on:
+  repository_dispatch:
+    # these are *all* the review events
+    types: [ review-approved, review-updated, review-rejected]
+
+jobs:
+  printJob:    
+    name: Print event
+    runs-on: ubuntu-latest
+    steps:
+    - name: Dump GitHub context
+      env:
+        GITHUB_CONTEXT: ${{ toJson(github) }}
+      run: |
+        echo "$GITHUB_CONTEXT"
