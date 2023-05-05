@@ -2,7 +2,7 @@
 on:
   repository_dispatch:
     # these are *all* the review events
-    types: [ review-approved, review-updated, review-rejected]
+    types: [ review-submitted, review-approved, review-updated, review-rejected]
 
 jobs:
   printJob:    
