@@ -1,7 +1,8 @@
 # change this to the event type you want to get the data for
 on:
   repository_dispatch:
-    # types: [opened, closed, reopened]
+    # these are *all* the review events
+    types: [ review-approved, review-updated, review-rejected]
 
 jobs:
   printJob:    
