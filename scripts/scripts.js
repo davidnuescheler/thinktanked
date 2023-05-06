@@ -110,12 +110,11 @@ async function loadLazy(doc) {
   sampleRUM.observe(main.querySelectorAll('div[data-block-name]'));
   sampleRUM.observe(main.querySelectorAll('picture > img'));
 
-    // Load jobs-switcher preview overlay
-    if (window.location.hostname === 'localhost' || window.location.hostname.endsWith('.hlx.page')  || window.location.hostname.endsWith('.hlx.reviews')) {
-      const review = await import(`${window.hlx.codeBasePath}/tools/sidekick/review.js`);
-      await review.default();
-    }
-  
+  // Load jobs-switcher preview overlay
+  if (window.location.hostname === 'localhost' || window.location.hostname.endsWith('.hlx.page') || window.location.hostname.endsWith('.hlx.reviews')) {
+    const review = await import(`${window.hlx.codeBasePath}/tools/sidekick/review.js`);
+    await review.default();
+  }
 }
 
 /**

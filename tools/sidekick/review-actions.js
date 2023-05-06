@@ -1,13 +1,15 @@
 export function getReviewEnv() {
-  let hostname = window.location.hostname;
+  let { hostname } = window.location;
   if (hostname === 'localhost') hostname = 'default--main--thinktanked--davidnuescheler.hlx.reviews';
 
   const [env, , state] = hostname.split('.');
   const splits = env.split('--');
-  let review, ref, repo, owner;
+  let review;
   if (splits.length === 4) review = splits.shift();
-  [ref, repo, owner] = splits;
-  return { review, ref, repo, owner, state };
+  const [ref, repo, owner] = splits;
+  return {
+    review, ref, repo, owner, state,
+  };
 }
 
 function getEndpoint(reviewId, verb) {
@@ -35,7 +37,7 @@ export async function addPageToReview(pathname, reviewId) {
   console.log(env);
   const endpoint = getEndpoint(reviewId, 'add-page');
   const resp = await fetch(`${endpoint}?page=${window.location.pathname}`, {
-    method: `POST`,
+    method: 'POST',
   });
   const text = await resp.text();
   console.log(text);
@@ -47,7 +49,7 @@ export async function removePageFromReview(pathname, reviewId) {
   console.log(env);
   const endpoint = getEndpoint(reviewId, 'remove-page');
   const resp = await fetch(`${endpoint}?page=${window.location.pathname}`, {
-    method: `POST`,
+    method: 'POST',
   });
   const text = await resp.text();
   console.log(text);
@@ -60,7 +62,7 @@ export async function updateReview(pathnames, reviewId) {
   console.log(env);
   const endpoint = getEndpoint(reviewId, '');
   const resp = await fetch(`${endpoint}?pages=${pathnames.join()}`, {
-    method: `POST`,
+    method: 'POST',
   });
   const text = await resp.text();
   console.log(text);
@@ -72,7 +74,7 @@ export async function submitForReview(reviewId) {
   console.log(env);
   const endpoint = getEndpoint(reviewId, 'submit');
   const resp = await fetch(endpoint, {
-    method: `POST`,
+    method: 'POST',
   });
   const text = await resp.text();
   console.log(text);
@@ -81,10 +83,10 @@ export async function submitForReview(reviewId) {
 export async function openReview(reviewId, description) {
   const env = getReviewEnv();
   console.log(`Open Review ${reviewId}, ${description}`);
-  console.log(env)
+  console.log(env);
   const endpoint = getEndpoint(reviewId, '');
   const resp = await fetch(`${endpoint}?description=${description}`, {
-    method: `POST`,
+    method: 'POST',
   });
   const text = await resp.text();
   console.log(text);
@@ -96,7 +98,7 @@ export async function rejectReview(reviewId) {
   console.log(env);
   const endpoint = getEndpoint(reviewId, 'reject');
   const resp = await fetch(endpoint, {
-    method: `POST`,
+    method: 'POST',
   });
   const text = await resp.text();
   console.log(text);
@@ -108,7 +110,7 @@ export async function approveReview(reviewId) {
   console.log(env);
   const endpoint = getEndpoint(reviewId, 'approve');
   const resp = await fetch(endpoint, {
-    method: `POST`,
+    method: 'POST',
   });
   const text = await resp.text();
   console.log(text);

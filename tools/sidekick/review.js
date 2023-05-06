@@ -1,17 +1,18 @@
-import { 
-  addPageToReview, 
-  getReviewEnv, 
-  getReviews, 
-  approveReview, 
-  rejectReview, 
+import {
+  addPageToReview,
+  getReviewEnv,
+  getReviews,
+  approveReview,
+  rejectReview,
   submitForReview,
-  removePageFromReview, 
+  removePageFromReview,
+  updateReview,
 } from './review-actions.js';
 
 async function getReviewStatus() {
   const reviews = await getReviews();
   if (reviews.length === 1 && reviews[0].reviewId === 'default') return reviews[0].status;
-  else return ('open');
+  return ('open');
 }
 
 async function getPageStatus() {
@@ -33,44 +34,43 @@ async function getOpenReviews() {
 }
 
 async function previewMode(plugins) {
+  const div = document.createElement('div');
+  div.className = 'review plugin';
+  div.innerHTML = `
+    <label class="switch"><input type="checkbox"><span class="slider round"></span></label>
+    <span class="review-status">Not In Review</span><span></span>`;
+
+  const checkbox = div.querySelector('input');
+  const label = div.querySelector('.review-status');
+  const switcher = div.querySelector('.switch');
+
   const setReviewStatus = (pageStatus, reviewStatus) => {
     const env = getReviewEnv();
     checkbox.checked = !!pageStatus;
     checkbox.disabled = (reviewStatus === 'submitted');
     let statusText;
     if (pageStatus === 'open') {
-      statusText = `Ready for Review`;
+      statusText = 'Ready for Review';
       switcher.className = 'switch open';
     }
     if (pageStatus === 'submitted') {
-      statusText = `Submitted for Review`;
-      switcher.className = 'switch submitted'
+      statusText = 'Submitted for Review';
+      switcher.className = 'switch submitted';
     }
     if (pageStatus === '') {
-      statusText = `Not in Review`;
-      switcher.className = 'switch'
+      statusText = 'Not in Review';
+      switcher.className = 'switch';
     }
 
     label.innerHTML = `<a target="_blank" href="https://default--${env.ref}--${env.repo}--${env.owner}.hlx.reviews${window.location.pathname}">${statusText}</a>`;
-
-  }
+  };
 
   let pageStatus = await getPageStatus();
-  let reviewStatus = await getReviewStatus();
-
-  const div = document.createElement('div');
-  div.className = 'review plugin';
-  div.innerHTML = `
-    <label class="switch"><input type="checkbox"><span class="slider round"></span></label>
-    <span class="review-status">Not In Review</span><span></span>`;
-  
-  const checkbox = div.querySelector('input');
-  const label = div.querySelector('.review-status');
-  const switcher = div.querySelector('.switch');
+  const reviewStatus = await getReviewStatus();
 
   setReviewStatus(pageStatus, reviewStatus);
 
-  checkbox.addEventListener('change',  async () => {
+  checkbox.addEventListener('change', async () => {
     console.log(checkbox.checked);
     if (checkbox.checked) {
       const openReviews = await getOpenReviews();
@@ -84,23 +84,23 @@ async function previewMode(plugins) {
     }
     pageStatus = checkbox.checked ? 'open' : '';
     setReviewStatus(pageStatus, reviewStatus);
-  })
+  });
 
   plugins.append(div);
 }
 
 async function openManifest(sk) {
-  const env = getReviewEnv()
+  const env = getReviewEnv();
   const reviews = await getReviews();
   console.log(reviews);
   console.log(env);
   const review = reviews.find((r) => r.reviewId === env.review);
 
-  const dialog = document.createElement('dialog'); 
+  const dialog = document.createElement('dialog');
   dialog.className = 'hlx-dialog';
   const edit = review.status === 'open' ? `<textarea rows="10">${review.pages.map((path) => `https://${env.ref}--${env.repo}--${env.owner}.hlx.page${path}`).join('\n')}</textarea><button id="hlx-update-manifest">Update Manifest</button>` : '';
-  const buttons = review.status === 'open' ? `<button id="hlx-submit">Submit For Review</button>` : `<button id="hlx-approve">Approve Review</button> <button id="hlx-reject">Reject Review</button>`;
-  const pages = review.pages.map((path) => `<p class="hlx-row"><a href="${path}">https://${env.review}--${env.ref}--${env.repo}--${env.owner}.hlx.reviews${path}</a></p>`)
+  const buttons = review.status === 'open' ? '<button id="hlx-submit">Submit For Review</button>' : '<button id="hlx-approve">Approve Review</button> <button id="hlx-reject">Reject Review</button>';
+  const pages = review.pages.map((path) => `<p class="hlx-row"><a href="${path}">https://${env.review}--${env.ref}--${env.repo}--${env.owner}.hlx.reviews${path}</a></p>`);
   dialog.innerHTML = `
     <form method="dialog">
       <button class="hlx-close-button">X</button>
@@ -116,31 +116,31 @@ async function openManifest(sk) {
   if (update) {
     update.addEventListener('click', () => {
       const ta = dialog.querySelector('textarea');
-      const pages = ta.value.split('\n').map((url) => new URL(url, window.location.href).pathname);
-      updateReview(pages, review.reviewId, env);
+      const taPages = ta.value.split('\n').map((url) => new URL(url, window.location.href).pathname);
+      updateReview(taPages, review.reviewId, env);
     });
   }
 
-  const verbs = [{id: 'reject', f: rejectReview}, {id: 'approve', f: approveReview}, {id: 'submit', f: submitForReview}]
-    
+  const verbs = [{ id: 'reject', f: rejectReview }, { id: 'approve', f: approveReview }, { id: 'submit', f: submitForReview }];
+
   verbs.forEach((verb) => {
-    const env = getReviewEnv();
     const button = dialog.querySelector(`#hlx-${verb.id}`);
-    if (button) button.addEventListener('click', async () => {
-      await verb.f(review.reviewId);
-      dialog.close();
-      if (verb.id === 'approve') {
-        window.location.href=`https://${env.ref}--${env.repo}--${env.owner}.hlx.live${window.location.pathname}`;
-      } else {
-        window.location.reload();
-      }
-    });  
+    if (button) {
+      button.addEventListener('click', async () => {
+        await verb.f(review.reviewId);
+        dialog.close();
+        if (verb.id === 'approve') {
+          window.location.href = `https://${env.ref}--${env.repo}--${env.owner}.hlx.live${window.location.pathname}`;
+        } else {
+          window.location.reload();
+        }
+      });
+    }
   });
 
   sk.shadowRoot.append(dialog);
   dialog.showModal();
 }
-
 
 async function reviewMode(plugins, sk) {
   const reviewStatus = await getReviewStatus();
@@ -152,13 +152,13 @@ async function reviewMode(plugins, sk) {
   }
   if (reviewStatus === 'submitted') {
     div.className = 'review-status-badge submitted';
-    div.innerHTML = '<span class="badge-locked"></span><span>Review Submitted</span>'
+    div.innerHTML = '<span class="badge-locked"></span><span>Review Submitted</span>';
   }
   div.classList.add('plugin');
   plugins.append(div);
   div.addEventListener('click', () => {
     openManifest(sk);
-  })
+  });
 }
 
 async function decorateSidekick(sk) {
@@ -179,11 +179,7 @@ export default async function init() {
   const catchSk = () => {
     const sk = document.querySelector('helix-sidekick');
     if (sk) decorateSidekick(sk);
-    else setTimeout(catchSk, 1000); 
-  }
-  setTimeout(catchSk, 1000);     
+    else setTimeout(catchSk, 1000);
+  };
+  setTimeout(catchSk, 1000);
 }
-
-
-
-
