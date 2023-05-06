@@ -113,7 +113,7 @@ export async function approveReview(reviewId) {
     method: 'POST',
   });
   const text = await resp.text();
-  if (resp.ok()) {
+  if (resp.ok) {
     // TODO: @rofe publish all pages that are in the review
   }
   console.log(text);
