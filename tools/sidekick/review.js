@@ -76,7 +76,7 @@ async function addReviewToEnvSelector(shadowRoot) {
     envSwitcher.classList.remove('hlx-sk-hidden');
     const toggle = fc.querySelector('.env .dropdown-toggle');
     toggle.textContent = 'Review';
-    const states = ['Preview', 'Live', 'Production'];
+    const states = ['Preview', 'Review', 'Live', 'Production'];
     dc.textContent = '';
     states.forEach((state) => {
       if (env.state === 'page' && state.toLowerCase() === 'preview') {
@@ -91,11 +91,6 @@ async function addReviewToEnvSelector(shadowRoot) {
       dc.append(pluginDiv);
     });
   }
-  const live = dc.querySelector('.live');
-  const div = document.createElement('div');
-  div.className = 'review plugin';
-  div.append(createButton('Review'));
-  live.before(div);
 }
 
 async function previewMode(plugins, sk) {
