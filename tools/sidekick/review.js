@@ -193,6 +193,10 @@ async function openManifest(sk) {
 }
 
 async function reviewMode(plugins, sk) {
+  const reviewPlugin = sk.shadowRoot.querySelector('.plugin.move-to-review');
+  if (reviewPlugin) {
+    reviewPlugin.remove();
+  }
   const reviewStatus = await getReviewStatus();
   console.log(reviewStatus);
   const div = document.createElement('div');
@@ -224,7 +228,6 @@ async function decorateSidekick(sk) {
 
   if (state === 'page') previewMode(plugins, sk);
   if (state === 'reviews') reviewMode(plugins, sk);
-
   addReviewToEnvSelector(sk.shadowRoot);
 }
 
@@ -233,7 +236,7 @@ function waitForSidekickPlugins(sk) {
   if (sk && sk.shadowRoot && sk.shadowRoot.querySelector('.plugin-container')) {
     decorateSidekick(sk);
   } else {
-    setTimeout(() => waitForSidekickPlugins(sk), 1000);
+    setTimeout(() => waitForSidekickPlugins(sk), 100);
   }
 }
 
@@ -244,7 +247,7 @@ function waitForSidekickPlugins(sk) {
   } else {
     // wait for sidekick to be loaded
     document.addEventListener('helix-sidekick-ready', () => {
-      waitForSidekickPlugins(sk);
+      waitForSidekickPlugins(document.querySelector('helix-sidekick'));
     }, { once: true });
   }
 })();
