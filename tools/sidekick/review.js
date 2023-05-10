@@ -91,11 +91,8 @@ async function addReviewToEnvSelector(shadowRoot) {
   live.before(div);
 }
 
-async function previewMode(plugins) {
-  const div = document.createElement('div');
-  div.className = 'review plugin';
-  div.innerHTML = '<button title="Review" tabindex="0"></button>';
-
+async function previewMode(plugins, sk) {
+  const div = plugins.querySelector('plugin.move-to-review');
   const button = div.querySelector('button');
 
   const env = getReviewEnv();
@@ -122,7 +119,7 @@ async function previewMode(plugins) {
 
   setReviewStatus(pageStatus, reviewStatus);
 
-  button.addEventListener('click', async () => {
+  sk.addEventListener('custom:move-to-review', async () => {
     const openReviews = await getOpenReviews();
     if (openReviews.length === 1) {
       const search = getPageParams();
@@ -130,7 +127,6 @@ async function previewMode(plugins) {
     }
     window.location.href = `https://default--${env.ref}--${env.repo}--${env.owner}.hlx.reviews${window.location.pathname}`;
   });
-  plugins.append(div);
 }
 
 async function openManifest(sk) {
@@ -226,17 +222,29 @@ async function decorateSidekick(sk) {
 
   sk.shadowRoot.append(link);
 
-  if (state === 'page') previewMode(plugins);
+  if (state === 'page') previewMode(plugins, sk);
   if (state === 'reviews') reviewMode(plugins, sk);
 
   addReviewToEnvSelector(sk.shadowRoot);
 }
 
-export default async function init() {
-  const catchSk = () => {
-    const sk = document.querySelector('helix-sidekick');
-    if (sk) decorateSidekick(sk);
-    else setTimeout(catchSk, 1000);
-  };
-  setTimeout(catchSk, 1000);
+function waitForSidekickPlugins(sk) {
+  // workaround for missing customization event
+  if (sk && sk.shadowRoot && sk.shadowRoot.querySelector('.plugin-container')) {
+    decorateSidekick(sk);
+  } else {
+    setTimeout(() => waitForSidekickPlugins(sk), 1000);
+  }
 }
+
+(() => {
+  const sk = document.querySelector('helix-sidekick');
+  if (sk) {
+    waitForSidekickPlugins(sk);
+  } else {
+    // wait for sidekick to be loaded
+    document.addEventListener('helix-sidekick-ready', () => {
+      waitForSidekickPlugins(sk);
+    }, { once: true });
+  }
+})();
