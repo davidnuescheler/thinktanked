@@ -89,21 +89,17 @@ async function addReviewToEnvSelector(shadowRoot) {
     states.forEach((state) => {
       let advancedOnly = false;
       let disabled = false;
-      if (env.state === 'page' && state.toLowerCase() === 'preview') {
+      // special handling for reviews state
+      if (state.toLowerCase() === 'review') {
+        // disable review button
         disabled = true;
       }
-      if (env.state === 'reviews') {
-        // special handling for reviews state
-        if (state.toLowerCase() === 'review') {
-          disabled = true;
-        }
-        if (state.toLowerCase() === 'live') {
-          // todo: check if sidekick config contains host
-          advancedOnly = true;
-        }
-        if (state.toLowerCase() === 'production') {
-          // todo: check if sidekick config contains host
-        }
+      if (state.toLowerCase() === 'live' || state.toLowerCase() === 'development') {
+        // todo for live: check if sidekick config contains host
+        advancedOnly = true;
+      }
+      if (state.toLowerCase() === 'production') {
+        // todo: check if sidekick config contains host
       }
       const pluginDiv = document.createElement('div');
       pluginDiv.className = `plugin ${state.toLowerCase()}`;
