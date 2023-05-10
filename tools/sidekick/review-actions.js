@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import { getMetadata } from '../../scripts/lib-franklin.js';
 
 export function getReviewEnv() {
@@ -77,49 +78,116 @@ export async function updateReview(pathnames, reviewId) {
 }
 
 export async function submitForReview(reviewId) {
-  const env = getReviewEnv();
-  console.log(`Submit Review ${reviewId}`);
-  console.log(env);
-  const endpoint = getEndpoint(reviewId, 'submit');
-  const resp = await fetch(endpoint, {
-    method: 'POST',
-  });
-  const text = await resp.text();
-  console.log(text);
+  try {
+    const env = getReviewEnv();
+    console.log(`Submit Review ${reviewId}`);
+    console.log(env);
+    const endpoint = getEndpoint(reviewId, 'submit');
+    const resp = await fetch(endpoint, {
+      method: 'POST',
+    });
+    const text = await resp.text();
+    console.log(text);
+    return true;
+  } catch (e) {
+    // ignore
+  }
+  return false;
 }
 
 export async function openReview(reviewId, description) {
-  const env = getReviewEnv();
-  console.log(`Open Review ${reviewId}, ${description}`);
-  console.log(env);
-  const endpoint = getEndpoint(reviewId, '');
-  const resp = await fetch(`${endpoint}?description=${description}`, {
-    method: 'POST',
-  });
-  const text = await resp.text();
-  console.log(text);
+  try {
+    const env = getReviewEnv();
+    console.log(`Open Review ${reviewId}, ${description}`);
+    console.log(env);
+    const endpoint = getEndpoint(reviewId, '');
+    const resp = await fetch(`${endpoint}?description=${description}`, {
+      method: 'POST',
+    });
+    const text = await resp.text();
+    console.log(text);
+    return true;
+  } catch (e) {
+    // ignore
+  }
+  return false;
 }
 
 export async function rejectReview(reviewId) {
-  const env = getReviewEnv();
-  console.log(`Reject Review ${reviewId}`);
-  console.log(env);
-  const endpoint = getEndpoint(reviewId, 'reject');
-  const resp = await fetch(endpoint, {
-    method: 'POST',
-  });
-  const text = await resp.text();
-  console.log(text);
+  try {
+    const env = getReviewEnv();
+    console.log(`Reject Review ${reviewId}`);
+    console.log(env);
+    const endpoint = getEndpoint(reviewId, 'reject');
+    const resp = await fetch(endpoint, {
+      method: 'POST',
+    });
+    const text = await resp.text();
+    console.log(text);
+    return true;
+  } catch (e) {
+    // ignore
+  }
+  return false;
+}
+
+async function publish(path, env) {
+  const { owner, repo, ref } = env;
+  const publishPath = new URL(path, window.location.href).pathname;
+  console.log(`publishing ${publishPath}`);
+  let resp = {
+    ok: false,
+  };
+  try {
+    resp = await fetch(
+      `https://admin.hlx.page/live/${owner}/${repo}/${ref}${publishPath}`,
+      {
+        method: 'POST',
+        cache: 'no-store',
+        credentials: 'include',
+      },
+    );
+  } catch (e) {
+    console.error('failed to publish', publishPath, e);
+  }
+  resp.path = publishPath;
+  resp.error = (resp.headers && resp.headers.get('x-error')) || '';
+  return resp;
 }
 
 export async function approveReview(reviewId) {
   const env = getReviewEnv();
   console.log(`Approve Review ${reviewId}`);
   console.log(env);
-  const endpoint = getEndpoint(reviewId, 'approve');
-  const resp = await fetch(endpoint, {
-    method: 'POST',
-  });
-  const text = await resp.text();
-  console.log(text);
+  const review = (await getReviews()).find((r) => r.reviewId === reviewId);
+  if (review) {
+    // publish all pages in review
+    const { pages } = review;
+    const { processQueue } = await import('./process-queue.js');
+    const results = [];
+    await processQueue(pages, async (path) => {
+      results.push(await publish(path, env));
+    }, 40);
+    console.log(results);
+
+    const errors = results.filter((res) => !res.ok);
+    if (errors.length > 0) {
+      const errPaths = errors.map((e) => e.path);
+      const msg = `The following pages could not be published:\n\n${errPaths.join('\n')}`;
+      // eslint-disable-next-line no-alert
+      window.alert(msg);
+      return false;
+    }
+
+    // set review to approved
+    // const endpoint = getEndpoint(reviewId, 'approve');
+    // const resp = await fetch(endpoint, {
+    //   method: 'POST',
+    // });
+    // const text = await resp.text();
+    // console.log(text);
+    return true;
+  }
+  console.error(`Review with ID "${reviewId}" not found`);
+  return false;
 }
