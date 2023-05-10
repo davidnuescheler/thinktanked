@@ -75,7 +75,9 @@ async function addReviewToEnvSelector(shadowRoot) {
   if (fc.querySelector('.env.hlx-sk-hidden')) {
     envSwitcher.classList.remove('hlx-sk-hidden');
     const toggle = fc.querySelector('.env .dropdown-toggle');
-    toggle.textContent = 'Review';
+    if (env.state === 'reviews') {
+      toggle.textContent = 'Review';
+    }
     const states = ['Preview', 'Review', 'Live', 'Production'];
     dc.textContent = '';
     states.forEach((state) => {
