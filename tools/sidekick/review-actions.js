@@ -1,6 +1,6 @@
 export function getReviewEnv() {
   let { hostname } = window.location;
-  if (hostname === 'localhost') hostname = 'default--main--thinktanked--davidnuescheler.hlx.reviews';
+  if (hostname === 'localhost') hostname = 'default--reviews--aempenbrayacomingsooncom--pfizer.hlx.reviews';
 
   const [env, , state] = hostname.split('.');
   const splits = env.split('--');
@@ -36,7 +36,7 @@ export async function addPageToReview(pathname, reviewId) {
   console.log(`Add ${pathname} to ${reviewId}`);
   console.log(env);
   const endpoint = getEndpoint(reviewId, 'add-page');
-  const resp = await fetch(`${endpoint}?page=${window.location.pathname}`, {
+  const resp = await fetch(`${endpoint}?page=${encodeURIComponent(pathname)}`, {
     method: 'POST',
   });
   const text = await resp.text();
@@ -48,7 +48,7 @@ export async function removePageFromReview(pathname, reviewId) {
   console.log(`Remove ${pathname} from ${reviewId}`);
   console.log(env);
   const endpoint = getEndpoint(reviewId, 'remove-page');
-  const resp = await fetch(`${endpoint}?page=${window.location.pathname}`, {
+  const resp = await fetch(`${endpoint}?page=${encodeURIComponent(pathname)}`, {
     method: 'POST',
   });
   const text = await resp.text();
@@ -113,8 +113,5 @@ export async function approveReview(reviewId) {
     method: 'POST',
   });
   const text = await resp.text();
-  if (resp.ok) {
-    // TODO: @rofe publish all pages that are in the review
-  }
   console.log(text);
 }

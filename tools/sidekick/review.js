@@ -5,7 +5,6 @@ import {
   approveReview,
   rejectReview,
   submitForReview,
-  removePageFromReview,
   updateReview,
 } from './review-actions.js';
 
@@ -15,17 +14,17 @@ async function getReviewStatus() {
   return ('open');
 }
 
-async function getPageStatus() {
-  const reviews = await getReviews();
-  const review = reviews.find((r) => r.pages.includes(window.location.pathname));
-  if (review) return review.status;
-  return '';
-}
-
 async function getPageReview() {
   const reviews = await getReviews();
-  const review = reviews.find((r) => r.pages.includes(window.location.pathname));
+  console.log(reviews);
+  const review = reviews.find((r) => r.pages.find((p) => p.split('?')[0] === window.location.pathname));
   return review;
+}
+
+async function getPageStatus() {
+  const review = await getPageReview();
+  if (review) return review.status;
+  return '';
 }
 
 async function getOpenReviews() {
@@ -33,59 +32,104 @@ async function getOpenReviews() {
   return reviews.filter((r) => r.status === 'open');
 }
 
+function getPageParams() {
+  const params = new URLSearchParams();
+  document.querySelectorAll('form[data-config-token]').forEach((e) => {
+    params.append('form', e.dataset.configToken);
+  });
+  const search = params.toString();
+  if (search) return (`?${search}`);
+  return '';
+}
+
+async function addReviewToEnvSelector(shadowRoot) {
+  const env = getReviewEnv();
+  const reviews = await getReviews();
+  const fc = shadowRoot.querySelector('.feature-container');
+  const envSwitcher = fc.querySelector('.env');
+  const dc = fc.querySelector('.env .dropdown-container');
+
+  const createButton = (text) => {
+    const button = document.createElement('button');
+    button.title = text;
+    button.tabindex = '0';
+    button.textContent = text;
+    button.addEventListener('click', () => {
+      if (text === 'Preview') {
+        window.location.href = `https://${env.ref}--${env.repo}--${env.owner}.hlx.page${window.location.pathname}`;
+      }
+      if (text === 'Review') {
+        window.location.href = `https://${reviews[0].reviewId}--${env.ref}--${env.repo}--${env.owner}.hlx.reviews${window.location.pathname}`;
+      }
+      if (text === 'Live') {
+        window.location.href = `https://${env.ref}--${env.repo}--${env.owner}.hlx.live${window.location.pathname}`;
+      }
+      if (text === 'Production') {
+        window.location.href = `https://www.penbrayacomingsoon.com${window.location.pathname}`;
+      }
+    });
+    return (button);
+  };
+
+  if (fc.querySelector('.env.hlx-sk-hidden')) {
+    envSwitcher.classList.remove('hlx-sk-hidden');
+    const toggle = fc.querySelector('.env .dropdown-toggle');
+    toggle.textContent = 'Review';
+    const states = ['Preview', 'Live', 'Production'];
+    dc.textContent = '';
+    states.forEach((state) => {
+      const pluginDiv = document.createElement('div');
+      pluginDiv.className = `plugin ${state.toLowerCase()}`;
+      pluginDiv.append(createButton(state));
+      dc.append(pluginDiv);
+    });
+  }
+  const live = dc.querySelector('.live');
+  const div = document.createElement('div');
+  div.className = 'review plugin';
+  div.append(createButton('Review'));
+  live.before(div);
+}
+
 async function previewMode(plugins) {
   const div = document.createElement('div');
   div.className = 'review plugin';
-  div.innerHTML = `
-    <label class="switch"><input type="checkbox"><span class="slider round"></span></label>
-    <span class="review-status">Not In Review</span><span></span>`;
+  div.innerHTML = '<button title="Review" tabindex="0"></button>';
 
-  const checkbox = div.querySelector('input');
-  const label = div.querySelector('.review-status');
-  const switcher = div.querySelector('.switch');
+  const button = div.querySelector('button');
+
+  const env = getReviewEnv();
 
   const setReviewStatus = (pageStatus, reviewStatus) => {
-    const env = getReviewEnv();
-    checkbox.checked = !!pageStatus;
-    checkbox.disabled = (reviewStatus === 'submitted');
     let statusText;
     if (pageStatus === 'open') {
       statusText = 'Ready for Review';
-      switcher.className = 'switch open';
+      button.classList.add('ready');
     }
     if (pageStatus === 'submitted') {
       statusText = 'Submitted for Review';
-      switcher.className = 'switch submitted';
+      button.classList.add('submitted');
     }
     if (pageStatus === '') {
-      statusText = 'Not in Review';
-      switcher.className = 'switch';
+      statusText = 'Move to Review';
     }
-
-    label.innerHTML = `<a target="_blank" href="https://default--${env.ref}--${env.repo}--${env.owner}.hlx.reviews${window.location.pathname}">${statusText}</a>`;
+    if (reviewStatus === 'submitted') button.setAttribute('disabled', '');
+    button.innerHTML = `${statusText}`;
   };
 
-  let pageStatus = await getPageStatus();
+  const pageStatus = await getPageStatus();
   const reviewStatus = await getReviewStatus();
 
   setReviewStatus(pageStatus, reviewStatus);
 
-  checkbox.addEventListener('change', async () => {
-    console.log(checkbox.checked);
-    if (checkbox.checked) {
-      const openReviews = await getOpenReviews();
-      console.log(openReviews);
-      if (openReviews.length === 1) {
-        await addPageToReview(window.location.pathname, openReviews[0].reviewId);
-      }
-    } else {
-      const review = await getPageReview();
-      await removePageFromReview(window.location.pathname, review.reviewId);
+  button.addEventListener('click', async () => {
+    const openReviews = await getOpenReviews();
+    if (openReviews.length === 1) {
+      const search = getPageParams();
+      await addPageToReview(window.location.pathname + search, openReviews[0].reviewId);
     }
-    pageStatus = checkbox.checked ? 'open' : '';
-    setReviewStatus(pageStatus, reviewStatus);
+    window.location.href = `https://default--${env.ref}--${env.repo}--${env.owner}.hlx.reviews${window.location.pathname}`;
   });
-
   plugins.append(div);
 }
 
@@ -98,26 +142,36 @@ async function openManifest(sk) {
 
   const dialog = document.createElement('dialog');
   dialog.className = 'hlx-dialog';
-  const edit = review.status === 'open' ? `<textarea rows="10">${review.pages.map((path) => `https://${env.ref}--${env.repo}--${env.owner}.hlx.page${path}`).join('\n')}</textarea><button id="hlx-update-manifest">Update Manifest</button>` : '';
-  const buttons = review.status === 'open' ? '<button id="hlx-submit">Submit For Review</button>' : '<button id="hlx-approve">Approve Review</button> <button id="hlx-reject">Reject Review</button>';
+  const edit = review.status === 'open' ? `<div class="hlx-edit-manifest hlx-edit-hide"><button id="hlx-edit-manifest">Edit Pages in Change Log</button><textarea wrap="off" rows="10">${review.pages.map((path) => `https://${env.ref}--${env.repo}--${env.owner}.hlx.page${path}`).join('\n')}</textarea><button id="hlx-update-manifest">Update Change Log</button></div>` : '';
+  const buttons = review.status === 'open' ? '<button id="hlx-submit">Submit for Review</button>' : '<button id="hlx-approve">Approve and Publish</button> <button id="hlx-reject">Reject Review</button>';
   const pages = review.pages.map((path) => `<p class="hlx-row"><a href="${path}">https://${env.review}--${env.ref}--${env.repo}--${env.owner}.hlx.reviews${path}</a></p>`);
   dialog.innerHTML = `
     <form method="dialog">
       <button class="hlx-close-button">X</button>
     </form>
-    <h3>Manifest for ${review.reviewId} (${review.status})</h3>
-    <p>${review.description}</p>
+    <h3>Change Log for ${review.reviewId} Review (${review.status === 'open' ? 'Preparing For Review' : 'Submitted For Review'})</h3>
     <p>${buttons}</p>
     ${pages.join('')}
-    <hr>
     ${edit}
   `;
+  const editManifest = dialog.querySelector('#hlx-edit-manifest');
+  if (editManifest) {
+    editManifest.addEventListener('click', () => {
+      editManifest.parentElement.classList.remove('hlx-edit-hide');
+      editManifest.parentElement.classList.add('hlx-edit-show');
+    });
+  }
   const update = dialog.querySelector('#hlx-update-manifest');
   if (update) {
     update.addEventListener('click', () => {
       const ta = dialog.querySelector('textarea');
-      const taPages = ta.value.split('\n').map((url) => new URL(url, window.location.href).pathname);
+      const taPages = ta.value.split('\n').filter((line) => !!line).map((line) => {
+        console.log(`line:${line}`);
+        const url = new URL(line, window.location.href);
+        return (url.pathname + url.search);
+      });
       updateReview(taPages, review.reviewId, env);
+      dialog.close();
     });
   }
 
@@ -162,7 +216,8 @@ async function reviewMode(plugins, sk) {
 }
 
 async function decorateSidekick(sk) {
-  const { state } = getReviewEnv();
+  const env = getReviewEnv();
+  const { state } = env;
   const plugins = sk.shadowRoot.querySelector('.plugin-container');
 
   const link = document.createElement('link');
@@ -173,6 +228,8 @@ async function decorateSidekick(sk) {
 
   if (state === 'page') previewMode(plugins);
   if (state === 'reviews') reviewMode(plugins, sk);
+
+  addReviewToEnvSelector(sk.shadowRoot);
 }
 
 export default async function init() {
