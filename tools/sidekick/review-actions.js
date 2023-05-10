@@ -79,7 +79,7 @@ export async function addPageToReview(page, reviewId) {
   if (isReviewOpen(reviewId)) {
     console.log('Adding to snapshot');
     const [pathname] = page.split('?');
-    addPageToReview(pathname, reviewId, env);
+    addPageToSnapshot(pathname, reviewId, env);
     const endpoint = getEndpoint(reviewId, 'add-page');
     const resp = await fetch(`${endpoint}?page=${encodeURIComponent(page)}`, {
       method: 'POST',
