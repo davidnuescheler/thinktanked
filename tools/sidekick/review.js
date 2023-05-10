@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import {
   addPageToReview,
   getReviewEnv,
@@ -92,7 +93,7 @@ async function addReviewToEnvSelector(shadowRoot) {
 }
 
 async function previewMode(plugins, sk) {
-  const div = plugins.querySelector('plugin.move-to-review');
+  const div = plugins.querySelector('.plugin.move-to-review');
   const button = div.querySelector('button');
 
   const env = getReviewEnv();
