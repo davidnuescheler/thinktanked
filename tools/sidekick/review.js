@@ -150,7 +150,7 @@ async function previewMode(plugins, sk) {
 
   sk.addEventListener('custom:move-to-review', async () => {
     const openReviews = await getOpenReviews();
-    if (openReviews.length === 1) {
+    if (openReviews.length === 1 && pageStatus === '') {
       const search = getPageParams();
       await addPageToReview(window.location.pathname + search, openReviews[0].reviewId);
     }

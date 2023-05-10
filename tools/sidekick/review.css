@@ -5,13 +5,13 @@
   --review-submitted-color: white;
 }
 
-.review button.submitted {
+.move-to-review button.submitted {
   background-color: var(--review-submitted-background-color);
   color: var(--review-submitted-color);
   border-color: var(--review-submitted-background-color);
 }
 
-.review button.ready {
+.move-to-review button.ready {
   background-color: var(--review-open-background-color); 
   color: var(--review-open-color);
   border-color: var(--review-open-background-color);
