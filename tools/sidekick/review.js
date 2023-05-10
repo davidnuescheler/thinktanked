@@ -122,40 +122,42 @@ async function addReviewToEnvSelector(shadowRoot) {
 
 async function previewMode(plugins, sk) {
   const div = plugins.querySelector('.plugin.move-to-review');
-  const button = div.querySelector('button');
+  if (div) {
+    const button = div.querySelector('button');
 
-  const env = getReviewEnv();
+    const env = getReviewEnv();
 
-  const setReviewStatus = (pageStatus, reviewStatus) => {
-    let statusText;
-    if (pageStatus === 'open') {
-      statusText = 'Ready for Review';
-      button.classList.add('ready');
-    }
-    if (pageStatus === 'submitted') {
-      statusText = 'Submitted for Review';
-      button.classList.add('submitted');
-    }
-    if (pageStatus === '') {
-      statusText = 'Move to Review';
-    }
-    if (reviewStatus === 'submitted') button.setAttribute('disabled', '');
-    button.innerHTML = `${statusText}`;
-  };
+    const setReviewStatus = (pageStatus, reviewStatus) => {
+      let statusText;
+      if (pageStatus === 'open') {
+        statusText = 'Ready for Review';
+        button.classList.add('ready');
+      }
+      if (pageStatus === 'submitted') {
+        statusText = 'Submitted for Review';
+        button.classList.add('submitted');
+      }
+      if (pageStatus === '') {
+        statusText = 'Move to Review';
+      }
+      if (reviewStatus === 'submitted') button.setAttribute('disabled', '');
+      button.innerHTML = `${statusText}`;
+    };
 
-  const pageStatus = await getPageStatus();
-  const reviewStatus = await getReviewStatus();
+    const pageStatus = await getPageStatus();
+    const reviewStatus = await getReviewStatus();
 
-  setReviewStatus(pageStatus, reviewStatus);
+    setReviewStatus(pageStatus, reviewStatus);
 
-  sk.addEventListener('custom:move-to-review', async () => {
-    const openReviews = await getOpenReviews();
-    if (openReviews.length === 1) {
-      const search = getPageParams();
-      await addPageToReview(window.location.pathname + search, openReviews[0].reviewId);
-    }
-    window.location.href = `https://default--${env.ref}--${env.repo}--${env.owner}.hlx.reviews${window.location.pathname}`;
-  });
+    sk.addEventListener('custom:move-to-review', async () => {
+      const openReviews = await getOpenReviews();
+      if (openReviews.length === 1) {
+        const search = getPageParams();
+        await addPageToReview(window.location.pathname + search, openReviews[0].reviewId);
+      }
+      window.location.href = `https://default--${env.ref}--${env.repo}--${env.owner}.hlx.reviews${window.location.pathname}`;
+    });
+  }
 }
 
 async function openManifest(sk) {
@@ -206,9 +208,9 @@ async function openManifest(sk) {
     const button = dialog.querySelector(`#hlx-${verb.id}`);
     if (button) {
       button.addEventListener('click', async () => {
-        await verb.f(review.reviewId);
+        const success = await verb.f(review.reviewId);
         dialog.close();
-        if (verb.id === 'approve') {
+        if (success && verb.id === 'approve') {
           window.location.href = `https://${env.ref}--${env.repo}--${env.owner}.hlx.live${window.location.pathname}`;
         } else {
           window.location.reload();
