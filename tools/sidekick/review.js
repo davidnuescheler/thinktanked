@@ -50,12 +50,18 @@ async function addReviewToEnvSelector(shadowRoot) {
   const envSwitcher = fc.querySelector('.env');
   const dc = fc.querySelector('.env .dropdown-container');
 
-  const createButton = (text) => {
+  const createButton = (text, disabled) => {
     const button = document.createElement('button');
     button.title = text;
     button.tabindex = '0';
     button.textContent = text;
+    if (disabled) {
+      button.disabled = true;
+    }
     button.addEventListener('click', () => {
+      if (text === 'Preview') {
+        window.location.href = `https://${env.ref}--${env.repo}--${env.owner}.hlx.page${window.location.pathname}`;
+      }
       if (text === 'Preview') {
         window.location.href = `https://${env.ref}--${env.repo}--${env.owner}.hlx.page${window.location.pathname}`;
       }
@@ -78,18 +84,33 @@ async function addReviewToEnvSelector(shadowRoot) {
     if (env.state === 'reviews') {
       toggle.textContent = 'Review';
     }
-    const states = ['Preview', 'Review', 'Live', 'Production'];
+    const states = ['Development', 'Preview', 'Review', 'Live', 'Production'];
     dc.textContent = '';
     states.forEach((state) => {
+      let advancedOnly = false;
+      let disabled = false;
       if (env.state === 'page' && state.toLowerCase() === 'preview') {
-        return;
+        disabled = true;
       }
-      if (env.state === 'reviews' && state.toLowerCase() === 'review') {
-        return;
+      if (env.state === 'reviews') {
+        // special handling for reviews state
+        if (state.toLowerCase() === 'review') {
+          disabled = true;
+        }
+        if (state.toLowerCase() === 'live') {
+          // todo: check if sidekick config contains host
+          advancedOnly = true;
+        }
+        if (state.toLowerCase() === 'production') {
+          // todo: check if sidekick config contains host
+        }
       }
       const pluginDiv = document.createElement('div');
       pluginDiv.className = `plugin ${state.toLowerCase()}`;
-      pluginDiv.append(createButton(state));
+      if (advancedOnly) {
+        pluginDiv.classList.add('hlx-sk-advanced-only');
+      }
+      pluginDiv.append(createButton(state, disabled));
       dc.append(pluginDiv);
     });
   }
