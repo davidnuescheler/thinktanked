@@ -79,6 +79,12 @@ async function addReviewToEnvSelector(shadowRoot) {
     const states = ['Preview', 'Live', 'Production'];
     dc.textContent = '';
     states.forEach((state) => {
+      if (env.state === 'page' && state.toLowerCase() === 'preview') {
+        return;
+      }
+      if (env.state === 'reviews' && state.toLowerCase() === 'review') {
+        return;
+      }
       const pluginDiv = document.createElement('div');
       pluginDiv.className = `plugin ${state.toLowerCase()}`;
       pluginDiv.append(createButton(state));
