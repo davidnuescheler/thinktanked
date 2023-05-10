@@ -112,8 +112,7 @@ async function loadLazy(doc) {
 
   // Load jobs-switcher preview overlay
   if (window.location.hostname === 'localhost' || window.location.hostname.endsWith('.hlx.page') || window.location.hostname.endsWith('.hlx.reviews')) {
-    const review = await import(`${window.hlx.codeBasePath}/tools/sidekick/review.js`);
-    await review.default();
+    await import(`${window.hlx.codeBasePath}/tools/sidekick/review.js`);
   }
 }
 

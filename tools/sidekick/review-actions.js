@@ -1,6 +1,14 @@
+import { getMetadata } from '../../scripts/lib-franklin.js';
+
 export function getReviewEnv() {
   let { hostname } = window.location;
-  if (hostname === 'localhost') hostname = 'default--reviews--aempenbrayacomingsooncom--pfizer.hlx.reviews';
+  if (hostname === 'localhost') {
+    try {
+      hostname = new URL(getMetadata('hlx:proxyUrl')).hostname;
+    } catch (e) {
+      hostname = 'default--reviews--aempenbrayacomingsooncom--pfizer.hlx.reviews';
+    }
+  }
 
   const [env, , state] = hostname.split('.');
   const splits = env.split('--');

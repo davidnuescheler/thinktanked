@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import {
   addPageToReview,
   getReviewEnv,
@@ -49,12 +50,18 @@ async function addReviewToEnvSelector(shadowRoot) {
   const envSwitcher = fc.querySelector('.env');
   const dc = fc.querySelector('.env .dropdown-container');
 
-  const createButton = (text) => {
+  const createButton = (text, disabled) => {
     const button = document.createElement('button');
     button.title = text;
     button.tabindex = '0';
     button.textContent = text;
+    if (disabled) {
+      button.disabled = true;
+    }
     button.addEventListener('click', () => {
+      if (text === 'Development') {
+        window.location.href = `http://localhost:3000${window.location.pathname}`;
+      }
       if (text === 'Preview') {
         window.location.href = `https://${env.ref}--${env.repo}--${env.owner}.hlx.page${window.location.pathname}`;
       }
@@ -74,28 +81,47 @@ async function addReviewToEnvSelector(shadowRoot) {
   if (fc.querySelector('.env.hlx-sk-hidden')) {
     envSwitcher.classList.remove('hlx-sk-hidden');
     const toggle = fc.querySelector('.env .dropdown-toggle');
-    toggle.textContent = 'Review';
-    const states = ['Preview', 'Live', 'Production'];
+    if (env.state === 'reviews') {
+      toggle.textContent = 'Review';
+    }
+    const states = ['Development', 'Preview', 'Live', 'Production'];
     dc.textContent = '';
     states.forEach((state) => {
+      let advancedOnly = false;
+      let disabled = false;
+      // special handling for reviews state
+      if (state.toLowerCase() === 'review') {
+        // disable review button
+        disabled = true;
+      }
+      if (state.toLowerCase() === 'live' || state.toLowerCase() === 'development') {
+        // todo for live: check if sidekick config contains host
+        advancedOnly = true;
+      }
+      if (state.toLowerCase() === 'production') {
+        // todo: check if sidekick config contains host
+      }
       const pluginDiv = document.createElement('div');
       pluginDiv.className = `plugin ${state.toLowerCase()}`;
-      pluginDiv.append(createButton(state));
+      if (advancedOnly) {
+        pluginDiv.classList.add('hlx-sk-advanced-only');
+      }
+      pluginDiv.append(createButton(state, disabled));
       dc.append(pluginDiv);
     });
   }
-  const live = dc.querySelector('.live');
-  const div = document.createElement('div');
-  div.className = 'review plugin';
-  div.append(createButton('Review'));
-  live.before(div);
+  // review button
+  if (reviews.length > 0) {
+    const live = dc.querySelector('.live');
+    const reviewDiv = document.createElement('div');
+    reviewDiv.className = 'review plugin';
+    reviewDiv.append(createButton('Review', env.state === 'reviews'));
+    live.before(reviewDiv);
+  }
 }
 
-async function previewMode(plugins) {
-  const div = document.createElement('div');
-  div.className = 'review plugin';
-  div.innerHTML = '<button title="Review" tabindex="0"></button>';
-
+async function previewMode(plugins, sk) {
+  const div = plugins.querySelector('.plugin.move-to-review');
   const button = div.querySelector('button');
 
   const env = getReviewEnv();
@@ -122,7 +148,7 @@ async function previewMode(plugins) {
 
   setReviewStatus(pageStatus, reviewStatus);
 
-  button.addEventListener('click', async () => {
+  sk.addEventListener('custom:move-to-review', async () => {
     const openReviews = await getOpenReviews();
     if (openReviews.length === 1) {
       const search = getPageParams();
@@ -130,7 +156,6 @@ async function previewMode(plugins) {
     }
     window.location.href = `https://default--${env.ref}--${env.repo}--${env.owner}.hlx.reviews${window.location.pathname}`;
   });
-  plugins.append(div);
 }
 
 async function openManifest(sk) {
@@ -197,6 +222,10 @@ async function openManifest(sk) {
 }
 
 async function reviewMode(plugins, sk) {
+  const reviewPlugin = sk.shadowRoot.querySelector('.plugin.move-to-review');
+  if (reviewPlugin) {
+    reviewPlugin.remove();
+  }
   const reviewStatus = await getReviewStatus();
   console.log(reviewStatus);
   const div = document.createElement('div');
@@ -226,17 +255,28 @@ async function decorateSidekick(sk) {
 
   sk.shadowRoot.append(link);
 
-  if (state === 'page') previewMode(plugins);
+  if (state === 'page') previewMode(plugins, sk);
   if (state === 'reviews') reviewMode(plugins, sk);
-
   addReviewToEnvSelector(sk.shadowRoot);
 }
 
-export default async function init() {
-  const catchSk = () => {
-    const sk = document.querySelector('helix-sidekick');
-    if (sk) decorateSidekick(sk);
-    else setTimeout(catchSk, 1000);
-  };
-  setTimeout(catchSk, 1000);
+function waitForSidekickPlugins(sk) {
+  // workaround for missing customization event
+  if (sk && sk.shadowRoot && sk.shadowRoot.querySelector('.plugin-container')) {
+    decorateSidekick(sk);
+  } else {
+    setTimeout(() => waitForSidekickPlugins(sk), 100);
+  }
 }
+
+(() => {
+  const sk = document.querySelector('helix-sidekick');
+  if (sk) {
+    waitForSidekickPlugins(sk);
+  } else {
+    // wait for sidekick to be loaded
+    document.addEventListener('helix-sidekick-ready', () => {
+      waitForSidekickPlugins(document.querySelector('helix-sidekick'));
+    }, { once: true });
+  }
+})();
