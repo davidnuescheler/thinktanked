@@ -59,8 +59,8 @@ async function addReviewToEnvSelector(shadowRoot) {
       button.disabled = true;
     }
     button.addEventListener('click', () => {
-      if (text === 'Preview') {
-        window.location.href = `https://${env.ref}--${env.repo}--${env.owner}.hlx.page${window.location.pathname}`;
+      if (text === 'Development') {
+        window.location.href = `http://localhost:3000${window.location.pathname}`;
       }
       if (text === 'Preview') {
         window.location.href = `https://${env.ref}--${env.repo}--${env.owner}.hlx.page${window.location.pathname}`;
@@ -84,7 +84,7 @@ async function addReviewToEnvSelector(shadowRoot) {
     if (env.state === 'reviews') {
       toggle.textContent = 'Review';
     }
-    const states = ['Development', 'Preview', 'Review', 'Live', 'Production'];
+    const states = ['Development', 'Preview', 'Live', 'Production'];
     dc.textContent = '';
     states.forEach((state) => {
       let advancedOnly = false;
@@ -109,6 +109,14 @@ async function addReviewToEnvSelector(shadowRoot) {
       pluginDiv.append(createButton(state, disabled));
       dc.append(pluginDiv);
     });
+  }
+  // review button
+  if (reviews.length > 0) {
+    const live = dc.querySelector('.live');
+    const reviewDiv = document.createElement('div');
+    reviewDiv.className = 'review plugin';
+    reviewDiv.append(createButton('Review', env.state === 'reviews'));
+    live.before(reviewDiv);
   }
 }
 
