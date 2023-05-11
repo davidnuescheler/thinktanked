@@ -53,7 +53,7 @@ async function isReviewOpen(reviewId) {
 }
 
 async function publishPageFromSnapshot(pathname, reviewId, env) {
-  const snapshotEndpoint = `https://admin.hlx.page/snapshot/${env.owner}/${env.repo}/${env.ref}/${reviewId}${pathname}?publish=true`;
+  const snapshotEndpoint = `https://admin.hlx.page/snapshot/${env.owner}/${env.repo}/main/${reviewId}${pathname}?publish=true`;
   console.log(snapshotEndpoint);
   const snapshotResp = await fetch(snapshotEndpoint, {
     method: 'POST',
@@ -63,7 +63,7 @@ async function publishPageFromSnapshot(pathname, reviewId, env) {
 }
 
 async function addPageToSnapshot(pathname, reviewId, env) {
-  const snapshotEndpoint = `https://admin.hlx.page/snapshot/${env.owner}/${env.repo}/${env.ref}/${reviewId}${pathname}`;
+  const snapshotEndpoint = `https://admin.hlx.page/snapshot/${env.owner}/${env.repo}/main/${reviewId}${pathname}`;
   console.log(snapshotEndpoint);
   const snapshotResp = await fetch(snapshotEndpoint, {
     method: 'POST',
@@ -98,7 +98,7 @@ export async function removePageFromReview(page, reviewId) {
   if (isReviewOpen(reviewId)) {
     console.log('Removing from snapshot');
     const [pathname] = page.split('?');
-    const snapshotEndpoint = `https://admin.hlx.page/snapshot/${env.owner}/${env.repo}/${env.ref}/${reviewId}${pathname}`;
+    const snapshotEndpoint = `https://admin.hlx.page/snapshot/${env.owner}/${env.repo}/main/${reviewId}${pathname}`;
     console.log(snapshotEndpoint);
     const snapshotResp = await fetch(snapshotEndpoint, {
       method: 'DELETE',
@@ -125,7 +125,7 @@ export async function updateReview(pages, reviewId) {
 
   if (isReviewOpen(reviewId)) {
     console.log('Clearing Pages');
-    const snapshotEndpoint = `https://admin.hlx.page/snapshot/${env.owner}/${env.repo}/${env.ref}/${reviewId}/*`;
+    const snapshotEndpoint = `https://admin.hlx.page/snapshot/${env.owner}/${env.repo}/main/${reviewId}/*`;
     console.log(snapshotEndpoint);
     const snapshotResp = await fetch(snapshotEndpoint, {
       method: 'DELETE',
@@ -209,7 +209,7 @@ export async function approveReview(reviewId) {
     }
 
     console.log('Clearing Pages');
-    const snapshotEndpoint = `https://admin.hlx.page/snapshot/${env.owner}/${env.repo}/${env.ref}/${reviewId}/*`;
+    const snapshotEndpoint = `https://admin.hlx.page/snapshot/${env.owner}/${env.repo}/main/${reviewId}/*`;
     console.log(snapshotEndpoint);
     const snapshotResp = await fetch(snapshotEndpoint, {
       method: 'DELETE',
