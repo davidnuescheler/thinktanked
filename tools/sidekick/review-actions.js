@@ -1,5 +1,6 @@
 /* eslint-disable no-console */
 // import { getMetadata } from '../../scripts/lib-franklin.js';
+export const SidekickState = {};
 
 export function getReviewEnv() {
   let { hostname } = window.location;

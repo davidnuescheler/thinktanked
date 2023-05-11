@@ -1,5 +1,6 @@
 /* eslint-disable no-console */
 import {
+  SidekickState,
   addPageToReview,
   getReviewEnv,
   getReviews,
@@ -159,16 +160,21 @@ async function previewMode(plugins, sk) {
 }
 
 async function openManifest(sk) {
+  console.log('STATE', SidekickState);
+  const { status } = SidekickState;
   const env = getReviewEnv();
   const reviews = await getReviews();
   console.log(reviews);
   console.log(env);
   const review = reviews.find((r) => r.reviewId === env.review);
 
+  const disabled = (status && status.live && status.live.permissions
+    && status.live.permissions.includes('write')) ? '' : ' disabled';
+
   const dialog = document.createElement('dialog');
   dialog.className = 'hlx-dialog';
   const edit = review.status === 'open' ? `<div class="hlx-edit-manifest hlx-edit-hide"><button id="hlx-edit-manifest">Edit Pages in Change Log</button><textarea wrap="off" rows="10">${review.pages.map((path) => `https://${env.ref}--${env.repo}--${env.owner}.hlx.page${path}`).join('\n')}</textarea><button id="hlx-update-manifest">Update Change Log</button></div>` : '';
-  const buttons = review.status === 'open' ? '<button id="hlx-submit">Submit for Review</button>' : '<button id="hlx-approve">Approve and Publish</button> <button id="hlx-reject">Reject Review</button>';
+  const buttons = review.status === 'open' ? '<button id="hlx-submit">Submit for Review</button>' : `<button${disabled} id="hlx-approve">Approve and Publish</button> <button${disabled} id="hlx-reject">Reject Review</button>`;
   const pages = review.pages.map((path) => `<p class="hlx-row"><a href="${path}">https://${env.review}--${env.ref}--${env.repo}--${env.owner}.hlx.reviews${path}</a></p>`);
   dialog.innerHTML = `
     <form method="dialog">
@@ -261,6 +267,9 @@ async function decorateSidekick(sk) {
 }
 
 function waitForSidekickPlugins(sk) {
+  sk.addEventListener('statusfetched', ({ detail }) => {
+    SidekickState.status = detail.data;
+  });
   // workaround for missing customization event
   if (sk && sk.shadowRoot && sk.shadowRoot.querySelector('.plugin-container')) {
     decorateSidekick(sk);
