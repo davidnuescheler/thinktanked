@@ -3,6 +3,20 @@
   --review-open-color: black;
   --review-submitted-background-color: #f56544;
   --review-submitted-color: white;
+  --hlx-dialog-background-color: white;
+  --hlx-dialog-text-color: #444;
+  --hlx-dialog-row-odd-color: #ddd;
+  --hlx-dialog-row-even-color: #eee;
+  --hlx-dialog-row-link-color: var(--hlx-dialog-text-color);
+}
+
+@media (prefers-color-scheme: dark) {
+  :host {
+    --hlx-dialog-background-color: #444;
+    --hlx-dialog-text-color: #eee;
+    --hlx-dialog-row-odd-color: #666;
+    --hlx-dialog-row-even-color: #555;
+  }
 }
 
 .move-to-review button.submitted {
@@ -12,7 +26,7 @@
 }
 
 .move-to-review button.ready {
-  background-color: var(--review-open-background-color); 
+  background-color: var(--review-open-background-color);
   color: var(--review-open-color);
   border-color: var(--review-open-background-color);
 }
@@ -130,29 +144,29 @@
   height: calc(100% - 140px);
   width: min(calc(100% - 64px), 800px);
   margin: 32px auto;
-  background-color: #444;
+  background-color: var(--hlx-dialog-background-color);
   border-radius: 16px;
   box-shadow: 0 0 10px #000;
   font-size: 12px;
-  color: #eee;
+  color: var(--hlx-dialog-text-color);
   border: 0;
   box-sizing: border-box;
   padding: 32px;
 }
 
 .hlx-dialog p.hlx-row {
-  background-color: #666;
+  background-color: var(--hlx-dialog-row-even-color);
   margin: 0;
   padding: 8px;
   border-top: 1px solid #888;
 }
 
 .hlx-dialog p.hlx-row:nth-child(odd) {
-  background-color: #555;
+  background-color: var(--hlx-dialog-row-odd-color);
 }
 
 .hlx-row a:any-link {
-  color: white;
+  color: var(--hlx-dialog-row-link-color);
 }
 
 .hlx-dialog form {
