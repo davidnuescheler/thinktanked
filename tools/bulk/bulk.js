@@ -33,7 +33,7 @@ submit.addEventListener(('click'), () => {
   };
   
   const operation = $operation.value;
-  const concurrency = operation === 'live' ? 40 : 5;
+  const concurrency = operation === 'live' ? 40 : 3;
   const urls = $urls.value.split('\n').map(e => e.trim());
   const total = urls.length;
   append(`URLs: ${urls.length}`);
