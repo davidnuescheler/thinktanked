@@ -185,10 +185,6 @@
   display: none;
 }
 
-.plugin-container > .plugin.publish {
-  display: none;
-}
-
 .hlx-dialog .hlx-edit-manifest {
   margin-top: 32px;
 }

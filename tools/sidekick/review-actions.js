@@ -1,15 +1,16 @@
 /* eslint-disable no-console */
-// import { getMetadata } from '../../scripts/lib-franklin.js';
+import { getMetadata } from '../../scripts/lib-franklin.js';
+
 export const SidekickState = {};
 
 export function getReviewEnv() {
   let { hostname } = window.location;
   if (hostname === 'localhost') {
     try {
-      // hostname = new URL(getMetadata('hlx:proxyUrl')).hostname;
-      hostname = 'default--main--thinktanked--davidnuescheler.hlx.reviews';
+      hostname = new URL(getMetadata('hlx:proxyUrl')).hostname;
+      // hostname = 'default--main--thinktanked--davidnuescheler.hlx.reviews';
     } catch (e) {
-      hostname = 'default--reviews--aempenbrayacomingsooncom--pfizer.hlx.reviews';
+      hostname = 'default--reviews--aembabyprevnar20com--pfizer.hlx.reviews';
     }
   }
 

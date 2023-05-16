@@ -140,23 +140,28 @@ async function previewMode(plugins, sk) {
     if (pageStatus === '') {
       statusText = 'Move to Review';
     }
-    if (reviewStatus === 'submitted') button.setAttribute('disabled', '');
+    if (reviewStatus === 'submitted' && pageStatus === 'open') button.setAttribute('disabled', '');
     button.innerHTML = `${statusText}`;
   };
 
-  const pageStatus = await getPageStatus();
-  const reviewStatus = await getReviewStatus();
+  try {
+    const pageStatus = await getPageStatus();
+    const reviewStatus = await getReviewStatus();
 
-  setReviewStatus(pageStatus, reviewStatus);
+    setReviewStatus(pageStatus, reviewStatus);
 
-  sk.addEventListener('custom:move-to-review', async () => {
-    const openReviews = await getOpenReviews();
-    if (openReviews.length === 1 && pageStatus === '') {
-      const search = getPageParams();
-      await addPageToReview(window.location.pathname + search, openReviews[0].reviewId);
-    }
-    window.location.href = `https://default--${env.ref}--${env.repo}--${env.owner}.hlx.reviews${window.location.pathname}`;
-  });
+    sk.addEventListener('custom:move-to-review', async () => {
+      const openReviews = await getOpenReviews();
+      if (openReviews.length === 1 && pageStatus === '') {
+        const search = getPageParams();
+        await addPageToReview(window.location.pathname + search, openReviews[0].reviewId);
+      }
+      window.location.href = `https://default--${env.ref}--${env.repo}--${env.owner}.hlx.reviews${window.location.pathname}`;
+    });
+  } catch (e) {
+    button.setAttribute('disabled', '');
+    button.title = 'Failed to Connect to Review Service';
+  }
 }
 
 async function openManifest(sk) {
@@ -279,6 +284,12 @@ function waitForSidekickPlugins(sk) {
 }
 
 (() => {
+  if (window.location.pathname.startsWith('/.snapshots/')) {
+    if (!window.location.search.includes('suppress')) {
+      window.location.pathname = `${window.location.pathname.split('/').slice(3).join('/')}`;
+    }
+  }
+
   const sk = document.querySelector('helix-sidekick');
   if (sk) {
     waitForSidekickPlugins(sk);
