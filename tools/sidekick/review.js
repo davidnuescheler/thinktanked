@@ -275,6 +275,10 @@ function waitForSidekickPlugins(sk) {
   sk.addEventListener('statusfetched', ({ detail }) => {
     SidekickState.status = detail.data;
   });
+  // for sites with auth, decorate sidekick after login
+  sk.addEventListener('loggedin', () => {
+    decorateSidekick(sk);
+  });
   // workaround for missing customization event
   if (sk && sk.shadowRoot && sk.shadowRoot.querySelector('.plugin-container')) {
     decorateSidekick(sk);
