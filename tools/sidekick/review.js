@@ -274,10 +274,12 @@ async function decorateSidekick(sk) {
 function waitForSidekickPlugins(sk) {
   sk.addEventListener('statusfetched', ({ detail }) => {
     SidekickState.status = detail.data;
-  });
-  // for sites with auth, decorate sidekick after login
-  sk.addEventListener('loggedin', () => {
-    decorateSidekick(sk);
+    if (detail.data.status === 401) {
+      // decorate sidekick after login
+      sk.addEventListener('loggedin', () => {
+        decorateSidekick(sk);
+      }, { once: true });
+    }
   });
   // workaround for missing customization event
   if (sk && sk.shadowRoot && sk.shadowRoot.querySelector('.plugin-container')) {
