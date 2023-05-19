@@ -73,7 +73,8 @@ async function addReviewToEnvSelector(shadowRoot) {
         window.location.href = `https://${env.ref}--${env.repo}--${env.owner}.hlx.live${window.location.pathname}`;
       }
       if (text === 'Production') {
-        window.location.href = `https://www.penbrayacomingsoon.com${window.location.pathname}`;
+        // todo for live: check if sidekick config contains host
+        // window.location.href = `https://www.penbrayacomingsoon.com${window.location.pathname}`;
       }
     });
     return (button);
@@ -95,11 +96,11 @@ async function addReviewToEnvSelector(shadowRoot) {
         // disable review button
         disabled = true;
       }
-      if (state.toLowerCase() === 'live' || state.toLowerCase() === 'development') {
-        // todo for live: check if sidekick config contains host
+      if (state.toLowerCase() === 'development' || state.toLowerCase() === 'production') {
+        // todo for production: check if sidekick config contains host
         advancedOnly = true;
       }
-      if (state.toLowerCase() === 'production') {
+      if (state.toLowerCase() === 'live') {
         // todo: check if sidekick config contains host
       }
       const pluginDiv = document.createElement('div');
@@ -161,6 +162,7 @@ async function previewMode(plugins, sk) {
   } catch (e) {
     button.setAttribute('disabled', '');
     button.title = 'Failed to Connect to Review Service';
+    button.textContent = '(Network Error)'
   }
 }
 
@@ -185,7 +187,7 @@ async function openManifest(sk) {
     <form method="dialog">
       <button class="hlx-close-button">X</button>
     </form>
-    <h3>Change Log for ${review.reviewId} Review (${review.status === 'open' ? 'Preparing For Review' : 'Submitted For Review'})</h3>
+    <h3>Change Log for Site in ${review.reviewId} Review (${review.status === 'open' ? 'Preparing For Review' : 'Submitted For Review'})</h3>
     <p>${buttons}</p>
     ${pages.join('')}
     ${edit}
@@ -232,7 +234,7 @@ async function openManifest(sk) {
   dialog.showModal();
 }
 
-async function reviewMode(plugins, sk) {
+async function reviewMode(features, sk) {
   const reviewPlugin = sk.shadowRoot.querySelector('.plugin.move-to-review');
   if (reviewPlugin) {
     reviewPlugin.remove();
@@ -249,7 +251,7 @@ async function reviewMode(plugins, sk) {
     div.innerHTML = '<span class="badge-locked"></span><span>Review Submitted</span>';
   }
   div.classList.add('plugin');
-  plugins.append(div);
+  features.prepend(div);
   div.addEventListener('click', () => {
     openManifest(sk);
   });
@@ -259,6 +261,7 @@ async function decorateSidekick(sk) {
   const env = getReviewEnv();
   const { state } = env;
   const plugins = sk.shadowRoot.querySelector('.plugin-container');
+  const features = sk.shadowRoot.querySelector('.feature-container');
 
   const link = document.createElement('link');
   link.rel = 'stylesheet';
@@ -267,7 +270,7 @@ async function decorateSidekick(sk) {
   sk.shadowRoot.append(link);
 
   if (state === 'page') previewMode(plugins, sk);
-  if (state === 'reviews') reviewMode(plugins, sk);
+  if (state === 'reviews') reviewMode(features, sk);
   addReviewToEnvSelector(sk.shadowRoot);
 }
 
