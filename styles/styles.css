@@ -241,3 +241,48 @@ main .section {
 main .section.highlight {
   background-color: var(--highlight-background-color);
 }
+
+/* rsvp */
+.rsvp header {
+  display: none;
+}
+
+.rsvp {
+  --background-color: #8e6497;
+  --text-color: #CEFFCB;
+  --heading-color: #BCEB23;
+
+  color: var(--text-color);
+  background-color: var(--background-color);
+  text-align: center;
+  font-size: 150%;
+}
+
+.rsvp main {
+  max-width: 800px;
+  margin: auto;
+}
+
+.rsvp .default-content-wrapper img {
+  max-width: 500px;
+  object-fit: cover;
+  aspect-ratio: 10 / 9;
+  object-position: top;
+  width: 100%;
+}
+
+.rsvp .section {
+  padding-top: 32px;
+}
+
+.rsvp h1 {
+  color: var(--heading-color);
+  margin: 24px;
+  font-family: Comfortaa, 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+
+@media (min-width: 900px) {
+  .rsvp h1 {
+    font-size: 150%;
+  }
+}
