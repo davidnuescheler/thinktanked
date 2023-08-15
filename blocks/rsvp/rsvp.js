@@ -6,7 +6,7 @@ export default function decorate(block) {
     <input name="Name" type="text" value="${guestName}">
     <select name="Guests">
     <option value="1">Coming Solo</option>
-    <option value="2" selected>Just the two of us</option>
+    <option value="2">Just the two of us</option>
     <option value="3">We are three</option>
     <option value="4">We are four</option>
     <option value="5">We are five or more</option>
@@ -18,6 +18,8 @@ export default function decorate(block) {
     </form>
   `;
 
+  const numNames = guestName.replace(/[^A-Z]/g, '').length;
+  block.querySelector('select').children[numNames - 1].selected = true;
   /* submit */
   block.querySelector('form').addEventListener('submit', async (e) => {
     e.preventDefault();
