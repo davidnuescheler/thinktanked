@@ -6,12 +6,13 @@ main .rsvp {
     border-radius: 32px;
     border: 2px solid currentcolor;
     padding: 32px;
+    font-size: 20px;
 }
 
 /* class applies to select element itself, not a wrapper element */
 main .rsvp select {
     display: block;
-    font-size: 24px;
+    font-size: 20px;
     font-family: sans-serif;
     font-weight: 700;
     color: #BCEB23;
@@ -67,6 +68,7 @@ main .rsvp input[type="submit"], main .rsvp input[type="button"] {
     border-radius: 0.5em;
     font-weight: 800;
     border: 2px solid var(--heading-color);
+    padding: 16px 32px;
 }
 
 main .rsvp input[type="submit"], main .rsvp input[type="button"]:hover {
