@@ -6,13 +6,13 @@ main .rsvp {
     border-radius: 32px;
     border: 2px solid currentcolor;
     padding: 32px;
-    font-size: 20px;
+    font-size: 18px;
 }
 
 /* class applies to select element itself, not a wrapper element */
 main .rsvp select {
     display: block;
-    font-size: 20px;
+    font-size: 18px;
     font-family: sans-serif;
     font-weight: 700;
     color: #BCEB23;
