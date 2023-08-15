@@ -74,7 +74,8 @@ main .rsvp input[type="submit"], main .rsvp input[type="button"]:hover {
     color: var(--background-color);
 }
 
-main .rsvp input[type="submit"]:hover, main .rsvp input[type="button"] {
+/* stylelint-disable-next-line no-descending-specificity */
+main .rsvp input[type="button"], main .rsvp input[type="submit"]:hover {
     background-color: var(--background-color);
     color: var(--heading-color);
 }
@@ -86,17 +87,15 @@ main .rsvp-buttons {
     margin-top: 32px;
     gap: 32px;
     flex-direction: column;
+    width: 100%;
+    max-width: 100%;
 }
+
 
 @media (min-width: 600px) {
     main .rsvp-buttons {
         flex-direction: row;
     }
-}
-
-main .rsvp-buttons {
-    width: 100%;
-    max-width: 100%;
 }
 
 
