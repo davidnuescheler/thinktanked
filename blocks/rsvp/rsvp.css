@@ -69,6 +69,7 @@ main .rsvp input[type="submit"], main .rsvp input[type="button"] {
     font-weight: 800;
     border: 2px solid var(--heading-color);
     padding: 16px 32px;
+    height: 60px;
 }
 
 main .rsvp input[type="submit"], main .rsvp input[type="button"]:hover {
