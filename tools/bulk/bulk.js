@@ -6,8 +6,15 @@ const append = (string, status="unknown") => {
     log.append(p);
 }
 
+function sleep(ms) {
+    return new Promise((resolve) => {
+        setTimeout(resolve, ms);
+    });
+}
+
 document.getElementById('start').addEventListener('click', () => {
     let counter = 0;
+    const slow = document.getElementById('slow').checked;
 
     const executeOperation = async (url) => {
         const { hostname, pathname } = new URL(url);
@@ -27,12 +34,19 @@ document.getElementById('start').addEventListener('click', () => {
         while (urls.length) {
             const url = urls.shift();
             await executeOperation(url);
+            if(slow) await sleep(1500);
         }
     };
 
     const operation = document.getElementById('select').value;
-    const concurrency = operation === 'live' ? 40 : 3;
-    const urls = document.getElementById('textarea').value.split('\n').map(e => e.trim());
+    let concurrency = operation === 'live' ? 40 : 3;
+    if(slow) {
+        concurrency = 1;
+    }
+    const urls = document.getElementById('textarea').value
+        .split('\n')
+        .map(e => e.trim())
+        .filter(e => e.length > 0);
     const total = urls.length;
     append(`URLs: ${urls.length}`);
     for (let i = 0; i < concurrency; i += 1) {
