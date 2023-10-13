@@ -20,7 +20,7 @@
   async function getResults(url, samples) {
     const reqs = [];
     for (let i = 0; i < samples; i += 1) {
-      reqs.push(getResult(`${url}?${Math.random()}`));
+      reqs.push(getResult(`${url}${url.includes('?') ? '&' : '?'}ck=${Math.random()}`));
     }
     return await Promise.all(reqs);
   }
