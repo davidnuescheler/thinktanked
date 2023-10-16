@@ -20,7 +20,7 @@
   async function getResults(url, samples) {
     const reqs = [];
     for (let i = 0; i < samples; i += 1) {
-      reqs.push(getResult(`${url}?${Math.random()}`));
+      reqs.push(getResult(`${url}${url.includes('?') ? '&' : '?'}ck=${Math.random()}`));
     }
     return await Promise.all(reqs);
   }
@@ -141,6 +141,7 @@
 
   async function executePSI(num) {
     const url = document.getElementById('url' + num).value;
+    if (!url) return;
     const output = document.getElementById('output' + num);
     output.innerHTML += `fetching report for: ${url}\n`;
     const rawResults = await getResults(url, 20);
@@ -156,7 +157,13 @@
     const avgs = {};
     output.append(createTable(results, avgs));
     const p = document.createElement('p');
-    p.innerHTML = `<a target="_blank" href="https://googlechrome.github.io/lighthouse/scorecalc/#FCP=${avgs.FCP}&TTI=${avgs.TTI}&SI=${avgs.SI}&TBT=${avgs.TBT}&LCP=${avgs.LCP}&CLS=${avgs.CLS}&device=mobile&version=9.6.6">Overall Best Stable Score</a>`;
+    p.innerHTML = `<a target="_blank" href="https://googlechrome.github.io/lighthouse/scorecalc/#FCP=${avgs.FCP}&TTI=${avgs.TTI}&SI=${avgs.SI}&TBT=${avgs.TBT}&LCP=${avgs.LCP}&CLS=${avgs.CLS}&device=mobile&version=10">Overall Best Stable Score</a>`;
+
+    const avgScore = (r, k) => {
+      return mean(keytoarray(r, k));
+    }
+    
+    p.innerHTML += `<br><a target="_blank" href="https://googlechrome.github.io/lighthouse/scorecalc/#FCP=${avgScore(results, 'FCP')}&TTI=${avgScore(results, 'TTI')}&SI=${avgScore(results, 'SI')}&TBT=${avgScore(results, 'TBT')}&LCP=${avgScore(results, 'LCP')}&CLS=${avgScore(results, 'CLS')}&device=mobile&version=10">Overall Average Score</a>`;
     output.append(p);
 
     return results;
