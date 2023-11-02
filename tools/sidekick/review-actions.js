@@ -10,7 +10,7 @@ export function getReviewEnv() {
       hostname = new URL(getMetadata('hlx:proxyUrl')).hostname;
       // hostname = 'default--main--sssupportuktraining--pfizer.hlx.reviews';
     } catch (e) {
-      hostname = 'default--reviews--aembabyprevnar20com--pfizer.hlx.reviews';
+      hostname = 'default--reviews--thinktanked--davidnuescheler.hlx.reviews';
     }
   }
 
