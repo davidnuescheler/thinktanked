@@ -162,7 +162,7 @@ async function previewMode(plugins, sk) {
   } catch (e) {
     button.setAttribute('disabled', '');
     button.title = 'Failed to Connect to Review Service';
-    button.textContent = '(Network Error)'
+    button.textContent = '(Network Error)';
   }
 }
 

@@ -24,38 +24,36 @@ export function getReviewEnv() {
   };
 }
 
-function getEndpoint(reviewId, verb) {
-  const env = getReviewEnv();
-  return `https://${reviewId}--${env.ref}--${env.repo}--${env.owner}.hlx.reviews/admin/${verb}`;
-}
-
 export async function getReviews() {
   const env = getReviewEnv();
-  const adminHost = env.review ? `${env.review}--${env.ref}--${env.repo}--${env.owner}.hlx.reviews` : `${env.ref}--${env.repo}--${env.owner}.hlx.reviews`;
-  const resp = await fetch(`https://${adminHost}/admin/?ck=${Math.random()}`, {
+  const resp = await fetch(`https://admin.hlx.page/snapshot/${env.owner}/${env.repo}/main/?ck=${Math.random()}`, {
     cache: 'no-store',
   });
   const json = await resp.json();
   const reviews = json.data;
-  reviews.forEach((review) => {
-    review.pages = review.pages ? review.pages.split(',').map((p) => p.trim()) : [];
-  });
   return (reviews);
 }
 
 async function getReview(reviewId) {
-  const reviews = await getReviews();
-  return reviews.find((e) => e.reviewId === reviewId);
+  const env = getReviewEnv();
+  const resp = await fetch(`https://admin.hlx.page/snapshot/${env.owner}/${env.repo}/main/${reviewId}?ck=${Math.random()}`, {
+    cache: 'no-store',
+  });
+
+  const json = await resp.json();
+  const review = json.data;
+  return review;
 }
 
 async function isReviewOpen(reviewId) {
-  const { status } = await getReview(reviewId);
+  const { review } = await getReview(reviewId);
+  const status = review.manifest.locked ? 'locked' : 'open';
   console.log(`${reviewId} status: ${status}`);
   return (status === 'open');
 }
 
-async function publishPageFromSnapshot(pathname, reviewId, env) {
-  const snapshotEndpoint = `https://admin.hlx.page/snapshot/${env.owner}/${env.repo}/main/${reviewId}${pathname}?publish=true`;
+async function publishSnapshot(pathname, reviewId, env) {
+  const snapshotEndpoint = `https://admin.hlx.page/snapshot/${env.owner}/${env.repo}/main/${reviewId}?publish=true`;
   console.log(snapshotEndpoint);
   const snapshotResp = await fetch(snapshotEndpoint, {
     method: 'POST',
@@ -82,12 +80,6 @@ export async function addPageToReview(page, reviewId) {
     console.log('Adding to snapshot');
     const [pathname] = page.split('?');
     addPageToSnapshot(pathname, reviewId, env);
-    const endpoint = getEndpoint(reviewId, 'add-page');
-    const resp = await fetch(`${endpoint}?page=${encodeURIComponent(page)}`, {
-      method: 'POST',
-    });
-    const text = await resp.text();
-    console.log(text);
   } else {
     console.log('Review is not open');
   }
@@ -107,13 +99,6 @@ export async function removePageFromReview(page, reviewId) {
     });
     const snapshotText = await snapshotResp.text();
     console.log(snapshotText);
-
-    const endpoint = getEndpoint(reviewId, 'remove-page');
-    const resp = await fetch(`${endpoint}?page=${encodeURIComponent(pathname)}`, {
-      method: 'POST',
-    });
-    const text = await resp.text();
-    console.log(text);
   } else {
     console.log('Review is not open');
   }
@@ -134,23 +119,6 @@ export async function updateReview(pages, reviewId) {
     });
     const snapshotText = await snapshotResp.text();
     console.log(snapshotText);
-
-    const pathnames = pages.map((page) => page.split('?')[0]);
-    console.log(pathnames);
-    for (let i = 0; i < pathnames.length; i += 1) {
-      const pathname = pathnames[i];
-      console.log('Adding to snapshot');
-      console.log(pathname);
-      // eslint-disable-next-line no-await-in-loop
-      await addPageToSnapshot(pathname, reviewId, env);
-    }
-
-    const endpoint = getEndpoint(reviewId, '');
-    const resp = await fetch(`${endpoint}?pages=${pages.join()}`, {
-      method: 'POST',
-    });
-    const text = await resp.text();
-    console.log(text);
   } else {
     console.log('Review is not open');
   }
@@ -160,36 +128,39 @@ export async function submitForReview(reviewId) {
   const env = getReviewEnv();
   console.log(`Submit Review ${reviewId}`);
   console.log(env);
-  const endpoint = getEndpoint(reviewId, 'submit');
-  const resp = await fetch(endpoint, {
+  const snapshotEndpoint = `https://admin.hlx.page/snapshot/${env.owner}/${env.repo}/main/${reviewId}?locked=true`;
+  console.log(snapshotEndpoint);
+  const snapshotResp = await fetch(snapshotEndpoint, {
     method: 'POST',
   });
-  const text = await resp.text();
-  console.log(text);
+  const snapshotText = await snapshotResp.text();
+  console.log(snapshotText);
 }
 
 export async function openReview(reviewId, description) {
   const env = getReviewEnv();
   console.log(`Open Review ${reviewId}, ${description}`);
   console.log(env);
-  const endpoint = getEndpoint(reviewId, '');
-  const resp = await fetch(`${endpoint}?description=${description}`, {
+  const snapshotEndpoint = `https://admin.hlx.page/snapshot/${env.owner}/${env.repo}/main/${reviewId}`;
+  console.log(snapshotEndpoint);
+  const snapshotResp = await fetch(snapshotEndpoint, {
     method: 'POST',
   });
-  const text = await resp.text();
-  console.log(text);
+  const snapshotText = await snapshotResp.text();
+  console.log(snapshotText);
 }
 
 export async function rejectReview(reviewId) {
   const env = getReviewEnv();
   console.log(`Reject Review ${reviewId}`);
   console.log(env);
-  const endpoint = getEndpoint(reviewId, 'reject');
-  const resp = await fetch(endpoint, {
+  const snapshotEndpoint = `https://admin.hlx.page/snapshot/${env.owner}/${env.repo}/main/${reviewId}?locked=false`;
+  console.log(snapshotEndpoint);
+  const snapshotResp = await fetch(snapshotEndpoint, {
     method: 'POST',
   });
-  const text = await resp.text();
-  console.log(text);
+  const snapshotText = await snapshotResp.text();
+  console.log(snapshotText);
 }
 
 export async function approveReview(reviewId) {
@@ -207,7 +178,7 @@ export async function approveReview(reviewId) {
       console.log('Publishing from snapshot');
       console.log(pathname);
       // eslint-disable-next-line no-await-in-loop
-      await publishPageFromSnapshot(pathname, reviewId, env);
+      await publishSnapshot(pathname, reviewId, env);
     }
 
     console.log('Clearing Pages');
@@ -218,13 +189,6 @@ export async function approveReview(reviewId) {
     });
     const snapshotText = await snapshotResp.text();
     console.log(snapshotText);
-
-    const endpoint = getEndpoint(reviewId, 'approve');
-    const resp = await fetch(endpoint, {
-      method: 'POST',
-    });
-    const text = await resp.text();
-    console.log(text);
   } else {
     console.log('Review is not submitted');
   }
