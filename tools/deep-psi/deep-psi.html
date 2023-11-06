@@ -5,7 +5,7 @@
 </head>
 <script src="//cdn.jsdelivr.net/npm/jstat@latest/dist/jstat.min.js"></script>
 <script type="module">
-  import pLimit from 'https://cdn.skypack.dev/p-limit';
+  import pLimit from 'https://cdn.skypack.dev/p-limit@4.0.0';
   const parallelism = new URL(window.location.href).searchParams.get('parallelism');
   // parse number
   const limit = pLimit(parallelism ? parseInt(parallelism) : 10);
