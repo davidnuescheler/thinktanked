@@ -269,6 +269,8 @@ async function decorateSidekick(sk) {
 
   sk.shadowRoot.append(link);
 
+  console.log(state);
+
   if (state === 'page') previewMode(plugins, sk);
   if (state === 'reviews') reviewMode(features, sk);
   addReviewToEnvSelector(sk.shadowRoot);

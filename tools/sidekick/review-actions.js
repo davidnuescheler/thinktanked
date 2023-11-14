@@ -8,7 +8,7 @@ export function getReviewEnv() {
   if (hostname === 'localhost') {
     try {
       hostname = new URL(getMetadata('hlx:proxyUrl')).hostname;
-      // hostname = 'default--main--sssupportuktraining--pfizer.hlx.reviews';
+      hostname = 'default--reviews--thinktanked--davidnuescheler.hlx.reviews';
     } catch (e) {
       hostname = 'default--reviews--thinktanked--davidnuescheler.hlx.reviews';
     }
@@ -24,30 +24,38 @@ export function getReviewEnv() {
   };
 }
 
+function toReview(snapshot) {
+  const review = {
+    reviewId: snapshot.id,
+    status: snapshot.locked ? 'submitted' : 'open',
+  };
+  if (snapshot.resources) {
+    review.pages = snapshot.resources.map((r) => r.path);
+  }
+  return (review);
+}
+
 export async function getReviews() {
-  const env = getReviewEnv();
-  const resp = await fetch(`https://admin.hlx.page/snapshot/${env.owner}/${env.repo}/main/?ck=${Math.random()}`, {
+  const resp = await fetch(`/.snapshots/default/.manifest.json?ck=${Math.random()}`, {
     cache: 'no-store',
   });
-  const json = await resp.json();
-  const reviews = json.data;
-  return (reviews);
+  const snapshot = await resp.json();
+  const review = toReview(snapshot);
+  return ([review]);
 }
 
 async function getReview(reviewId) {
-  const env = getReviewEnv();
-  const resp = await fetch(`https://admin.hlx.page/snapshot/${env.owner}/${env.repo}/main/${reviewId}?ck=${Math.random()}`, {
+  const resp = await fetch(`/.snapshots/${reviewId}/.manifest.json?ck=${Math.random()}`, {
     cache: 'no-store',
   });
 
   const json = await resp.json();
-  const review = json.data;
+  const review = toReview(json);
   return review;
 }
 
 async function isReviewOpen(reviewId) {
-  const { review } = await getReview(reviewId);
-  const status = review.manifest.locked ? 'locked' : 'open';
+  const { status } = await getReview(reviewId);
   console.log(`${reviewId} status: ${status}`);
   return (status === 'open');
 }
