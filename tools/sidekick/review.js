@@ -315,7 +315,7 @@ function waitForSidekickPlugins(sk) {
   if (window.location.hostname.endsWith('.reviews')) {
     // Sidekick doesn't know how to open on .reviews
     // so we need to open it manually
-    openSidekick('loadSidekick', (opened) => {
+    openSidekick((opened) => {
       if (!opened) {
         console.warn('Cannot open sidekick on this page');
       }
