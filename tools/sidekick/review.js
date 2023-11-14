@@ -312,7 +312,7 @@ function waitForSidekickPlugins(sk) {
     }
   }
 
-  if (window.location.hostname.endsWith === '.reviews') {
+  if (window.location.hostname.endsWith('.reviews')) {
     // Sidekick doesn't know how to open on .reviews
     // so we need to open it manually
     openSidekick('loadSidekick', (opened) => {
