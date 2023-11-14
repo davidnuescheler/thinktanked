@@ -74,7 +74,6 @@ async function addReviewToEnvSelector(shadowRoot) {
       }
       if (text === 'Production') {
         // todo for live: check if sidekick config contains host
-        // window.location.href = `https://www.penbrayacomingsoon.com${window.location.pathname}`;
       }
     });
     return (button);
@@ -299,6 +298,28 @@ function waitForSidekickPlugins(sk) {
     if (!window.location.search.includes('suppress')) {
       window.location.pathname = `${window.location.pathname.split('/').slice(3).join('/')}`;
     }
+  }
+
+  function openSidekick(callback) {
+    const env = getReviewEnv();
+
+    const SIDEKICK_EXTENSION_ID = 'ccfggkjabjahcjoljmgmklhpaccedipo';
+    if (window.chrome && window.chrome.runtime) {
+      const payload = { owner: env.owner, repo: env.repo, action: 'loadSidekick' };
+      window.chrome.runtime.sendMessage(SIDEKICK_EXTENSION_ID, payload, callback);
+    } else {
+      console.error('No chrome.runtime, cannot send message to the Sidekick');
+    }
+  }
+
+  if (window.location.hostname.endsWith === '.reviews') {
+    // Sidekick doesn't know how to open on .reviews
+    // so we need to open it manually
+    openSidekick('loadSidekick', (opened) => {
+      if (!opened) {
+        console.warn('Cannot open sidekick on this page');
+      }
+    });
   }
 
   const sk = document.querySelector('helix-sidekick');
