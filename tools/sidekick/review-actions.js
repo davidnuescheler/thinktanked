@@ -8,9 +8,9 @@ export function getReviewEnv() {
   if (hostname === 'localhost') {
     try {
       hostname = new URL(getMetadata('hlx:proxyUrl')).hostname;
-      // hostname = 'default--reviews--thinktanked--davidnuescheler.aem.reviews';
+      // hostname = 'default--snapshot-reviews--thinktanked--davidnuescheler.aem.reviews';
     } catch (e) {
-      hostname = 'default--reviews--thinktanked--davidnuescheler.aem.reviews';
+      hostname = 'default--snapshot-reviews--thinktanked--davidnuescheler.aem.reviews';
     }
   }
 
@@ -60,9 +60,8 @@ async function isReviewOpen(reviewId) {
   return (status === 'open');
 }
 
-async function publishSnapshot(pathname, reviewId, env) {
+async function publishSnapshot(reviewId, env) {
   const snapshotEndpoint = `https://admin.hlx.page/snapshot/${env.owner}/${env.repo}/main/${reviewId}?publish=true`;
-  console.log(snapshotEndpoint);
   const snapshotResp = await fetch(snapshotEndpoint, {
     method: 'POST',
   });
@@ -178,16 +177,8 @@ export async function approveReview(reviewId) {
 
   const review = await getReview(reviewId);
   if (review && review.status === 'submitted') {
-    console.log(review);
-    const pathnames = review.pages.map((page) => page.split('?')[0]);
-    console.log(pathnames);
-    for (let i = 0; i < pathnames.length; i += 1) {
-      const pathname = pathnames[i];
-      console.log('Publishing from snapshot');
-      console.log(pathname);
-      // eslint-disable-next-line no-await-in-loop
-      await publishSnapshot(pathname, reviewId, env);
-    }
+    await publishSnapshot(reviewId, env);
+    await rejectReview(reviewId);
 
     console.log('Clearing Pages');
     const snapshotEndpoint = `https://admin.hlx.page/snapshot/${env.owner}/${env.repo}/main/${reviewId}/*`;
