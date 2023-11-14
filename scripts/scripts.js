@@ -116,6 +116,7 @@ async function loadLazy(doc) {
   if (window.location.hostname === 'localhost'
     || window.location.hostname.endsWith('.hlx.page')
     || window.location.hostname.endsWith('.hlx.reviews')
+    || window.location.hostname.endsWith('.aem.reviews')
     || window.location.hostname.endsWith('.hlx.live')) {
     await import(`${window.hlx.codeBasePath}/tools/sidekick/review.js`);
   }
