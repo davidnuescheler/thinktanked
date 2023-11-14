@@ -67,7 +67,7 @@ async function addReviewToEnvSelector(shadowRoot) {
         window.location.href = `https://${env.ref}--${env.repo}--${env.owner}.hlx.page${window.location.pathname}`;
       }
       if (text === 'Review') {
-        window.location.href = `https://${reviews[0].reviewId}--${env.ref}--${env.repo}--${env.owner}.hlx.reviews${window.location.pathname}`;
+        window.location.href = `https://${reviews[0].reviewId}--${env.ref}--${env.repo}--${env.owner}.aem.reviews${window.location.pathname}`;
       }
       if (text === 'Live') {
         window.location.href = `https://${env.ref}--${env.repo}--${env.owner}.hlx.live${window.location.pathname}`;
@@ -157,7 +157,7 @@ async function previewMode(plugins, sk) {
         const search = getPageParams();
         await addPageToReview(window.location.pathname + search, openReviews[0].reviewId);
       }
-      window.location.href = `https://default--${env.ref}--${env.repo}--${env.owner}.hlx.reviews${window.location.pathname}`;
+      window.location.href = `https://default--${env.ref}--${env.repo}--${env.owner}.aem.reviews${window.location.pathname}`;
     });
   } catch (e) {
     button.setAttribute('disabled', '');
@@ -182,7 +182,7 @@ async function openManifest(sk) {
   dialog.className = 'hlx-dialog';
   const edit = review.status === 'open' ? `<div class="hlx-edit-manifest hlx-edit-hide"><button id="hlx-edit-manifest">Edit Pages in Change Log</button><textarea wrap="off" rows="10">${review.pages.map((path) => `https://${env.ref}--${env.repo}--${env.owner}.hlx.page${path}`).join('\n')}</textarea><button id="hlx-update-manifest">Update Change Log</button></div>` : '';
   const buttons = review.status === 'open' ? '<button id="hlx-submit">Submit for Review</button>' : `<button${disabled} id="hlx-approve">Approve and Publish</button> <button${disabled} id="hlx-reject">Reject Review</button>`;
-  const pages = review.pages.map((path) => `<p class="hlx-row"><a href="${path}">https://${env.review}--${env.ref}--${env.repo}--${env.owner}.hlx.reviews${path}</a></p>`);
+  const pages = review.pages.map((path) => `<p class="hlx-row"><a href="${path}">https://${env.review}--${env.ref}--${env.repo}--${env.owner}.aem.reviews${path}</a></p>`);
   dialog.innerHTML = `
     <form method="dialog">
       <button class="hlx-close-button">X</button>

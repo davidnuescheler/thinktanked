@@ -8,9 +8,9 @@ export function getReviewEnv() {
   if (hostname === 'localhost') {
     try {
       hostname = new URL(getMetadata('hlx:proxyUrl')).hostname;
-      hostname = 'default--reviews--thinktanked--davidnuescheler.hlx.reviews';
+      // hostname = 'default--reviews--thinktanked--davidnuescheler.aem.reviews';
     } catch (e) {
-      hostname = 'default--reviews--thinktanked--davidnuescheler.hlx.reviews';
+      hostname = 'default--reviews--thinktanked--davidnuescheler.aem.reviews';
     }
   }
 
