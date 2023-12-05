@@ -128,6 +128,7 @@
 
   async function comparePSI() {
     const [res1, res2] = await Promise.all([executePSI(1), executePSI(2)]);
+    if (!res1 || !res2) return;
     console.log(keytoarray(res1, 'LCP'), keytoarray(res2, 'LCP'));
     console.log(significancetest(keytoarray(res1, 'LCP'), keytoarray(res2, 'LCP')));
     const significancetestresults = document.getElementById('significancetestresults');
