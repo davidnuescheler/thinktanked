@@ -175,6 +175,14 @@
     url.searchParams.set('url1', document.getElementById('url1').value);
     url.searchParams.set('url2', document.getElementById('url2').value);
     window.history.pushState({}, '', url);
+
+
+    if (document.getElementById('clear').checked) {
+      document.getElementById('output1').innerHTML = '';
+      document.getElementById('output2').innerHTML = '';
+      document.getElementById('significancetestresults').innerHTML = '';
+    }
+
     comparePSI();
   });
 
@@ -191,20 +199,23 @@
     font-family: 'Helvetica';
   }
 
-  main {
-  }
-
   input {
     padding: 5px;
     font-size: 16px;
     width: 100%;
-    margin-right: 10px;
   }
 
   .form {
     display: flex;
     max-width: 800px;
     margin: auto;
+    gap: 1rem;
+  }
+
+  .field label {
+    display: flex;
+    height: 100%;
+    align-items: center;
   }
 
   .results {
@@ -238,6 +249,12 @@
       <input id="url1" value="">
       <input id="url2" value="">
       <button id="button">Submit</button>
+      <div class="field">
+        <label>
+          <input type="checkbox" id="clear">
+          Clear
+        </label>
+      </div>
     </div>
     <div class="results">
       <div id="output1">
