@@ -11,7 +11,7 @@
  */
 
 import {
-} from '../../scripts/lib-franklin.js';
+} from '../../scripts/aem.js';
 import {
   createPopupButton,
   getOverlay,
