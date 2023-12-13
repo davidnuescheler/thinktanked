@@ -67,14 +67,13 @@ async function addReviewToEnvSelector(shadowRoot) {
         window.location.href = `https://${env.ref}--${env.repo}--${env.owner}.hlx.page${window.location.pathname}`;
       }
       if (text === 'Review') {
-        window.location.href = `https://${reviews[0].reviewId}--${env.ref}--${env.repo}--${env.owner}.hlx.reviews${window.location.pathname}`;
+        window.location.href = `https://${reviews[0].reviewId}--${env.ref}--${env.repo}--${env.owner}.aem.reviews${window.location.pathname}`;
       }
       if (text === 'Live') {
         window.location.href = `https://${env.ref}--${env.repo}--${env.owner}.hlx.live${window.location.pathname}`;
       }
       if (text === 'Production') {
         // todo for live: check if sidekick config contains host
-        // window.location.href = `https://www.penbrayacomingsoon.com${window.location.pathname}`;
       }
     });
     return (button);
@@ -157,12 +156,12 @@ async function previewMode(plugins, sk) {
         const search = getPageParams();
         await addPageToReview(window.location.pathname + search, openReviews[0].reviewId);
       }
-      window.location.href = `https://default--${env.ref}--${env.repo}--${env.owner}.hlx.reviews${window.location.pathname}`;
+      window.location.href = `https://default--${env.ref}--${env.repo}--${env.owner}.aem.reviews${window.location.pathname}`;
     });
   } catch (e) {
     button.setAttribute('disabled', '');
     button.title = 'Failed to Connect to Review Service';
-    button.textContent = '(Network Error)'
+    button.textContent = '(Network Error)';
   }
 }
 
@@ -182,7 +181,7 @@ async function openManifest(sk) {
   dialog.className = 'hlx-dialog';
   const edit = review.status === 'open' ? `<div class="hlx-edit-manifest hlx-edit-hide"><button id="hlx-edit-manifest">Edit Pages in Change Log</button><textarea wrap="off" rows="10">${review.pages.map((path) => `https://${env.ref}--${env.repo}--${env.owner}.hlx.page${path}`).join('\n')}</textarea><button id="hlx-update-manifest">Update Change Log</button></div>` : '';
   const buttons = review.status === 'open' ? '<button id="hlx-submit">Submit for Review</button>' : `<button${disabled} id="hlx-approve">Approve and Publish</button> <button${disabled} id="hlx-reject">Reject Review</button>`;
-  const pages = review.pages.map((path) => `<p class="hlx-row"><a href="${path}">https://${env.review}--${env.ref}--${env.repo}--${env.owner}.hlx.reviews${path}</a></p>`);
+  const pages = review.pages.map((path) => `<p class="hlx-row"><a href="${path}">https://${env.review}--${env.ref}--${env.repo}--${env.owner}.aem.reviews${path}</a></p>`);
   dialog.innerHTML = `
     <form method="dialog">
       <button class="hlx-close-button">X</button>
@@ -269,6 +268,8 @@ async function decorateSidekick(sk) {
 
   sk.shadowRoot.append(link);
 
+  console.log(state);
+
   if (state === 'page') previewMode(plugins, sk);
   if (state === 'reviews') reviewMode(features, sk);
   addReviewToEnvSelector(sk.shadowRoot);
@@ -297,6 +298,28 @@ function waitForSidekickPlugins(sk) {
     if (!window.location.search.includes('suppress')) {
       window.location.pathname = `${window.location.pathname.split('/').slice(3).join('/')}`;
     }
+  }
+
+  function openSidekick(callback) {
+    const env = getReviewEnv();
+
+    const SIDEKICK_EXTENSION_ID = 'ccfggkjabjahcjoljmgmklhpaccedipo';
+    if (window.chrome && window.chrome.runtime) {
+      const payload = { owner: env.owner, repo: env.repo, action: 'loadSidekick' };
+      window.chrome.runtime.sendMessage(SIDEKICK_EXTENSION_ID, payload, callback);
+    } else {
+      console.error('No chrome.runtime, cannot send message to the Sidekick');
+    }
+  }
+
+  if (window.location.hostname.endsWith('.reviews')) {
+    // Sidekick doesn't know how to open on .reviews
+    // so we need to open it manually
+    openSidekick((opened) => {
+      if (!opened) {
+        console.warn('Cannot open sidekick on this page');
+      }
+    });
   }
 
   const sk = document.querySelector('helix-sidekick');

@@ -5,7 +5,7 @@
 </head>
 <script src="//cdn.jsdelivr.net/npm/jstat@latest/dist/jstat.min.js"></script>
 <script type="module">
-  import pLimit from 'https://cdn.skypack.dev/p-limit';
+  import pLimit from 'https://cdn.skypack.dev/p-limit@4.0.0';
   const parallelism = new URL(window.location.href).searchParams.get('parallelism');
   // parse number
   const limit = pLimit(parallelism ? parseInt(parallelism) : 10);
@@ -128,6 +128,7 @@
 
   async function comparePSI() {
     const [res1, res2] = await Promise.all([executePSI(1), executePSI(2)]);
+    if (!res1 || !res2) return;
     console.log(keytoarray(res1, 'LCP'), keytoarray(res2, 'LCP'));
     console.log(significancetest(keytoarray(res1, 'LCP'), keytoarray(res2, 'LCP')));
     const significancetestresults = document.getElementById('significancetestresults');
@@ -174,6 +175,14 @@
     url.searchParams.set('url1', document.getElementById('url1').value);
     url.searchParams.set('url2', document.getElementById('url2').value);
     window.history.pushState({}, '', url);
+
+
+    if (document.getElementById('clear').checked) {
+      document.getElementById('output1').innerHTML = '';
+      document.getElementById('output2').innerHTML = '';
+      document.getElementById('significancetestresults').innerHTML = '';
+    }
+
     comparePSI();
   });
 
@@ -190,20 +199,23 @@
     font-family: 'Helvetica';
   }
 
-  main {
-  }
-
   input {
     padding: 5px;
     font-size: 16px;
     width: 100%;
-    margin-right: 10px;
   }
 
   .form {
     display: flex;
     max-width: 800px;
     margin: auto;
+    gap: 1rem;
+  }
+
+  .field label {
+    display: flex;
+    height: 100%;
+    align-items: center;
   }
 
   .results {
@@ -237,6 +249,12 @@
       <input id="url1" value="">
       <input id="url2" value="">
       <button id="button">Submit</button>
+      <div class="field">
+        <label>
+          <input type="checkbox" id="clear">
+          Clear
+        </label>
+      </div>
     </div>
     <div class="results">
       <div id="output1">
