@@ -61,7 +61,7 @@ async function isReviewOpen(reviewId) {
 }
 
 async function publishSnapshot(reviewId, env) {
-  const snapshotEndpoint = `https://admin.hlx.page/snapshot/${env.owner}/${env.repo}/main/${reviewId}/*?publish=true`;
+  const snapshotEndpoint = `https://admin.hlx.page/snapshot/${env.owner}/${env.repo}/main/${reviewId}?publish=true`;
   const snapshotResp = await fetch(snapshotEndpoint, {
     method: 'POST',
   });
