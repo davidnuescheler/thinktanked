@@ -35,6 +35,19 @@ function toReview(snapshot) {
   return (review);
 }
 
+async function pollJob(url, count = 0) {
+  const resp = await fetch(url);
+  if(!resp.ok) {
+    console.log('failed to poll job: ', resp);
+    throw Error('failed to poll job');
+  }
+  const { state } = await resp.json();
+  if(state !== 'stopped' && count < 30) {
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    return pollJob(url, count + 1);
+  }
+}
+
 export async function getReviews() {
   const resp = await fetch(`/.snapshots/default/.manifest.json?ck=${Math.random()}`, {
     cache: 'no-store',
@@ -67,6 +80,10 @@ async function publishSnapshot(reviewId, env) {
   });
   const snapshotText = await snapshotResp.text();
   console.log(snapshotText);
+  try {
+    snapshotResp.data = JSON.parse(snapshotText);
+  } catch {};
+  return snapshotResp;
 }
 
 async function addPageToSnapshot(pathname, reviewId, env) {
@@ -177,7 +194,14 @@ export async function approveReview(reviewId) {
 
   const review = await getReview(reviewId);
   if (review && review.status === 'submitted') {
-    await publishSnapshot(reviewId, env);
+    const resp = await publishSnapshot(reviewId, env);
+    if(resp.status === 202) {
+      const url = resp.data.links?.self || resp.data.link?.self;
+      if(url) {
+        // wait for snapshot job to complete
+        await pollJob(resp.data.link.self);
+      }
+    }
     await rejectReview(reviewId);
 
     console.log('Clearing Pages');
