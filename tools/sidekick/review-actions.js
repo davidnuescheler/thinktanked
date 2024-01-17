@@ -196,8 +196,11 @@ export async function approveReview(reviewId) {
   if (review && review.status === 'submitted') {
     const resp = await publishSnapshot(reviewId, env);
     if(resp.status === 202) {
-      // wait for snapshot job to complete
-      await pollJob(resp.data.link.self);
+      const url = resp.data.links?.self || resp.data.link?.self;
+      if(url) {
+        // wait for snapshot job to complete
+        await pollJob(resp.data.link.self);
+      }
     }
     await rejectReview(reviewId);
 
