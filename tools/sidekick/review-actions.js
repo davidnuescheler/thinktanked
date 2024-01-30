@@ -199,7 +199,7 @@ export async function approveReview(reviewId) {
       const url = resp.data.links?.self || resp.data.link?.self;
       if(url) {
         // wait for snapshot job to complete
-        await pollJob(resp.data.link.self);
+        await pollJob(url);
       }
     }
     await rejectReview(reviewId);
