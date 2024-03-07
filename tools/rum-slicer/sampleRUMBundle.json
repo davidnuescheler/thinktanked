@@ -1,0 +1,60 @@
+{
+    "id": "Wlr",
+    "weight": 100,
+    "userAgent": "desktop",
+    "url": "https://thinktanked.org/",
+    "events": [
+      {
+        "timeOffset": 0,
+        "checkpoint": "top"
+      },
+      {
+        "timeOffset": 209,
+        "checkpoint": "load"
+      },
+      {
+        "timeOffset": 343,
+        "checkpoint": "lazy"
+      },
+      {
+        "timeOffset": 377,
+        "checkpoint": "enter",
+        "target": "visible",
+        "source": ""
+      },
+      {
+        "timeOffset": 383,
+        "checkpoint": "viewblock",
+        "source": ".hero"
+      },
+      {
+        "timeOffset": 383,
+        "checkpoint": "viewmedia",
+        "target": "https://thinktanked.org/media_1654dd859ba4ebc31b7ace9e69456f260aa60d3c2.jpeg",
+        "source": ".hero"
+      },
+      {
+        "timeOffset": 576,
+        "checkpoint": "leave"
+      },
+      {
+        "timeOffset": 1885,
+        "checkpoint": "loadresource",
+        "target": 1300,
+        "source": "https://thinktanked.org/nav.plain.html"
+      },
+      {
+        "timeOffset": 3985,
+        "checkpoint": "cwv"
+      },
+      {
+        "timeOffset": 4014,
+        "checkpoint": "cwv"
+      },
+      {
+        "timeOffset": 47485,
+        "checkpoint": "cwv-inp",
+        "target": 0
+      }
+    ]
+  }

@@ -1,0 +1,53 @@
+<html>
+    <head>
+        <title>
+            RUM Slicer
+        </title>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script src="./slicer.js" type="module"></script>
+    </head>
+    <body>
+        <header>
+        <h1>RUM Dashboard</h1>
+        DomainKey:
+        <input type="password" id="domainKey">
+        Domain:
+        <input type="text" id="domain">
+        </header>
+        <main>
+            <div>
+                <canvas id="myChart"></canvas>
+              </div>              
+        </main>
+        <aside>
+            <fieldset>
+                <legend>Events</legend>
+              
+                <div>
+                  <input type="checkbox" id="top" name="top" checked />
+                  <label for="top">top</label>
+                </div>
+              
+                <div>
+                  <input type="checkbox" id="enter" name="enter" />
+                  <label for="enter">enter</label>
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend>Target</legend>
+              
+                <div>
+                  <input type="checkbox" id="target" name="target" checked />
+                  <label for="target">target</label>
+                </div>
+              
+                <div>
+                  <input type="checkbox" id="enter" name="enter" />
+                  <label for="horns">enter</label>
+                </div>
+            </fieldset>
+
+        </aside>
+    </body>
+</html>
