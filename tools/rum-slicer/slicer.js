@@ -117,8 +117,11 @@ export async function fetchLastWeek() {
 function filterBundle(bundle, filter, facets) {
   let matchedAll = true;
   const filterMatches = {};
+
+  filterMatches.text = true;
   if (!bundle.url.includes(filter.text)) {
     matchedAll = false;
+    filterMatches.text = false;
   }
 
   const checkpoints = bundle.events.map((e) => e.checkpoint);
@@ -130,6 +133,7 @@ function filterBundle(bundle, filter, facets) {
         filterMatches.checkpoint = true;
       } else {
         matchedAll = false;
+        filterMatches.checkpoint = false;
       }
     }
   }
@@ -141,19 +145,28 @@ function filterBundle(bundle, filter, facets) {
         filterMatches.url = true;
       } else {
         matchedAll = false;
+        filterMatches.url = false;
       }
     }
   }
 
+  const matchedEverythingElse = (facetName) => {
+    let includeInFacet = true;
+    Object.keys(filterMatches).forEach((filterKey) => {
+      if (filterKey !== facetName && !filterMatches[filterKey]) includeInFacet = false;
+    });
+    return includeInFacet;
+  };
+
   /* facets */
-  if (matchedAll) {
+  if (matchedEverythingElse('checkpoint')) {
     checkpoints.forEach((val) => {
       if (facets.checkpoint[val]) facets.checkpoint[val] += bundle.weight;
       else facets.checkpoint[val] = bundle.weight;
     });
   }
 
-  if (matchedAll) {
+  if (matchedEverythingElse('url')) {
     if (facets.url[bundle.url]) facets.url[bundle.url] += bundle.weight;
     else facets.url[bundle.url] = bundle.weight;
   }
