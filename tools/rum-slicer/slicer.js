@@ -3,6 +3,7 @@ let DOMAIN_KEY = '1234';
 let DOMAIN = 'www.thinktanked.com';
 
 const filterInput = document.getElementById('filter');
+const facetsElement = document.getElementById('facets');
 const canvas = document.getElementById('myChart');
 let dataChunks = [];
 
@@ -13,7 +14,7 @@ const chart = new Chart(canvas, {
     labels: ['this'],
     datasets: [{
       label: 'Page Views',
-      data: [2000],
+      data: [],
       barPercentage: 1,
       categoryPercentage: 0.95,
       backgroundColor: '#7FB2F0',
@@ -29,6 +30,27 @@ const chart = new Chart(canvas, {
   },
 });
 
+function toHumanReadble(num) {
+  const dp = 0;
+  let number = num;
+  const thresh = 1000;
+
+  if (Math.abs(num) < thresh) {
+    return `${num} B`;
+  }
+
+  const units = ['k', 'm', 'g', 't', 'p'];
+  let u = -1;
+  const r = 10 ** dp;
+
+  do {
+    number /= thresh;
+    u += 1;
+  } while (Math.round(Math.abs(number) * r) / r >= thresh && u < units.length - 1);
+
+  return `${number.toFixed(dp)}${units[u]}`;
+}
+
 async function loadSampleBundle() {
   const resp = await fetch('./sampleRUMBundle.json');
   return (resp.json());
@@ -41,9 +63,14 @@ async function createRandomBundle(date, hour) {
   const sampleURLs = ['https://www.thinktanked.org/', 'https://www.thinktanked.org/pretzels', 'https://www.thinktanked.org/iba-testing'];
   const bundle = structuredClone(SAMPLE_BUNDLE);
   bundle.id = `${Math.random()}`;
-  bundle.userAgent = Math.random() < 0.5 ? 'desktop' : 'mobile';
+  bundle.userAgent = Math.random() < 0.3 ? 'desktop' : 'mobile';
   bundle.url = sampleURLs[Math.floor(Math.random() * 3)];
   bundle.timeSlot = `${date}T${hour}:00:00Z`;
+  // remove leave
+  if (Math.random() < 0.3) bundle.events.splice(6, 1);
+  // remove enter
+  if (Math.random() < 0.3) bundle.events.splice(3, 1);
+
   return (bundle);
 }
 
@@ -98,6 +125,12 @@ function filterBundle(bundle, filter) {
 function createChartData(bundles, config) {
   const labels = [];
   const data = [];
+  const facets = {
+    checkpoint: {},
+    target: {},
+    url: {},
+  };
+
   if (config.view === 'previousWeek') {
     const hoursInWeek = 7 * 24;
     const counts = {};
@@ -105,6 +138,18 @@ function createChartData(bundles, config) {
     bundles.forEach((bundle) => {
       if (!counts[bundle.timeSlot]) counts[bundle.timeSlot] = 0;
       counts[bundle.timeSlot] += bundle.weight;
+      bundle.events.forEach((event) => {
+        const addToFacet = (facetName) => {
+          if (event[facetName]) {
+            if (!facets[facetName][event[facetName]]) facets[facetName][event[facetName]] = 0;
+            facets[facetName][event[facetName]] += bundle.weight;
+          }
+        };
+
+        addToFacet('checkpoint');
+        addToFacet('target');
+        addToFacet('url');
+      });
     });
 
     const date = new Date();
@@ -119,7 +164,35 @@ function createChartData(bundles, config) {
     }
   }
 
-  return { labels, data };
+  return { labels, data, facets };
+}
+
+function updateFacets(facets) {
+  facetsElement.textContent = '';
+  const keys = Object.keys(facets);
+  keys.forEach((facetName) => {
+    const facet = facets[facetName];
+    const fieldSet = document.createElement('fieldset');
+    const legend = document.createElement('legend');
+    legend.textContent = facetName;
+    fieldSet.append(legend);
+    const optionKeys = Object.keys(facet);
+    optionKeys.sort((a, b) => facet[b] - facet[a]);
+    optionKeys.forEach((optionKey) => {
+      const optionValue = facet[optionKey];
+      const div = document.createElement('div');
+      const input = document.createElement('input');
+      input.type = 'checkbox';
+      input.value = optionKey;
+      input.id = `${facetName}-${optionKey}`;
+      const label = document.createElement('label');
+      label.for = `${facetName}-${optionKey}`;
+      label.textContent = `${optionKey} (${toHumanReadble(optionValue)})`;
+      div.append(input, label);
+      fieldSet.append(div);
+    });
+    facetsElement.append(fieldSet);
+  });
 }
 
 async function draw() {
@@ -130,10 +203,11 @@ async function draw() {
   dataChunks.forEach((chunk) => {
     filtered.push(...chunk.rumBundles.filter((bundle) => filterBundle(bundle, filter)));
   });
-  const { labels, data } = createChartData(filtered, { view: 'previousWeek' });
+  const { labels, data, facets } = createChartData(filtered, { view: 'previousWeek' });
   chart.data.datasets[0].data = data;
   chart.data.labels = labels;
   chart.update();
+  updateFacets(facets);
 }
 
 async function loadData() {
@@ -141,5 +215,15 @@ async function loadData() {
   draw();
 }
 
+function updateState() {
+  const url = new URL(window.location);
+  url.searchParams.set('text', filterInput.value);
+  window.history.replaceState({}, '', url);
+}
+
 loadData();
-filterInput.addEventListener('input', draw);
+
+filterInput.addEventListener('input', () => {
+  updateState();
+  draw();
+});
