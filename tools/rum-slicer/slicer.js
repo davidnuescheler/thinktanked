@@ -11,7 +11,7 @@ let dataChunks = [];
 const chart = new Chart(canvas, {
   type: 'bar',
   data: {
-    labels: ['this'],
+    labels: [],
     datasets: [{
       label: 'Page Views',
       data: [],
@@ -114,12 +114,51 @@ export async function fetchLastWeek() {
   return chunks;
 }
 
-function filterBundle(bundle, filter) {
-  let matched = true;
+function filterBundle(bundle, filter, facets) {
+  let matchedAll = true;
+  const filterMatches = {};
   if (!bundle.url.includes(filter.text)) {
-    matched = false;
+    matchedAll = false;
   }
-  return (matched);
+
+  const checkpoints = bundle.events.map((e) => e.checkpoint);
+
+  /* filter checkpoint */
+  if (matchedAll) {
+    if (filter.checkpoint.length) {
+      if (checkpoints.some((cp) => filter.checkpoint.includes(cp))) {
+        filterMatches.checkpoint = true;
+      } else {
+        matchedAll = false;
+      }
+    }
+  }
+
+  /* filter url */
+  if (matchedAll) {
+    if (filter.url.length) {
+      if (filter.url.includes(bundle.url)) {
+        filterMatches.url = true;
+      } else {
+        matchedAll = false;
+      }
+    }
+  }
+
+  /* facets */
+  if (matchedAll) {
+    checkpoints.forEach((val) => {
+      if (facets.checkpoint[val]) facets.checkpoint[val] += bundle.weight;
+      else facets.checkpoint[val] = bundle.weight;
+    });
+  }
+
+  if (matchedAll) {
+    if (facets.url[bundle.url]) facets.url[bundle.url] += bundle.weight;
+    else facets.url[bundle.url] = bundle.weight;
+  }
+
+  return (matchedAll);
 }
 
 function createChartData(bundles, config) {
@@ -168,6 +207,8 @@ function createChartData(bundles, config) {
 }
 
 function updateFacets(facets) {
+  const url = new URL(window.location);
+
   facetsElement.textContent = '';
   const keys = Object.keys(facets);
   keys.forEach((facetName) => {
@@ -184,7 +225,15 @@ function updateFacets(facets) {
       const input = document.createElement('input');
       input.type = 'checkbox';
       input.value = optionKey;
+      input.checked = url.searchParams.getAll(facetName).includes(optionKey);
       input.id = `${facetName}-${optionKey}`;
+      input.addEventListener('click', () => {
+        // eslint-disable-next-line no-use-before-define
+        updateState();
+        // eslint-disable-next-line no-use-before-define
+        draw();
+      });
+
       const label = document.createElement('label');
       label.for = `${facetName}-${optionKey}`;
       label.textContent = `${optionKey} (${toHumanReadble(optionValue)})`;
@@ -196,14 +245,29 @@ function updateFacets(facets) {
 }
 
 async function draw() {
+  const params = new URL(window.location).searchParams;
+  const checkpoint = params.getAll('checkpoint');
+  const target = params.getAll('target');
+  const url = params.getAll('url');
+
+  const filterText = params.get('filter');
   const filtered = [];
   const filter = {
-    text: filterInput.value,
+    text: filterText,
+    checkpoint,
+    target,
+    url,
   };
+
+  const facets = {
+    checkpoint: {},
+    url: {},
+  };
+
   dataChunks.forEach((chunk) => {
-    filtered.push(...chunk.rumBundles.filter((bundle) => filterBundle(bundle, filter)));
+    filtered.push(...chunk.rumBundles.filter((bundle) => filterBundle(bundle, filter, facets)));
   });
-  const { labels, data, facets } = createChartData(filtered, { view: 'previousWeek' });
+  const { labels, data } = createChartData(filtered, { view: 'previousWeek' });
   chart.data.datasets[0].data = data;
   chart.data.labels = labels;
   chart.update();
@@ -216,12 +280,19 @@ async function loadData() {
 }
 
 function updateState() {
-  const url = new URL(window.location);
-  url.searchParams.set('text', filterInput.value);
+  const url = new URL(window.location.href.split('?')[0]);
+  url.searchParams.set('filter', filterInput.value);
+
+  facetsElement.querySelectorAll('input').forEach((e) => {
+    if (e.checked) {
+      url.searchParams.append(e.id.split('-')[0], e.value);
+    }
+  });
   window.history.replaceState({}, '', url);
 }
 
 loadData();
+filterInput.value = new URL(window.location).searchParams.get('filter');
 
 filterInput.addEventListener('input', () => {
   updateState();
