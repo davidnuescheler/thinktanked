@@ -150,6 +150,19 @@ function filterBundle(bundle, filter, facets) {
     }
   }
 
+  /* filter target */
+  if (matchedAll) {
+    const targets = bundle.events.map((e) => e.target);
+    if (filter.target.length) {
+      if (targets.some((cp) => filter.target.includes(cp))) {
+        filterMatches.checkpoint = true;
+      } else {
+        matchedAll = false;
+        filterMatches.checkpoint = false;
+      }
+    }
+  }
+
   const matchedEverythingElse = (facetName) => {
     let includeInFacet = true;
     Object.keys(filterMatches).forEach((filterKey) => {
@@ -263,7 +276,7 @@ async function draw() {
   const target = params.getAll('target');
   const url = params.getAll('url');
 
-  const filterText = params.get('filter');
+  const filterText = params.get('filter') || '';
   const filtered = [];
   const filter = {
     text: filterText,
