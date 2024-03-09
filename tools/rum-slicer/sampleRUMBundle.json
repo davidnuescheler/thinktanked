@@ -45,11 +45,13 @@
       },
       {
         "timeOffset": 3985,
-        "checkpoint": "cwv"
+        "checkpoint": "cwv-lcp",
+        "target": 0
       },
       {
         "timeOffset": 4014,
-        "checkpoint": "cwv"
+        "checkpoint": "cwv-cls",
+        "target": 0
       },
       {
         "timeOffset": 47485,

@@ -1,3 +1,8 @@
+// eslint-disable-next-line no-unused-vars, import/no-unresolved
+import { DateTime } from 'https://cdn.jsdelivr.net/npm/luxon@3.4.4/+esm';
+// eslint-disable-next-line import/no-unresolved
+import 'https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon/+esm';
+
 let SAMPLE_BUNDLE;
 let DOMAIN_KEY = '1234';
 let DOMAIN = 'www.thinktanked.com';
@@ -16,15 +21,34 @@ const chart = new Chart(canvas, {
       label: 'Page Views',
       data: [],
       barPercentage: 1,
-      categoryPercentage: 0.95,
-      backgroundColor: '#7FB2F0',
-      hoverBackgroundColor: '#35478C',
+      categoryPercentage: 1,
     }],
   },
   options: {
+    datasets: {
+      bar: {
+        borderSkipped: false,
+        borderRadius: {
+          topLeft: 3,
+          topRight: 3,
+          bottomLeft: 3,
+          bottomRight: 3,
+        },
+      },
+    },
+    responsive: true,
     scales: {
+      x: {
+        type: 'time',
+        display: true,
+        offset: true,
+        time: {
+          unit: 'hour',
+        },
+        stacked: true,
+      },
       y: {
-        beginAtZero: true,
+        stacked: true,
       },
     },
   },
@@ -66,6 +90,19 @@ async function createRandomBundle(date, hour) {
   bundle.userAgent = Math.random() < 0.3 ? 'desktop' : 'mobile';
   bundle.url = sampleURLs[Math.floor(Math.random() * 3)];
   bundle.timeSlot = `${date}T${hour}:00:00Z`;
+
+  // deal with inp
+  if (Math.random() < 0.5) bundle.events.splice(10, 1);
+  else bundle.events[10].target = Math.floor(Math.random() * 600);
+
+  // deal with cls
+  if (Math.random() < 0.5) bundle.events.splice(9, 1);
+  else bundle.events[9].target = Math.random() * 0.3;
+
+  // deal with lcp
+  if (Math.random() < 0.5) bundle.events.splice(8, 1);
+  else bundle.events[8].target = Math.floor(Math.random() * 5000);
+
   // remove leave
   if (Math.random() < 0.3) bundle.events.splice(6, 1);
   // remove enter
@@ -84,6 +121,20 @@ async function generateRandomRUMBundles(num, date, hour) {
   return (bundles);
 }
 
+function addCalculatedProps(bundle) {
+  bundle.events.forEach((e) => {
+    if (e.checkpoint === 'cwv-inp') {
+      bundle.cwvINP = e.target;
+    }
+    if (e.checkpoint === 'cwv-lcp') {
+      bundle.cwvLCP = e.target;
+    }
+    if (e.checkpoint === 'cwv-cls') {
+      bundle.cwvCLS = e.target;
+    }
+  });
+}
+
 async function fetchUTCHour(utcISOString) {
   const [date, time] = utcISOString.split('T');
   const datePath = date.split('-').join('/');
@@ -94,6 +145,7 @@ async function fetchUTCHour(utcISOString) {
   // const json = await resp.json();
   // const { rumBundles } = json;
   const rumBundles = await generateRandomRUMBundles(Math.random() * 100, date, hour);
+  rumBundles.forEach((bundle) => addCalculatedProps(bundle));
   return { date, hour, rumBundles };
 }
 
@@ -129,7 +181,7 @@ function filterBundle(bundle, filter, facets) {
   /* filter checkpoint */
   if (matchedAll) {
     if (filter.checkpoint.length) {
-      if (checkpoints.some((cp) => filter.checkpoint.includes(cp))) {
+      if (filter.checkpoint.every((cp) => checkpoints.includes(cp))) {
         filterMatches.checkpoint = true;
       } else {
         matchedAll = false;
@@ -150,15 +202,14 @@ function filterBundle(bundle, filter, facets) {
     }
   }
 
-  /* filter target */
+  /* filter userAgent */
   if (matchedAll) {
-    const targets = bundle.events.map((e) => e.target);
-    if (filter.target.length) {
-      if (targets.some((cp) => filter.target.includes(cp))) {
-        filterMatches.checkpoint = true;
+    if (filter.userAgent.length) {
+      if (filter.userAgent.includes(bundle.userAgent)) {
+        filterMatches.userAgent = true;
       } else {
         matchedAll = false;
-        filterMatches.checkpoint = false;
+        filterMatches.userAgent = false;
       }
     }
   }
@@ -172,7 +223,7 @@ function filterBundle(bundle, filter, facets) {
   };
 
   /* facets */
-  if (matchedEverythingElse('checkpoint')) {
+  if (matchedAll) {
     checkpoints.forEach((val) => {
       if (facets.checkpoint[val]) facets.checkpoint[val] += bundle.weight;
       else facets.checkpoint[val] = bundle.weight;
@@ -184,52 +235,114 @@ function filterBundle(bundle, filter, facets) {
     else facets.url[bundle.url] = bundle.weight;
   }
 
+  if (matchedEverythingElse('userAgent')) {
+    if (facets.userAgent[bundle.userAgent]) facets.userAgent[bundle.userAgent] += bundle.weight;
+    else facets.userAgent[bundle.userAgent] = bundle.weight;
+  }
+
   return (matchedAll);
 }
 
 function createChartData(bundles, config) {
   const labels = [];
-  const data = [];
-  const facets = {
-    checkpoint: {},
-    target: {},
-    url: {},
-  };
+  const datasets = [];
 
   if (config.view === 'previousWeek') {
     const hoursInWeek = 7 * 24;
-    const counts = {};
+    const stats = {};
+    const cwvStructure = () => ({
+      good: { weight: 0, average: 0 },
+      ni: { weight: 0, average: 0 },
+      poor: { weight: 0, average: 0 },
+    });
+
+    const scoreValue = (value, ni, poor) => {
+      if (value >= poor) return 'poor';
+      if (value >= ni) return 'ni';
+      return 'good';
+    };
 
     bundles.forEach((bundle) => {
-      if (!counts[bundle.timeSlot]) counts[bundle.timeSlot] = 0;
-      counts[bundle.timeSlot] += bundle.weight;
-      bundle.events.forEach((event) => {
-        const addToFacet = (facetName) => {
-          if (event[facetName]) {
-            if (!facets[facetName][event[facetName]]) facets[facetName][event[facetName]] = 0;
-            facets[facetName][event[facetName]] += bundle.weight;
-          }
+      if (!stats[bundle.timeSlot]) {
+        const s = {
+          total: 0,
+          lcp: cwvStructure(),
+          inp: cwvStructure(),
+          cls: cwvStructure(),
         };
 
-        addToFacet('checkpoint');
-        addToFacet('target');
-        addToFacet('url');
-      });
+        stats[bundle.timeSlot] = s;
+      }
+      const stat = stats[bundle.timeSlot];
+      stat.total += bundle.weight;
+      if (bundle.cwvLCP) {
+        const score = scoreValue(bundle.cwvLCP, 2500, 4000);
+        const bucket = stat.lcp[score];
+        const newWeight = bundle.weight + bucket.weight;
+        bucket.average = (
+          (bucket.average * bucket.weight)
+          + (bundle.cwvLCP * bundle.weight)
+        ) / newWeight;
+        bucket.weight = newWeight;
+      }
     });
+
+    const dataTotal = [];
+    const dataGood = [];
+    const dataNI = [];
+    const dataPoor = [];
 
     const date = new Date();
     for (let i = 0; i < hoursInWeek; i += 1) {
       const [dateString, time] = date.toISOString().split('T');
       const hour = time.split(':')[0];
       const timeSlot = `${dateString}T${hour}:00:00Z`;
+      const stat = stats[timeSlot];
+      // eslint-disable-next-line no-undef
+      labels.unshift(timeSlot);
+      const sumBucket = (bucket) => {
+        bucket.weight = bucket.good.weight + bucket.ni.weight + bucket.poor.weight;
+        if (bucket.weight) {
+          bucket.average = ((bucket.good.weight * bucket.good.average)
+        + (bucket.ni.weight * bucket.ni.average)
+        + (bucket.poor.weight * bucket.poor.average)) / bucket.weight;
+        } else {
+          bucket.average = 0;
+        }
+      };
 
-      labels.unshift(`${hour}:00`);
-      data.unshift(counts[timeSlot]);
+      if (stat) {
+        sumBucket(stat.lcp);
+        sumBucket(stat.cls);
+        sumBucket(stat.inp);
+        const cwvTotal = stat.lcp.weight + stat.cls.weight + stat.inp.weight;
+        const cwvFactor = stat.total / cwvTotal;
+
+        const cwvGood = stat.lcp.good.weight + stat.cls.good.weight + stat.inp.good.weight;
+        const cwvNI = stat.lcp.ni.weight + stat.cls.ni.weight + stat.inp.ni.weight;
+        const cwvPoor = stat.lcp.poor.weight + stat.cls.poor.weight + stat.inp.poor.weight;
+
+        dataTotal.unshift(cwvTotal ? 0 : stat.total);
+        dataGood.unshift(Math.round(cwvGood * cwvFactor));
+        dataNI.unshift(Math.round(cwvNI * cwvFactor));
+        dataPoor.unshift(Math.round(cwvPoor * cwvFactor));
+      } else {
+        dataTotal.unshift(0);
+        dataGood.unshift(0);
+        dataNI.unshift(0);
+        dataPoor.unshift(0);
+      }
+
       date.setHours(date.getHours() - 1);
     }
+
+    datasets.push({ label: 'No CWV', data: dataTotal, backgroundColor: '#888' });
+    datasets.push({ label: 'Good', data: dataGood, backgroundColor: '#0cce6a' });
+    datasets.push({ label: 'Needs Improvement', data: dataNI, backgroundColor: '#ffa400' });
+    datasets.push({ label: 'Poor', data: dataPoor, backgroundColor: '#ff4e43' });
   }
 
-  return { labels, data, facets };
+  return { labels, datasets };
 }
 
 function updateFacets(facets) {
@@ -275,6 +388,7 @@ async function draw() {
   const checkpoint = params.getAll('checkpoint');
   const target = params.getAll('target');
   const url = params.getAll('url');
+  const userAgent = params.getAll('userAgent');
 
   const filterText = params.get('filter') || '';
   const filtered = [];
@@ -283,18 +397,20 @@ async function draw() {
     checkpoint,
     target,
     url,
+    userAgent,
   };
 
   const facets = {
     checkpoint: {},
     url: {},
+    userAgent: {},
   };
 
   dataChunks.forEach((chunk) => {
     filtered.push(...chunk.rumBundles.filter((bundle) => filterBundle(bundle, filter, facets)));
   });
-  const { labels, data } = createChartData(filtered, { view: 'previousWeek' });
-  chart.data.datasets[0].data = data;
+  const { labels, datasets } = createChartData(filtered, { view: 'previousWeek' });
+  chart.data.datasets = datasets;
   chart.data.labels = labels;
   chart.update();
   updateFacets(facets);
