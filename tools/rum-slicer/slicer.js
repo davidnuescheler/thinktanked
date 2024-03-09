@@ -12,6 +12,20 @@ const facetsElement = document.getElementById('facets');
 const canvas = document.getElementById('myChart');
 let dataChunks = [];
 
+function toISOStringWithTimezone(date) {
+  // Pad a number to 2 digits
+  const pad = (n) => `${Math.floor(Math.abs(n))}`.padStart(2, '0');
+
+  // Get timezone offset in ISO format (+hh:mm or -hh:mm)
+  const getTimezoneOffset = () => {
+    const tzOffset = -date.getTimezoneOffset();
+    const diff = tzOffset >= 0 ? '+' : '-';
+    return `${diff}${pad(tzOffset / 60)}:${pad(tzOffset % 60)}`;
+  };
+
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}${getTimezoneOffset()}`;
+}
+
 // eslint-disable-next-line no-undef, no-new
 const chart = new Chart(canvas, {
   type: 'bar',
@@ -46,6 +60,10 @@ const chart = new Chart(canvas, {
           unit: 'hour',
         },
         stacked: true,
+        ticks: {
+          maxRotation: 0,
+          autoSkip: false,
+        },
       },
       y: {
         stacked: true,
@@ -263,7 +281,8 @@ function createChartData(bundles, config) {
     };
 
     bundles.forEach((bundle) => {
-      if (!stats[bundle.timeSlot]) {
+      const localTimeSlot = toISOStringWithTimezone(new Date(bundle.timeSlot));
+      if (!stats[localTimeSlot]) {
         const s = {
           total: 0,
           lcp: cwvStructure(),
@@ -271,9 +290,9 @@ function createChartData(bundles, config) {
           cls: cwvStructure(),
         };
 
-        stats[bundle.timeSlot] = s;
+        stats[localTimeSlot] = s;
       }
-      const stat = stats[bundle.timeSlot];
+      const stat = stats[localTimeSlot];
       stat.total += bundle.weight;
       if (bundle.cwvLCP) {
         const score = scoreValue(bundle.cwvLCP, 2500, 4000);
@@ -293,13 +312,14 @@ function createChartData(bundles, config) {
     const dataPoor = [];
 
     const date = new Date();
+    date.setMinutes(0);
+    date.setSeconds(0);
+
     for (let i = 0; i < hoursInWeek; i += 1) {
-      const [dateString, time] = date.toISOString().split('T');
-      const hour = time.split(':')[0];
-      const timeSlot = `${dateString}T${hour}:00:00Z`;
-      const stat = stats[timeSlot];
+      const localTimeSlot = toISOStringWithTimezone(date);
+      const stat = stats[localTimeSlot];
       // eslint-disable-next-line no-undef
-      labels.unshift(timeSlot);
+      labels.unshift(localTimeSlot);
       const sumBucket = (bucket) => {
         bucket.weight = bucket.good.weight + bucket.ni.weight + bucket.poor.weight;
         if (bucket.weight) {
