@@ -33,15 +33,34 @@ const chart = new Chart(canvas, {
   data: {
     labels: [],
     datasets: [{
-      label: 'Page Views',
+      label: 'No CVW',
+      backgroundColor: '#888',
       data: [],
-      barPercentage: 1,
-      categoryPercentage: 1,
+    },
+    {
+      label: 'Good',
+      backgroundColor: '#0cce6a',
+      data: [],
+    },
+    {
+      label: 'Needs Improvment',
+      backgroundColor: '#ffa400',
+      data: [],
+    },
+    {
+      label: 'Poor',
+      backgroundColor: '#ff4e43',
+      data: [],
     }],
   },
   options: {
+    animation: {
+      duration: 300,
+    },
     datasets: {
       bar: {
+        barPercentage: 1,
+        categoryPercentage: 0.9,
         borderSkipped: false,
         borderRadius: {
           topLeft: 3,
@@ -394,10 +413,10 @@ function createChartData(bundles, config) {
     if (config.unit === 'day') date.setDate(date.getDate() - 1);
   }
 
-  datasets.push({ label: 'No CWV', data: dataTotal, backgroundColor: '#888' });
-  datasets.push({ label: 'Good', data: dataGood, backgroundColor: '#0cce6a' });
-  datasets.push({ label: 'Needs Improvement', data: dataNI, backgroundColor: '#ffa400' });
-  datasets.push({ label: 'Poor', data: dataPoor, backgroundColor: '#ff4e43' });
+  datasets.push({ label: 'No CWV', data: dataTotal });
+  datasets.push({ label: 'Good', data: dataGood });
+  datasets.push({ label: 'Needs Improvement', data: dataNI });
+  datasets.push({ label: 'Poor', data: dataPoor });
 
   return { labels, datasets };
 }
@@ -477,7 +496,9 @@ async function draw() {
     units: 24 * 7,
   };
   const { labels, datasets } = createChartData(filtered, config);
-  chart.data.datasets = datasets;
+  datasets.forEach((ds, i) => {
+    chart.data.datasets[i].data = ds.data;
+  });
   chart.data.labels = labels;
   chart.options.scales.x.time.unit = config.unit;
   chart.update();
