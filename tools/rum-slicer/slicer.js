@@ -7,6 +7,7 @@ let SAMPLE_BUNDLE;
 let DOMAIN_KEY = '1234';
 let DOMAIN = 'www.thinktanked.com';
 
+const viewSelect = document.getElementById('view');
 const filterInput = document.getElementById('filter');
 const facetsElement = document.getElementById('facets');
 const canvas = document.getElementById('myChart');
@@ -57,11 +58,12 @@ const chart = new Chart(canvas, {
         display: true,
         offset: true,
         time: {
-          unit: 'hour',
+          unit: 'day',
         },
         stacked: true,
         ticks: {
-          maxRotation: 0,
+          minRotation: 90,
+          maxRotation: 90,
           autoSkip: false,
         },
       },
@@ -133,7 +135,7 @@ async function generateRandomRUMBundles(num, date, hour) {
   const bundles = [];
   for (let i = 0; i < num; i += 1) {
     // eslint-disable-next-line no-await-in-loop
-    const bundle = await createRandomBundle(date, hour);
+    const bundle = await createRandomBundle(date, (`${hour}`).padStart(2, '0'));
     bundles.push(bundle);
   }
   return (bundles);
@@ -151,6 +153,25 @@ function addCalculatedProps(bundle) {
       bundle.cwvCLS = e.target;
     }
   });
+}
+
+async function fetchUTCDay(utcISOString) {
+  const [date] = utcISOString.split('T');
+  const datePath = date.split('-').join('/');
+  const apiRequestURL = `https://rum.hlx.page/${DOMAIN}/${datePath}?domainKey=${DOMAIN_KEY}`;
+  console.log(apiRequestURL);
+  // const resp = await fetch(apiEndPoint);
+  // const json = await resp.json();
+  // const { rumBundles } = json;
+  const rumBundles = [];
+  for (let hour = 0; hour < 24; hour += 1) {
+    // eslint-disable-next-line no-await-in-loop
+    const hourBundles = await generateRandomRUMBundles(Math.random() * 100, date, hour);
+    hourBundles.forEach((bundle) => addCalculatedProps(bundle));
+    rumBundles.push(...hourBundles);
+  }
+  console.log(rumBundles.length, rumBundles);
+  return { date, rumBundles };
 }
 
 async function fetchUTCHour(utcISOString) {
@@ -180,6 +201,19 @@ export async function fetchLastWeek() {
     // eslint-disable-next-line no-await-in-loop
     chunks.unshift(await fetchUTCHour(date.toISOString()));
     date.setHours(date.getHours() - 1);
+  }
+  return chunks;
+}
+
+export async function fetchLast31Days() {
+  const chunks = [];
+  const date = new Date();
+  const days = 31;
+  for (let i = 0; i < days; i += 1) {
+    // eslint-disable-next-line no-await-in-loop
+    chunks.unshift(await fetchUTCDay(date.toISOString()));
+    date.setDate(date.getDate() - 1);
+    console.log(date);
   }
   return chunks;
 }
@@ -265,102 +299,105 @@ function createChartData(bundles, config) {
   const labels = [];
   const datasets = [];
 
-  if (config.view === 'previousWeek') {
-    const hoursInWeek = 7 * 24;
-    const stats = {};
-    const cwvStructure = () => ({
-      good: { weight: 0, average: 0 },
-      ni: { weight: 0, average: 0 },
-      poor: { weight: 0, average: 0 },
-    });
+  const stats = {};
+  const cwvStructure = () => ({
+    good: { weight: 0, average: 0 },
+    ni: { weight: 0, average: 0 },
+    poor: { weight: 0, average: 0 },
+  });
 
-    const scoreValue = (value, ni, poor) => {
-      if (value >= poor) return 'poor';
-      if (value >= ni) return 'ni';
-      return 'good';
-    };
+  const scoreValue = (value, ni, poor) => {
+    if (value >= poor) return 'poor';
+    if (value >= ni) return 'ni';
+    return 'good';
+  };
 
-    bundles.forEach((bundle) => {
-      const localTimeSlot = toISOStringWithTimezone(new Date(bundle.timeSlot));
-      if (!stats[localTimeSlot]) {
-        const s = {
-          total: 0,
-          lcp: cwvStructure(),
-          inp: cwvStructure(),
-          cls: cwvStructure(),
-        };
+  bundles.forEach((bundle) => {
+    const slotTime = new Date(bundle.timeSlot);
+    if (config.unit === 'day') slotTime.setHours(0);
 
-        stats[localTimeSlot] = s;
-      }
-      const stat = stats[localTimeSlot];
-      stat.total += bundle.weight;
-      if (bundle.cwvLCP) {
-        const score = scoreValue(bundle.cwvLCP, 2500, 4000);
-        const bucket = stat.lcp[score];
-        const newWeight = bundle.weight + bucket.weight;
-        bucket.average = (
-          (bucket.average * bucket.weight)
-          + (bundle.cwvLCP * bundle.weight)
-        ) / newWeight;
-        bucket.weight = newWeight;
-      }
-    });
-
-    const dataTotal = [];
-    const dataGood = [];
-    const dataNI = [];
-    const dataPoor = [];
-
-    const date = new Date();
-    date.setMinutes(0);
-    date.setSeconds(0);
-
-    for (let i = 0; i < hoursInWeek; i += 1) {
-      const localTimeSlot = toISOStringWithTimezone(date);
-      const stat = stats[localTimeSlot];
-      // eslint-disable-next-line no-undef
-      labels.unshift(localTimeSlot);
-      const sumBucket = (bucket) => {
-        bucket.weight = bucket.good.weight + bucket.ni.weight + bucket.poor.weight;
-        if (bucket.weight) {
-          bucket.average = ((bucket.good.weight * bucket.good.average)
-        + (bucket.ni.weight * bucket.ni.average)
-        + (bucket.poor.weight * bucket.poor.average)) / bucket.weight;
-        } else {
-          bucket.average = 0;
-        }
+    const localTimeSlot = toISOStringWithTimezone(slotTime);
+    if (!stats[localTimeSlot]) {
+      const s = {
+        total: 0,
+        lcp: cwvStructure(),
+        inp: cwvStructure(),
+        cls: cwvStructure(),
       };
 
-      if (stat) {
-        sumBucket(stat.lcp);
-        sumBucket(stat.cls);
-        sumBucket(stat.inp);
-        const cwvTotal = stat.lcp.weight + stat.cls.weight + stat.inp.weight;
-        const cwvFactor = stat.total / cwvTotal;
+      stats[localTimeSlot] = s;
+    }
+    const stat = stats[localTimeSlot];
+    stat.total += bundle.weight;
+    if (bundle.cwvLCP) {
+      const score = scoreValue(bundle.cwvLCP, 2500, 4000);
+      const bucket = stat.lcp[score];
+      const newWeight = bundle.weight + bucket.weight;
+      bucket.average = (
+        (bucket.average * bucket.weight)
+        + (bundle.cwvLCP * bundle.weight)
+      ) / newWeight;
+      bucket.weight = newWeight;
+    }
+  });
 
-        const cwvGood = stat.lcp.good.weight + stat.cls.good.weight + stat.inp.good.weight;
-        const cwvNI = stat.lcp.ni.weight + stat.cls.ni.weight + stat.inp.ni.weight;
-        const cwvPoor = stat.lcp.poor.weight + stat.cls.poor.weight + stat.inp.poor.weight;
+  const dataTotal = [];
+  const dataGood = [];
+  const dataNI = [];
+  const dataPoor = [];
 
-        dataTotal.unshift(cwvTotal ? 0 : stat.total);
-        dataGood.unshift(Math.round(cwvGood * cwvFactor));
-        dataNI.unshift(Math.round(cwvNI * cwvFactor));
-        dataPoor.unshift(Math.round(cwvPoor * cwvFactor));
+  const date = new Date();
+  date.setMinutes(0);
+  date.setSeconds(0);
+  if (config.unit === 'day') date.setHours(0);
+
+  for (let i = 0; i < config.units; i += 1) {
+    const localTimeSlot = toISOStringWithTimezone(date);
+    console.log(localTimeSlot);
+    const stat = stats[localTimeSlot];
+    // eslint-disable-next-line no-undef
+    labels.unshift(localTimeSlot);
+    const sumBucket = (bucket) => {
+      bucket.weight = bucket.good.weight + bucket.ni.weight + bucket.poor.weight;
+      if (bucket.weight) {
+        bucket.average = ((bucket.good.weight * bucket.good.average)
+      + (bucket.ni.weight * bucket.ni.average)
+      + (bucket.poor.weight * bucket.poor.average)) / bucket.weight;
       } else {
-        dataTotal.unshift(0);
-        dataGood.unshift(0);
-        dataNI.unshift(0);
-        dataPoor.unshift(0);
+        bucket.average = 0;
       }
+    };
 
-      date.setHours(date.getHours() - 1);
+    if (stat) {
+      sumBucket(stat.lcp);
+      sumBucket(stat.cls);
+      sumBucket(stat.inp);
+      const cwvTotal = stat.lcp.weight + stat.cls.weight + stat.inp.weight;
+      const cwvFactor = stat.total / cwvTotal;
+
+      const cwvGood = stat.lcp.good.weight + stat.cls.good.weight + stat.inp.good.weight;
+      const cwvNI = stat.lcp.ni.weight + stat.cls.ni.weight + stat.inp.ni.weight;
+      const cwvPoor = stat.lcp.poor.weight + stat.cls.poor.weight + stat.inp.poor.weight;
+
+      dataTotal.unshift(cwvTotal ? 0 : stat.total);
+      dataGood.unshift(Math.round(cwvGood * cwvFactor));
+      dataNI.unshift(Math.round(cwvNI * cwvFactor));
+      dataPoor.unshift(Math.round(cwvPoor * cwvFactor));
+    } else {
+      dataTotal.unshift(0);
+      dataGood.unshift(0);
+      dataNI.unshift(0);
+      dataPoor.unshift(0);
     }
 
-    datasets.push({ label: 'No CWV', data: dataTotal, backgroundColor: '#888' });
-    datasets.push({ label: 'Good', data: dataGood, backgroundColor: '#0cce6a' });
-    datasets.push({ label: 'Needs Improvement', data: dataNI, backgroundColor: '#ffa400' });
-    datasets.push({ label: 'Poor', data: dataPoor, backgroundColor: '#ff4e43' });
+    if (config.unit === 'hour') date.setHours(date.getHours() - 1);
+    if (config.unit === 'day') date.setDate(date.getDate() - 1);
   }
+
+  datasets.push({ label: 'No CWV', data: dataTotal, backgroundColor: '#888' });
+  datasets.push({ label: 'Good', data: dataGood, backgroundColor: '#0cce6a' });
+  datasets.push({ label: 'Needs Improvement', data: dataNI, backgroundColor: '#ffa400' });
+  datasets.push({ label: 'Poor', data: dataPoor, backgroundColor: '#ff4e43' });
 
   return { labels, datasets };
 }
@@ -409,6 +446,7 @@ async function draw() {
   const target = params.getAll('target');
   const url = params.getAll('url');
   const userAgent = params.getAll('userAgent');
+  const view = params.get('view') || 'week';
 
   const filterText = params.get('filter') || '';
   const filtered = [];
@@ -429,21 +467,38 @@ async function draw() {
   dataChunks.forEach((chunk) => {
     filtered.push(...chunk.rumBundles.filter((bundle) => filterBundle(bundle, filter, facets)));
   });
-  const { labels, datasets } = createChartData(filtered, { view: 'previousWeek' });
+  const config = view === 'month' ? {
+    view,
+    unit: 'day',
+    units: 30,
+  } : {
+    view,
+    unit: 'hour',
+    units: 24 * 7,
+  };
+  const { labels, datasets } = createChartData(filtered, config);
   chart.data.datasets = datasets;
   chart.data.labels = labels;
+  chart.options.scales.x.time.unit = config.unit;
   chart.update();
   updateFacets(facets);
 }
 
-async function loadData() {
-  dataChunks = await fetchLastWeek();
+async function loadData(scope) {
+  if (scope === 'week') {
+    dataChunks = await fetchLastWeek();
+  }
+  if (scope === 'month') {
+    dataChunks = await fetchLast31Days();
+  }
+
   draw();
 }
 
 function updateState() {
   const url = new URL(window.location.href.split('?')[0]);
   url.searchParams.set('filter', filterInput.value);
+  url.searchParams.set('view', viewSelect.value);
 
   facetsElement.querySelectorAll('input').forEach((e) => {
     if (e.checked) {
@@ -452,11 +507,19 @@ function updateState() {
   });
   window.history.replaceState({}, '', url);
 }
+const params = new URL(window.location).searchParams;
+filterInput.value = params.get('filter');
+const view = params.get('view') || 'week';
+viewSelect.value = view;
 
-loadData();
-filterInput.value = new URL(window.location).searchParams.get('filter');
+loadData(view);
 
 filterInput.addEventListener('input', () => {
   updateState();
   draw();
+});
+
+viewSelect.addEventListener('input', () => {
+  updateState();
+  window.location.reload();
 });
