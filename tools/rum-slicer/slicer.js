@@ -43,7 +43,7 @@ const chart = new Chart(canvas, {
       data: [],
     },
     {
-      label: 'Needs Improvment',
+      label: 'Needs Improvement',
       backgroundColor: '#ffa400',
       data: [],
     },
@@ -54,6 +54,23 @@ const chart = new Chart(canvas, {
     }],
   },
   options: {
+    plugins: {
+      tooltip: {
+        callbacks: {
+          label: (context) => {
+            const { datasets } = context.chart.data;
+            const value = context.parsed.y;
+            const i = context.dataIndex;
+            const total = datasets.reduce((pv, cv) => pv + cv.data[i], 0);
+
+            return (`${context.dataset.label}: ${Math.round((value / total) * 1000) / 10}%`);
+          },
+        },
+      },
+    },
+    interaction: {
+      mode: 'x',
+    },
     animation: {
       duration: 300,
     },
@@ -177,11 +194,12 @@ function addCalculatedProps(bundle) {
 async function fetchUTCDay(utcISOString) {
   const [date] = utcISOString.split('T');
   const datePath = date.split('-').join('/');
-  const apiRequestURL = `https://rum.hlx.page/${DOMAIN}/${datePath}?domainKey=${DOMAIN_KEY}`;
+  const apiRequestURL = `https://thinktanked.org/rum-bundles/${DOMAIN}/${datePath}?domainKey=${DOMAIN_KEY}`;
   console.log(apiRequestURL);
-  // const resp = await fetch(apiEndPoint);
-  // const json = await resp.json();
-  // const { rumBundles } = json;
+  const resp = await fetch(apiRequestURL);
+  const json = await resp.json();
+  const { rumBundles } = json;
+  /*
   const rumBundles = [];
   for (let hour = 0; hour < 24; hour += 1) {
     // eslint-disable-next-line no-await-in-loop
@@ -189,7 +207,8 @@ async function fetchUTCDay(utcISOString) {
     hourBundles.forEach((bundle) => addCalculatedProps(bundle));
     rumBundles.push(...hourBundles);
   }
-  console.log(rumBundles.length, rumBundles);
+  */
+  rumBundles.forEach((bundle) => addCalculatedProps(bundle));
   return { date, rumBundles };
 }
 
@@ -197,12 +216,14 @@ async function fetchUTCHour(utcISOString) {
   const [date, time] = utcISOString.split('T');
   const datePath = date.split('-').join('/');
   const hour = time.split(':')[0];
-  const apiRequestURL = `https://rum.hlx.page/${DOMAIN}/${datePath}/${hour}?domainKey=${DOMAIN_KEY}`;
+  const apiRequestURL = `https://thinktanked.org/rum-bundles/${DOMAIN}/${datePath}/${hour}?domainKey=${DOMAIN_KEY}`;
   console.log(apiRequestURL);
-  // const resp = await fetch(apiEndPoint);
-  // const json = await resp.json();
-  // const { rumBundles } = json;
+  const resp = await fetch(apiRequestURL);
+  const json = await resp.json();
+  const { rumBundles } = json;
+  /*
   const rumBundles = await generateRandomRUMBundles(Math.random() * 100, date, hour);
+  */
   rumBundles.forEach((bundle) => addCalculatedProps(bundle));
   return { date, hour, rumBundles };
 }
@@ -219,7 +240,7 @@ export async function fetchLastWeek() {
   for (let i = 0; i < hoursInWeek; i += 1) {
     // eslint-disable-next-line no-await-in-loop
     chunks.unshift(await fetchUTCHour(date.toISOString()));
-    date.setHours(date.getHours() - 1);
+    date.setTime(date.getTime() - (3600 * 1000));
   }
   return chunks;
 }
@@ -232,7 +253,6 @@ export async function fetchLast31Days() {
     // eslint-disable-next-line no-await-in-loop
     chunks.unshift(await fetchUTCDay(date.toISOString()));
     date.setDate(date.getDate() - 1);
-    console.log(date);
   }
   return chunks;
 }
@@ -372,7 +392,6 @@ function createChartData(bundles, config) {
 
   for (let i = 0; i < config.units; i += 1) {
     const localTimeSlot = toISOStringWithTimezone(date);
-    console.log(localTimeSlot);
     const stat = stats[localTimeSlot];
     // eslint-disable-next-line no-undef
     labels.unshift(localTimeSlot);
@@ -409,14 +428,14 @@ function createChartData(bundles, config) {
       dataPoor.unshift(0);
     }
 
-    if (config.unit === 'hour') date.setHours(date.getHours() - 1);
+    if (config.unit === 'hour') date.setTime(date.getTime() - (3600 * 1000));
     if (config.unit === 'day') date.setDate(date.getDate() - 1);
   }
 
-  datasets.push({ label: 'No CWV', data: dataTotal });
-  datasets.push({ label: 'Good', data: dataGood });
-  datasets.push({ label: 'Needs Improvement', data: dataNI });
-  datasets.push({ label: 'Poor', data: dataPoor });
+  datasets.push({ data: dataTotal });
+  datasets.push({ data: dataGood });
+  datasets.push({ data: dataNI });
+  datasets.push({ data: dataPoor });
 
   return { labels, datasets };
 }
