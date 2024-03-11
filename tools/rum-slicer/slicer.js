@@ -5,12 +5,12 @@ import 'https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon/+esm';
 
 let SAMPLE_BUNDLE;
 let DOMAIN_KEY = '1234';
-let DOMAIN = 'www.thinktanked.com';
+let DOMAIN = 'www.thinktanked.org';
 
 const viewSelect = document.getElementById('view');
 const filterInput = document.getElementById('filter');
 const facetsElement = document.getElementById('facets');
-const canvas = document.getElementById('myChart');
+const canvas = document.getElementById('time-series');
 let dataChunks = [];
 
 function toISOStringWithTimezone(date) {
@@ -111,7 +111,7 @@ const chart = new Chart(canvas, {
 });
 
 function toHumanReadble(num) {
-  const dp = 0;
+  const dp = 3;
   let number = num;
   const thresh = 1000;
 
@@ -128,7 +128,8 @@ function toHumanReadble(num) {
     u += 1;
   } while (Math.round(Math.abs(number) * r) / r >= thresh && u < units.length - 1);
 
-  return `${number.toFixed(dp)}${units[u]}`;
+  const precision = (dp - 1) - Math.floor(Math.log10(number));
+  return `${number.toFixed(precision)}${units[u]}`;
 }
 
 async function loadSampleBundle() {
