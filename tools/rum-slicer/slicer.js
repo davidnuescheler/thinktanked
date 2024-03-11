@@ -110,13 +110,14 @@ const chart = new Chart(canvas, {
   },
 });
 
-function toHumanReadble(num) {
+function toHumanReadable(num) {
   const dp = 3;
   let number = num;
   const thresh = 1000;
 
   if (Math.abs(num) < thresh) {
-    return `${num} B`;
+    const precision = (dp - 1) - Math.floor(Math.log10(number));
+    return `${number.toFixed(precision)}`;
   }
 
   const units = ['k', 'm', 'g', 't', 'p'];
@@ -335,12 +336,21 @@ function filterBundle(bundle, filter, facets) {
   return (matchedAll);
 }
 
+function updateKeyMetrics(keyMetrics) {
+  document.querySelector('#pageviews p').textContent = toHumanReadable(keyMetrics.pageViews);
+  document.querySelector('#lcp p').textContent = `${toHumanReadable(keyMetrics.lcp / 1000)} s`;
+  document.querySelector('#cls p').textContent = `${toHumanReadable(keyMetrics.cls)}`;
+  document.querySelector('#inp p').textContent = `${toHumanReadable(keyMetrics.inp / 1000)} s`;
+}
+
 function createChartData(bundles, config) {
   const labels = [];
   const datasets = [];
 
   const stats = {};
   const cwvStructure = () => ({
+    weight: 0,
+    average: 0,
     good: { weight: 0, average: 0 },
     ni: { weight: 0, average: 0 },
     poor: { weight: 0, average: 0 },
@@ -367,17 +377,35 @@ function createChartData(bundles, config) {
 
       stats[localTimeSlot] = s;
     }
+
+    const updateAverage = (b, struct, key) => {
+      const newWeight = b.weight + struct.weight;
+      struct.average = (
+        (struct.average * struct.weight)
+        + (b[key] * b.weight)
+      ) / newWeight;
+      struct.weight = newWeight;
+    };
+
     const stat = stats[localTimeSlot];
     stat.total += bundle.weight;
     if (bundle.cwvLCP) {
       const score = scoreValue(bundle.cwvLCP, 2500, 4000);
       const bucket = stat.lcp[score];
-      const newWeight = bundle.weight + bucket.weight;
-      bucket.average = (
-        (bucket.average * bucket.weight)
-        + (bundle.cwvLCP * bundle.weight)
-      ) / newWeight;
-      bucket.weight = newWeight;
+      updateAverage(bundle, bucket, 'cwvLCP');
+      updateAverage(bundle, stat.lcp, 'cwvLCP');
+    }
+    if (bundle.cwvCLS) {
+      const score = scoreValue(bundle.cwvCLS, 0.1, 0.25);
+      const bucket = stat.cls[score];
+      updateAverage(bundle, bucket, 'cwvCLS');
+      updateAverage(bundle, stat.lcp, 'cwvCLS');
+    }
+    if (bundle.cwvINP) {
+      const score = scoreValue(bundle.cwvINP, 200, 500);
+      const bucket = stat.inp[score];
+      updateAverage(bundle, bucket, 'cwvINP');
+      updateAverage(bundle, stat.lcp, 'cwvINP');
     }
   });
 
@@ -438,7 +466,7 @@ function createChartData(bundles, config) {
   datasets.push({ data: dataNI });
   datasets.push({ data: dataPoor });
 
-  return { labels, datasets };
+  return { labels, datasets, stats };
 }
 
 function updateFacets(facets) {
@@ -471,7 +499,7 @@ function updateFacets(facets) {
 
       const label = document.createElement('label');
       label.for = `${facetName}-${optionKey}`;
-      label.textContent = `${optionKey} (${toHumanReadble(optionValue)})`;
+      label.textContent = `${optionKey} (${toHumanReadable(optionValue)})`;
       div.append(input, label);
       fieldSet.append(div);
     });
@@ -515,7 +543,7 @@ async function draw() {
     unit: 'hour',
     units: 24 * 7,
   };
-  const { labels, datasets } = createChartData(filtered, config);
+  const { labels, datasets, stats } = createChartData(filtered, config);
   datasets.forEach((ds, i) => {
     chart.data.datasets[i].data = ds.data;
   });
@@ -523,6 +551,26 @@ async function draw() {
   chart.options.scales.x.time.unit = config.unit;
   chart.update();
   updateFacets(facets);
+  const statsKeys = Object.keys(stats);
+
+  const getAverage = (metric) => {
+    const avg = statsKeys.reduce((cv, nv) => ({
+      weight: cv.weight + stats[nv].lcp.weight,
+      average: ((cv.average * cv.weight)
+      + (stats[nv][metric].average * stats[nv].lcp.weight))
+      / (cv.weight + stats[nv][metric].weight),
+    }), { average: 0, weight: 0 });
+    return avg.average;
+  };
+
+  const keyMetrics = {
+    pageViews: statsKeys.reduce((cv, nv) => cv + stats[nv].total, 0),
+    lcp: getAverage('lcp'),
+    inp: getAverage('inp'),
+    cls: getAverage('cls'),
+  };
+
+  updateKeyMetrics(keyMetrics);
 }
 
 async function loadData(scope) {
