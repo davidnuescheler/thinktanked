@@ -4,7 +4,7 @@ import { DateTime } from 'https://cdn.jsdelivr.net/npm/luxon@3.4.4/+esm';
 import 'https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon/+esm';
 
 let SAMPLE_BUNDLE;
-let DOMAIN_KEY = '1234';
+let DOMAIN_KEY = '';
 let DOMAIN = 'www.thinktanked.org';
 
 const viewSelect = document.getElementById('view');
@@ -180,7 +180,7 @@ async function generateRandomRUMBundles(num, date, hour) {
 }
 
 function addCalculatedProps(bundle) {
-  bundle.events.forEach((e) => {
+  bundle.events.forEach((e, i, array) => {
     if (e.checkpoint === 'cwv-inp') {
       bundle.cwvINP = e.target;
     }
@@ -399,13 +399,13 @@ function createChartData(bundles, config) {
       const score = scoreValue(bundle.cwvCLS, 0.1, 0.25);
       const bucket = stat.cls[score];
       updateAverage(bundle, bucket, 'cwvCLS');
-      updateAverage(bundle, stat.lcp, 'cwvCLS');
+      updateAverage(bundle, stat.cls, 'cwvCLS');
     }
     if (bundle.cwvINP) {
       const score = scoreValue(bundle.cwvINP, 200, 500);
       const bucket = stat.inp[score];
       updateAverage(bundle, bucket, 'cwvINP');
-      updateAverage(bundle, stat.lcp, 'cwvINP');
+      updateAverage(bundle, stat.inp, 'cwvINP');
     }
   });
 
@@ -496,7 +496,6 @@ function updateFacets(facets) {
         // eslint-disable-next-line no-use-before-define
         draw();
       });
-
       const label = document.createElement('label');
       label.for = `${facetName}-${optionKey}`;
       label.textContent = `${optionKey} (${toHumanReadable(optionValue)})`;
@@ -586,6 +585,7 @@ async function loadData(scope) {
 
 function updateState() {
   const url = new URL(window.location.href.split('?')[0]);
+  url.searchParams.set('domain', DOMAIN);
   url.searchParams.set('filter', filterInput.value);
   url.searchParams.set('view', viewSelect.value);
 
@@ -594,12 +594,20 @@ function updateState() {
       url.searchParams.append(e.id.split('-')[0], e.value);
     }
   });
+  url.searchParams.set('domainkey', DOMAIN_KEY);
   window.history.replaceState({}, '', url);
 }
 const params = new URL(window.location).searchParams;
 filterInput.value = params.get('filter');
 const view = params.get('view') || 'week';
 viewSelect.value = view;
+DOMAIN = params.get('domain') || 'www.thinktanked.org';
+DOMAIN_KEY = params.get('domainkey') || '';
+const h1 = document.querySelector('h1');
+h1.textContent = ` ${DOMAIN}`;
+const img = document.createElement('img');
+img.src = `https://${DOMAIN}/favicon.ico`;
+h1.prepend(img);
 
 loadData(view);
 
