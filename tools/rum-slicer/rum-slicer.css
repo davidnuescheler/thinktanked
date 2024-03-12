@@ -1,3 +1,17 @@
+:root {
+  --medium-green: #0cce6a;
+  --dark-green: #080;
+  --light-green: #EEF9F1;
+
+  --medium-orange: #ffa400;
+  --dark-orange: #ff7040;
+  --light-orange: #FEF7ED;
+
+  --medium-red: #ff4e43;
+  --dark-red: #c00;
+  --light-red: #FDECEB;
+}
+
 body {
     font-family: Arial, Helvetica, sans-serif;
     max-width: 1200px;
@@ -13,6 +27,7 @@ body {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   grid-gap: 16px;
+  padding-left: 0;
 }
 
 .key-metrics li h2 {
@@ -21,7 +36,7 @@ body {
 
 .key-metrics li h2::before {
     content: ' ';
-    background-color: #ccc;
+    background-color: currentcolor;
     width: 14px;
     height: 14px;
     margin-right: 8px;
@@ -33,3 +48,35 @@ body {
   font-weight: 600;
   font-size: 30px;
 }
+
+.key-metrics li {
+  border: 1px solid currentcolor;
+  border-radius: 16px;
+  background-color: #eee;
+  padding: 0 16px;
+}
+
+.key-metrics li.score-good {
+  color: var(--dark-green);
+  background-color: var(--light-green);
+}
+
+.key-metrics li.score-ni {
+  color: var(--dark-orange);
+  background-color: var(--light-orange);
+}
+
+.key-metrics li.score-poor {
+  color: var(--dark-red);
+  background-color: var(--light-red);
+}
+
+.key-metrics li.score-good p {
+  color: var(--medium-green);
+}
+
+
+.key-metrics li.score-ni p {
+  color: var(--medium-orange);
+}
+

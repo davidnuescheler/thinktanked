@@ -116,7 +116,7 @@ function toHumanReadable(num) {
   const thresh = 1000;
 
   if (Math.abs(num) < thresh) {
-    const precision = (dp - 1) - Math.floor(Math.log10(number));
+    const precision = (Math.log10(number) < 0) ? 2 : (dp - 1) - Math.floor(Math.log10(number));
     return `${number.toFixed(precision)}`;
   }
 
@@ -180,7 +180,7 @@ async function generateRandomRUMBundles(num, date, hour) {
 }
 
 function addCalculatedProps(bundle) {
-  bundle.events.forEach((e, i, array) => {
+  bundle.events.forEach((e) => {
     if (e.checkpoint === 'cwv-inp') {
       bundle.cwvINP = e.target;
     }
@@ -197,7 +197,6 @@ async function fetchUTCDay(utcISOString) {
   const [date] = utcISOString.split('T');
   const datePath = date.split('-').join('/');
   const apiRequestURL = `https://thinktanked.org/rum-bundles/${DOMAIN}/${datePath}?domainKey=${DOMAIN_KEY}`;
-  console.log(apiRequestURL);
   const resp = await fetch(apiRequestURL);
   const json = await resp.json();
   const { rumBundles } = json;
@@ -336,11 +335,35 @@ function filterBundle(bundle, filter, facets) {
   return (matchedAll);
 }
 
+function scoreValue(value, ni, poor) {
+  if (value >= poor) return 'poor';
+  if (value >= ni) return 'ni';
+  return 'good';
+}
+
+function scoreCWV(value, name) {
+  const limits = {
+    lcp: [2000, 4000],
+    cls: [0.1, 0.25],
+    inp: [200, 500],
+  };
+  return scoreValue(value, ...limits[name]);
+}
+
 function updateKeyMetrics(keyMetrics) {
   document.querySelector('#pageviews p').textContent = toHumanReadable(keyMetrics.pageViews);
-  document.querySelector('#lcp p').textContent = `${toHumanReadable(keyMetrics.lcp / 1000)} s`;
-  document.querySelector('#cls p').textContent = `${toHumanReadable(keyMetrics.cls)}`;
-  document.querySelector('#inp p').textContent = `${toHumanReadable(keyMetrics.inp / 1000)} s`;
+
+  const lcpElem = document.querySelector('#lcp p');
+  lcpElem.textContent = `${toHumanReadable(keyMetrics.lcp / 1000)} s`;
+  lcpElem.closest('li').className = `score-${scoreCWV(keyMetrics.lcp, 'lcp')}`;
+
+  const clsElem = document.querySelector('#cls p');
+  clsElem.textContent = `${toHumanReadable(keyMetrics.cls)}`;
+  clsElem.closest('li').className = `score-${scoreCWV(keyMetrics.cls, 'cls')}`;
+
+  const inpElem = document.querySelector('#inp p');
+  inpElem.textContent = `${toHumanReadable(keyMetrics.inp / 1000)} s`;
+  inpElem.closest('li').className = `score-${scoreCWV(keyMetrics.inp, 'inp')}`;
 }
 
 function createChartData(bundles, config) {
@@ -355,12 +378,6 @@ function createChartData(bundles, config) {
     ni: { weight: 0, average: 0 },
     poor: { weight: 0, average: 0 },
   });
-
-  const scoreValue = (value, ni, poor) => {
-    if (value >= poor) return 'poor';
-    if (value >= ni) return 'ni';
-    return 'good';
-  };
 
   bundles.forEach((bundle) => {
     const slotTime = new Date(bundle.timeSlot);
@@ -390,19 +407,19 @@ function createChartData(bundles, config) {
     const stat = stats[localTimeSlot];
     stat.total += bundle.weight;
     if (bundle.cwvLCP) {
-      const score = scoreValue(bundle.cwvLCP, 2500, 4000);
+      const score = scoreCWV(bundle.cwvLCP, 'lcp');
       const bucket = stat.lcp[score];
       updateAverage(bundle, bucket, 'cwvLCP');
       updateAverage(bundle, stat.lcp, 'cwvLCP');
     }
     if (bundle.cwvCLS) {
-      const score = scoreValue(bundle.cwvCLS, 0.1, 0.25);
+      const score = scoreCWV(bundle.cwvCLS, 'cls');
       const bucket = stat.cls[score];
       updateAverage(bundle, bucket, 'cwvCLS');
       updateAverage(bundle, stat.cls, 'cwvCLS');
     }
     if (bundle.cwvINP) {
-      const score = scoreValue(bundle.cwvINP, 200, 500);
+      const score = scoreCWV(bundle.cwvINP, 'inp');
       const bucket = stat.inp[score];
       updateAverage(bundle, bucket, 'cwvINP');
       updateAverage(bundle, stat.inp, 'cwvINP');
@@ -555,12 +572,12 @@ async function draw() {
   const statsKeys = Object.keys(stats);
 
   const getAverage = (metric) => {
-    const avg = statsKeys.reduce((cv, nv) => ({
+    const avg = statsKeys.reduce((cv, nv) => (stats[nv][metric].weight ? {
       weight: cv.weight + stats[nv].lcp.weight,
       average: ((cv.average * cv.weight)
       + (stats[nv][metric].average * stats[nv].lcp.weight))
       / (cv.weight + stats[nv][metric].weight),
-    }), { average: 0, weight: 0 });
+    } : cv), { average: 0, weight: 0 });
     return avg.average;
   };
 
