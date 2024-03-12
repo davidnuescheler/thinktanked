@@ -482,25 +482,27 @@ function updateFacets(facets) {
     fieldSet.append(legend);
     const optionKeys = Object.keys(facet);
     optionKeys.sort((a, b) => facet[b] - facet[a]);
-    optionKeys.forEach((optionKey) => {
-      const optionValue = facet[optionKey];
-      const div = document.createElement('div');
-      const input = document.createElement('input');
-      input.type = 'checkbox';
-      input.value = optionKey;
-      input.checked = url.searchParams.getAll(facetName).includes(optionKey);
-      input.id = `${facetName}-${optionKey}`;
-      input.addEventListener('click', () => {
-        // eslint-disable-next-line no-use-before-define
-        updateState();
-        // eslint-disable-next-line no-use-before-define
-        draw();
-      });
-      const label = document.createElement('label');
-      label.for = `${facetName}-${optionKey}`;
-      label.textContent = `${optionKey} (${toHumanReadable(optionValue)})`;
-      div.append(input, label);
-      fieldSet.append(div);
+    optionKeys.forEach((optionKey, i) => {
+      if (i < 10) {
+        const optionValue = facet[optionKey];
+        const div = document.createElement('div');
+        const input = document.createElement('input');
+        input.type = 'checkbox';
+        input.value = optionKey;
+        input.checked = url.searchParams.getAll(facetName).includes(optionKey);
+        input.id = `${facetName}-${optionKey}`;
+        input.addEventListener('click', () => {
+          // eslint-disable-next-line no-use-before-define
+          updateState();
+          // eslint-disable-next-line no-use-before-define
+          draw();
+        });
+        const label = document.createElement('label');
+        label.for = `${facetName}-${optionKey}`;
+        label.textContent = `${optionKey} (${toHumanReadable(optionValue)})`;
+        div.append(input, label);
+        fieldSet.append(div);
+      }
     });
     facetsElement.append(fieldSet);
   });
