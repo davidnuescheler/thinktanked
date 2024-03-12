@@ -56,27 +56,60 @@ body {
   padding: 0 16px;
 }
 
-.key-metrics li.score-good {
+fieldset li {
+  border: 1px solid currentcolor;
+  border-radius: 16px;
+  background-color: #eee;
+  padding: 4px 16px;
+  text-align: end;
+}
+
+fieldset li::after {
+  content: ' ';
+  background-color: currentcolor;
+  width: 10px;
+  height: 10px;
+  margin-left: 8px;
+  display: inline-block;
+  border-radius: 14px;
+}
+
+li.score-good {
   color: var(--dark-green);
   background-color: var(--light-green);
 }
 
-.key-metrics li.score-ni {
+li.score-ni {
   color: var(--dark-orange);
   background-color: var(--light-orange);
 }
 
-.key-metrics li.score-poor {
+li.score-poor {
   color: var(--dark-red);
   background-color: var(--light-red);
 }
 
-.key-metrics li.score-good p {
+li.score-good p {
   color: var(--medium-green);
 }
 
 
-.key-metrics li.score-ni p {
+li.score-ni p {
   color: var(--medium-orange);
+}
+
+#facets ul.cwv {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  grid-gap: 16px;
+  padding-left: 0;
+}
+
+#facets fieldset div {
+  display: grid;
+  grid-template-columns: 20px 1fr 350px;
+  align-items: center;
+  grid-gap: 16px;
 }
 

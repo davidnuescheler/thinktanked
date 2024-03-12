@@ -258,7 +258,7 @@ export async function fetchLast31Days() {
   return chunks;
 }
 
-function filterBundle(bundle, filter, facets) {
+function filterBundle(bundle, filter, facets, cwv) {
   let matchedAll = true;
   const filterMatches = {};
 
@@ -314,22 +314,38 @@ function filterBundle(bundle, filter, facets) {
     return includeInFacet;
   };
 
+  const addToCWV = (facet, option) => {
+    const addMetric = (metric) => {
+      if (!cwv[facet][option]) cwv[facet][option] = {};
+      if (!cwv[facet][option][metric]) cwv[facet][option][metric] = { weight: 0, bundles: [] };
+      const m = cwv[facet][option][metric];
+      m.bundles.push(bundle);
+      m.weight += bundle.weight;
+    };
+    if (bundle.cwvLCP) addMetric('lcp');
+    if (bundle.cwvCLS) addMetric('cls');
+    if (bundle.cwvINP) addMetric('inp');
+  };
+
   /* facets */
   if (matchedAll) {
     checkpoints.forEach((val) => {
       if (facets.checkpoint[val]) facets.checkpoint[val] += bundle.weight;
       else facets.checkpoint[val] = bundle.weight;
+      addToCWV('checkpoint', val);
     });
   }
 
   if (matchedEverythingElse('url')) {
     if (facets.url[bundle.url]) facets.url[bundle.url] += bundle.weight;
     else facets.url[bundle.url] = bundle.weight;
+    addToCWV('url', bundle.url);
   }
 
   if (matchedEverythingElse('userAgent')) {
     if (facets.userAgent[bundle.userAgent]) facets.userAgent[bundle.userAgent] += bundle.weight;
     else facets.userAgent[bundle.userAgent] = bundle.weight;
+    addToCWV('userAgent', bundle.userAgent);
   }
 
   return (matchedAll);
@@ -372,6 +388,7 @@ function createChartData(bundles, config) {
 
   const stats = {};
   const cwvStructure = () => ({
+    bundles: [],
     weight: 0,
     average: 0,
     good: { weight: 0, average: 0 },
@@ -411,18 +428,21 @@ function createChartData(bundles, config) {
       const bucket = stat.lcp[score];
       updateAverage(bundle, bucket, 'cwvLCP');
       updateAverage(bundle, stat.lcp, 'cwvLCP');
+      stat.lcp.bundles.push(bundle);
     }
     if (bundle.cwvCLS) {
       const score = scoreCWV(bundle.cwvCLS, 'cls');
       const bucket = stat.cls[score];
       updateAverage(bundle, bucket, 'cwvCLS');
       updateAverage(bundle, stat.cls, 'cwvCLS');
+      stat.cls.bundles.push(bundle);
     }
     if (bundle.cwvINP) {
       const score = scoreCWV(bundle.cwvINP, 'inp');
       const bucket = stat.inp[score];
       updateAverage(bundle, bucket, 'cwvINP');
       updateAverage(bundle, stat.inp, 'cwvINP');
+      stat.inp.bundles.push(bundle);
     }
   });
 
@@ -486,7 +506,7 @@ function createChartData(bundles, config) {
   return { labels, datasets, stats };
 }
 
-function updateFacets(facets) {
+function updateFacets(facets, cwv) {
   const url = new URL(window.location);
 
   facetsElement.textContent = '';
@@ -517,7 +537,67 @@ function updateFacets(facets) {
         const label = document.createElement('label');
         label.for = `${facetName}-${optionKey}`;
         label.textContent = `${optionKey} (${toHumanReadable(optionValue)})`;
-        div.append(input, label);
+
+        const getP75 = (metric) => {
+          const cwvMetric = `cwv${metric.toUpperCase()}`;
+          const optionMetric = cwv[facetName][optionKey][metric];
+          optionMetric.bundles.sort((a, b) => a[cwvMetric] - b[cwvMetric]);
+          let p75Weight = optionMetric.weight * 0.75;
+          let p75Value;
+          for (let i = 0; i < optionMetric.bundles.length; i += 1) {
+            p75Weight -= optionMetric.bundles[i].weight;
+            if (p75Weight < 0) {
+              p75Value = optionMetric.bundles[i][cwvMetric];
+              break;
+            }
+          }
+          return (p75Value);
+        };
+
+        // add core web vital to facets
+        const ul = document.createElement('ul');
+        ul.classList.add('cwv');
+
+        // add lcp
+        let lcp = '-';
+        let lcpScore = '';
+        if (cwv[facetName][optionKey] && cwv[facetName][optionKey].lcp) {
+          const lcpValue = getP75('lcp');
+          lcp = `${toHumanReadable(lcpValue / 1000)} s`;
+          lcpScore = scoreCWV(lcpValue, 'lcp');
+        }
+        const lcpLI = document.createElement('li');
+        lcpLI.classList.add(`score-${lcpScore}`);
+        lcpLI.textContent = lcp;
+        ul.append(lcpLI);
+
+        // add cls
+        let cls = '-';
+        let clsScore = '';
+        if (cwv[facetName][optionKey] && cwv[facetName][optionKey].cls) {
+          const clsValue = getP75('cls');
+          cls = `${toHumanReadable(clsValue)}`;
+          clsScore = scoreCWV(clsValue, 'cls');
+        }
+        const clsLI = document.createElement('li');
+        clsLI.classList.add(`score-${clsScore}`);
+        clsLI.textContent = cls;
+        ul.append(clsLI);
+
+        // add inp
+        let inp = '-';
+        let inpScore = '';
+        if (cwv[facetName][optionKey] && cwv[facetName][optionKey].inp) {
+          const inpValue = getP75('inp');
+          inp = `${toHumanReadable(inpValue / 1000)} s`;
+          inpScore = scoreCWV(inpValue, 'inp');
+        }
+        const inpLI = document.createElement('li');
+        inpLI.classList.add(`score-${inpScore}`);
+        inpLI.textContent = inp;
+        ul.append(inpLI);
+
+        div.append(input, label, ul);
         fieldSet.append(div);
       }
     });
@@ -549,8 +629,11 @@ async function draw() {
     userAgent: {},
   };
 
+  const cwv = structuredClone(facets);
+
   dataChunks.forEach((chunk) => {
-    filtered.push(...chunk.rumBundles.filter((bundle) => filterBundle(bundle, filter, facets)));
+    filtered.push(...chunk.rumBundles
+      .filter((bundle) => filterBundle(bundle, filter, facets, cwv)));
   });
   const config = view === 'month' ? {
     view,
@@ -568,7 +651,7 @@ async function draw() {
   chart.data.labels = labels;
   chart.options.scales.x.time.unit = config.unit;
   chart.update();
-  updateFacets(facets);
+  updateFacets(facets, cwv);
   const statsKeys = Object.keys(stats);
 
   const getAverage = (metric) => {
@@ -581,11 +664,29 @@ async function draw() {
     return avg.average;
   };
 
+  const getP75 = (metric) => {
+    const cwvMetric = `cwv${metric.toUpperCase()}`;
+    const totalWeight = statsKeys.reduce((cv, nv) => (cv + stats[nv][metric].weight), 0);
+    const allBundles = [];
+    statsKeys.forEach((key) => allBundles.push(...stats[key][metric].bundles));
+    allBundles.sort((a, b) => a[cwvMetric] - b[cwvMetric]);
+    let p75Weight = totalWeight * 0.75;
+    let p75Value;
+    for (let i = 0; i < allBundles.length; i += 1) {
+      p75Weight -= allBundles[i].weight;
+      if (p75Weight < 0) {
+        p75Value = allBundles[i][cwvMetric];
+        break;
+      }
+    }
+    return (p75Value);
+  };
+
   const keyMetrics = {
     pageViews: statsKeys.reduce((cv, nv) => cv + stats[nv].total, 0),
-    lcp: getAverage('lcp'),
-    inp: getAverage('inp'),
-    cls: getAverage('cls'),
+    lcp: getP75('lcp'),
+    cls: getP75('cls'),
+    inp: getP75('inp'),
   };
 
   updateKeyMetrics(keyMetrics);
