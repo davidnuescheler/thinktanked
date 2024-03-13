@@ -82,6 +82,7 @@ fieldset li {
   background-color: #eee;
   padding: 4px 16px;
   text-align: end;
+  opacity: 0.2;
 }
 
 fieldset li::after {
@@ -95,16 +96,19 @@ fieldset li::after {
 }
 
 li.score-good {
+  opacity: 1;
   color: var(--dark-green);
   background-color: var(--light-green);
 }
 
 li.score-ni {
+  opacity: 1;
   color: var(--dark-orange);
   background-color: var(--light-orange);
 }
 
 li.score-poor {
+  opacity: 1;
   color: var(--dark-red);
   background-color: var(--light-red);
 }
@@ -155,7 +159,7 @@ li.score-poor {
   position: absolute;
   border-radius: 3px;
   width: 2px;
-  background: currentColor;
+  background: currentcolor;
   left: 7px;
 }
 

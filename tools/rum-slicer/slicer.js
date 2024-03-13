@@ -613,8 +613,8 @@ function updateFacets(facets, cwv) {
           const ul = document.createElement('ul');
           ul.classList.add('cwv');
 
-          // add core web vital to facets
-          if (cwv[facetName] && cwv[facetName][optionKey]) {
+          // display core web vital to facets
+          if (cwv[facetName]) {
             // add lcp
             let lcp = '-';
             let lcpScore = '';
@@ -627,7 +627,7 @@ function updateFacets(facets, cwv) {
             lcpLI.classList.add(`score-${lcpScore}`);
             lcpLI.textContent = lcp;
             ul.append(lcpLI);
-  
+
             // add cls
             let cls = '-';
             let clsScore = '';
