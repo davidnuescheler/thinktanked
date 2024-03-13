@@ -407,6 +407,7 @@ function createChartData(bundles, config) {
     if (!stats[localTimeSlot]) {
       const s = {
         total: 0,
+        numBundles: 0,
         lcp: cwvStructure(),
         inp: cwvStructure(),
         cls: cwvStructure(),
@@ -426,6 +427,7 @@ function createChartData(bundles, config) {
 
     const stat = stats[localTimeSlot];
     stat.total += bundle.weight;
+    stat.numBundles += 1;
     if (bundle.cwvLCP) {
       const score = scoreCWV(bundle.cwvLCP, 'lcp');
       const bucket = stat.lcp[score];
@@ -486,10 +488,11 @@ function createChartData(bundles, config) {
       const cwvNI = stat.lcp.ni.weight + stat.cls.ni.weight + stat.inp.ni.weight;
       const cwvPoor = stat.lcp.poor.weight + stat.cls.poor.weight + stat.inp.poor.weight;
 
-      dataTotal.unshift(cwvTotal ? 0 : stat.total);
-      dataGood.unshift(Math.round(cwvGood * cwvFactor));
-      dataNI.unshift(Math.round(cwvNI * cwvFactor));
-      dataPoor.unshift(Math.round(cwvPoor * cwvFactor));
+      const showCWVSplit = cwvTotal && (stat.numBundles > 10);
+      dataTotal.unshift(showCWVSplit ? 0 : stat.total);
+      dataGood.unshift(showCWVSplit ? Math.round(cwvGood * cwvFactor) : 0);
+      dataNI.unshift(showCWVSplit ? Math.round(cwvNI * cwvFactor) : 0);
+      dataPoor.unshift(showCWVSplit ? Math.round(cwvPoor * cwvFactor) : 0);
     } else {
       dataTotal.unshift(0);
       dataGood.unshift(0);
