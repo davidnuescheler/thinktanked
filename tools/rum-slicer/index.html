@@ -52,14 +52,16 @@
                   <h2>INP</h2>
                   <p>0</p>
                 </li>
-                
-
             </div>
     
-            <div>
-                <canvas id="time-series"></canvas>
-              </div>
-        </main>
+            <figure>
+              <canvas id="time-series"></canvas>
+              <figcaption>
+                <span aria-hidden="true" id="low-data-warning"><span class="danger-icon"></span> small sample size, accuracy reduced.</span>
+                <span id="timezone"></span>
+              </figcaption>
+            </figure>
+      </main>
         <aside id="facets">
             <fieldset>
                 <legend>Events</legend>

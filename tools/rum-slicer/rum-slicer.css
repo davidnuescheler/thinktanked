@@ -1,15 +1,19 @@
 :root {
-  --medium-green: #0cce6a;
-  --dark-green: #080;
-  --light-green: #EEF9F1;
+  --light-green: #adf4ce;
+  --medium-green: #49cc93;
+  --dark-green: #00653e;
 
-  --medium-orange: #ffa400;
-  --dark-orange: #ff7040;
-  --light-orange: #FEF7ED;
+  --light-orange: #ffdfad;
+  --medium-orange: #ffa037;
+  --dark-orange: #cb5d00;
 
-  --medium-red: #ff4e43;
-  --dark-red: #c00;
-  --light-red: #FDECEB;
+  --light-red: #ffddd6;
+  --medium-red: #ff7c65;
+  --dark-red: #b40000;
+
+  --light-blue: #cae8ff;
+  --medium-blue: #78bbfa;
+
 }
 
 body {
@@ -56,6 +60,22 @@ body {
   padding: 0 16px;
 }
 
+fieldset {
+ padding: 8px 0 0; 
+}
+
+legend {
+  margin-left: 16px;
+}
+
+fieldset > div {
+  padding: 0 16px;
+}
+
+fieldset > div:hover {
+  background-color: #eee;
+}
+
 fieldset li {
   border: 1px solid currentcolor;
   border-radius: 16px;
@@ -89,15 +109,6 @@ li.score-poor {
   background-color: var(--light-red);
 }
 
-li.score-good p {
-  color: var(--medium-green);
-}
-
-
-li.score-ni p {
-  color: var(--medium-orange);
-}
-
 #facets ul.cwv {
   list-style: none;
   display: grid;
@@ -112,4 +123,86 @@ li.score-ni p {
   align-items: center;
   grid-gap: 16px;
 }
+
+#low-data-warning {
+  color: red;
+  display: inline-flex;
+  align-items: center;
+  align-self: end;
+}
+
+#timezone::before {
+  content: 'Timzone: ';
+}
+
+.danger-icon {
+  box-sizing: border-box;
+  position: relative;
+  display: inline-block;
+  transform: scale(1);
+  width: 20px;
+  height: 20px;
+  border: 2px solid;
+  border-radius: 40px;
+  margin-right: 5px;
+}
+
+.danger-icon::after,
+.danger-icon::before {
+  content: "";
+  display: block;
+  box-sizing: border-box;
+  position: absolute;
+  border-radius: 3px;
+  width: 2px;
+  background: currentColor;
+  left: 7px;
+}
+
+.danger-icon::after {
+  top: 2px;
+  height: 8px;
+}
+
+.danger-icon::before {
+  height: 2px;
+  bottom: 2px;
+}
+
+figcaption {
+  margin-top: 8px;
+  text-align: right;
+  font-style: italic;
+  display: flex;
+  align-items: center;
+  justify-content: end;
+}
+
+figcaption > span {
+  display: inline-flex;
+  height: 40px;
+  align-items: center;
+}
+
+figure {
+  margin-bottom: 16px;
+}
+
+#low-data-warning[aria-hidden=true] {
+  display: none;
+}
+
+#facets input[type=checkbox] {
+  height: 20px;
+  width: 20px;
+}
+
+#facets div[aria-selected=true] {
+  background-color: var(--light-blue)
+}
+
+#facets div[aria-selected]:hover {
+  background-color: #eee;
+}
+
 

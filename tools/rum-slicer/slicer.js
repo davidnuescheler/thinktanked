@@ -11,6 +11,9 @@ const viewSelect = document.getElementById('view');
 const filterInput = document.getElementById('filter');
 const facetsElement = document.getElementById('facets');
 const canvas = document.getElementById('time-series');
+const timezoneElement = document.getElementById('timezone');
+const lowDataWarning = document.getElementById('low-data-warning');
+
 let dataChunks = [];
 
 function toISOStringWithTimezone(date) {
@@ -527,15 +530,18 @@ function updateFacets(facets, cwv) {
         input.type = 'checkbox';
         input.value = optionKey;
         input.checked = url.searchParams.getAll(facetName).includes(optionKey);
+        if (input.checked) div.ariaSelected = true;
         input.id = `${facetName}-${optionKey}`;
-        input.addEventListener('click', () => {
+        div.addEventListener('click', (evt) => {
+          input.checked = !input.checked;
+          evt.stopPropagation();
           // eslint-disable-next-line no-use-before-define
           updateState();
           // eslint-disable-next-line no-use-before-define
           draw();
         });
         const label = document.createElement('label');
-        label.for = `${facetName}-${optionKey}`;
+        label.setAttribute('for', `${facetName}-${optionKey}`);
         label.textContent = `${optionKey} (${toHumanReadable(optionValue)})`;
 
         const getP75 = (metric) => {
@@ -544,10 +550,10 @@ function updateFacets(facets, cwv) {
           optionMetric.bundles.sort((a, b) => a[cwvMetric] - b[cwvMetric]);
           let p75Weight = optionMetric.weight * 0.75;
           let p75Value;
-          for (let i = 0; i < optionMetric.bundles.length; i += 1) {
-            p75Weight -= optionMetric.bundles[i].weight;
+          for (let j = 0; j < optionMetric.bundles.length; j += 1) {
+            p75Weight -= optionMetric.bundles[j].weight;
             if (p75Weight < 0) {
-              p75Value = optionMetric.bundles[i][cwvMetric];
+              p75Value = optionMetric.bundles[j][cwvMetric];
               break;
             }
           }
@@ -635,6 +641,13 @@ async function draw() {
     filtered.push(...chunk.rumBundles
       .filter((bundle) => filterBundle(bundle, filter, facets, cwv)));
   });
+
+  if (filtered.length < 1000) {
+    lowDataWarning.ariaHidden = 'false';
+  } else {
+    lowDataWarning.ariaHidden = 'true';
+  }
+
   const config = view === 'month' ? {
     view,
     unit: 'day',
@@ -728,6 +741,9 @@ h1.textContent = ` ${DOMAIN}`;
 const img = document.createElement('img');
 img.src = `https://${DOMAIN}/favicon.ico`;
 h1.prepend(img);
+
+const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+timezoneElement.textContent = timezone;
 
 loadData(view);
 
