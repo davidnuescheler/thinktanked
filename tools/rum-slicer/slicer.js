@@ -533,7 +533,7 @@ function updateFacets(facets, cwv) {
         if (input.checked) div.ariaSelected = true;
         input.id = `${facetName}-${optionKey}`;
         div.addEventListener('click', (evt) => {
-          input.checked = !input.checked;
+          if (evt.target !== input) input.checked = !input.checked;
           evt.stopPropagation();
           // eslint-disable-next-line no-use-before-define
           updateState();
