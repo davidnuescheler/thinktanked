@@ -265,13 +265,30 @@ function filterBundle(bundle, filter, facets, cwv) {
   let matchedAll = true;
   const filterMatches = {};
 
+  /* create sub facets */
+  filter.checkpoint.forEach((cp) => {
+    if (!facets[`${cp}.target`]) {
+      facets[`${cp}.target`] = {};
+      cwv[`${cp}.target`] = {};
+    }
+    if (!facets[`${cp}.source`]) {
+      facets[`${cp}.source`] = {};
+      cwv[`${cp}.source`] = {};
+    }
+  });
+
   filterMatches.text = true;
   if (!bundle.url.includes(filter.text)) {
     matchedAll = false;
     filterMatches.text = false;
   }
 
-  const checkpoints = bundle.events.map((e) => e.checkpoint);
+  const checkpointEvents = {};
+  const checkpoints = bundle.events.map((e) => {
+    if (!checkpointEvents[e.checkpoint]) checkpointEvents[e.checkpoint] = [];
+    checkpointEvents[e.checkpoint].push(e);
+    return (e.checkpoint);
+  });
 
   /* filter checkpoint */
   if (matchedAll) {
@@ -336,6 +353,34 @@ function filterBundle(bundle, filter, facets, cwv) {
       if (facets.checkpoint[val]) facets.checkpoint[val] += bundle.weight;
       else facets.checkpoint[val] = bundle.weight;
       addToCWV('checkpoint', val);
+      if (filter.checkpoint.includes(val)) {
+        checkpointEvents[val].forEach((e) => {
+          if (e.target) {
+            const facetName = `${val}.target`;
+            const facet = facets[facetName];
+            const option = e.target;
+
+            if (facet[option]) {
+              facet[option] += bundle.weight;
+            } else {
+              facet[option] = bundle.weight;
+            }
+            addToCWV(facetName, option);
+          }
+          if (e.source) {
+            const facetName = `${val}.source`;
+            const facet = facets[facetName];
+            const option = e.source;
+
+            if (facet[option]) {
+              facet[option] += bundle.weight;
+            } else {
+              facet[option] = bundle.weight;
+            }
+            addToCWV(facetName, option);
+          }
+        });
+      }
     });
   }
 
@@ -520,98 +565,102 @@ function updateFacets(facets, cwv) {
   const keys = Object.keys(facets);
   keys.forEach((facetName) => {
     const facet = facets[facetName];
-    const fieldSet = document.createElement('fieldset');
-    const legend = document.createElement('legend');
-    legend.textContent = facetName;
-    fieldSet.append(legend);
     const optionKeys = Object.keys(facet);
-    optionKeys.sort((a, b) => facet[b] - facet[a]);
-    optionKeys.forEach((optionKey, i) => {
-      if (i < 10) {
-        const optionValue = facet[optionKey];
-        const div = document.createElement('div');
-        const input = document.createElement('input');
-        input.type = 'checkbox';
-        input.value = optionKey;
-        input.checked = url.searchParams.getAll(facetName).includes(optionKey);
-        if (input.checked) div.ariaSelected = true;
-        input.id = `${facetName}-${optionKey}`;
-        div.addEventListener('click', (evt) => {
-          if (evt.target !== input) input.checked = !input.checked;
-          evt.stopPropagation();
-          // eslint-disable-next-line no-use-before-define
-          updateState();
-          // eslint-disable-next-line no-use-before-define
-          draw();
-        });
-        const label = document.createElement('label');
-        label.setAttribute('for', `${facetName}-${optionKey}`);
-        label.textContent = `${optionKey} (${toHumanReadable(optionValue)})`;
+    if (optionKeys.length) {
+      const fieldSet = document.createElement('fieldset');
+      const legend = document.createElement('legend');
+      legend.textContent = facetName;
+      fieldSet.append(legend);
+      optionKeys.sort((a, b) => facet[b] - facet[a]);
+      optionKeys.forEach((optionKey, i) => {
+        if (i < 10) {
+          const optionValue = facet[optionKey];
+          const div = document.createElement('div');
+          const input = document.createElement('input');
+          input.type = 'checkbox';
+          input.value = optionKey;
+          input.checked = url.searchParams.getAll(facetName).includes(optionKey);
+          if (input.checked) div.ariaSelected = true;
+          input.id = `${facetName}-${optionKey}`;
+          div.addEventListener('click', (evt) => {
+            if (evt.target !== input) input.checked = !input.checked;
+            evt.stopPropagation();
+            // eslint-disable-next-line no-use-before-define
+            updateState();
+            // eslint-disable-next-line no-use-before-define
+            draw();
+          });
+          const label = document.createElement('label');
+          label.setAttribute('for', `${facetName}-${optionKey}`);
+          label.textContent = `${optionKey} (${toHumanReadable(optionValue)})`;
 
-        const getP75 = (metric) => {
-          const cwvMetric = `cwv${metric.toUpperCase()}`;
-          const optionMetric = cwv[facetName][optionKey][metric];
-          optionMetric.bundles.sort((a, b) => a[cwvMetric] - b[cwvMetric]);
-          let p75Weight = optionMetric.weight * 0.75;
-          let p75Value;
-          for (let j = 0; j < optionMetric.bundles.length; j += 1) {
-            p75Weight -= optionMetric.bundles[j].weight;
-            if (p75Weight < 0) {
-              p75Value = optionMetric.bundles[j][cwvMetric];
-              break;
+          const getP75 = (metric) => {
+            const cwvMetric = `cwv${metric.toUpperCase()}`;
+            const optionMetric = cwv[facetName][optionKey][metric];
+            optionMetric.bundles.sort((a, b) => a[cwvMetric] - b[cwvMetric]);
+            let p75Weight = optionMetric.weight * 0.75;
+            let p75Value;
+            for (let j = 0; j < optionMetric.bundles.length; j += 1) {
+              p75Weight -= optionMetric.bundles[j].weight;
+              if (p75Weight < 0) {
+                p75Value = optionMetric.bundles[j][cwvMetric];
+                break;
+              }
             }
+            return (p75Value);
+          };
+
+          const ul = document.createElement('ul');
+          ul.classList.add('cwv');
+
+          // add core web vital to facets
+          if (cwv[facetName] && cwv[facetName][optionKey]) {
+            // add lcp
+            let lcp = '-';
+            let lcpScore = '';
+            if (cwv[facetName][optionKey] && cwv[facetName][optionKey].lcp) {
+              const lcpValue = getP75('lcp');
+              lcp = `${toHumanReadable(lcpValue / 1000)} s`;
+              lcpScore = scoreCWV(lcpValue, 'lcp');
+            }
+            const lcpLI = document.createElement('li');
+            lcpLI.classList.add(`score-${lcpScore}`);
+            lcpLI.textContent = lcp;
+            ul.append(lcpLI);
+  
+            // add cls
+            let cls = '-';
+            let clsScore = '';
+            if (cwv[facetName][optionKey] && cwv[facetName][optionKey].cls) {
+              const clsValue = getP75('cls');
+              cls = `${toHumanReadable(clsValue)}`;
+              clsScore = scoreCWV(clsValue, 'cls');
+            }
+            const clsLI = document.createElement('li');
+            clsLI.classList.add(`score-${clsScore}`);
+            clsLI.textContent = cls;
+            ul.append(clsLI);
+
+            // add inp
+            let inp = '-';
+            let inpScore = '';
+            if (cwv[facetName][optionKey] && cwv[facetName][optionKey].inp) {
+              const inpValue = getP75('inp');
+              inp = `${toHumanReadable(inpValue / 1000)} s`;
+              inpScore = scoreCWV(inpValue, 'inp');
+            }
+            const inpLI = document.createElement('li');
+            inpLI.classList.add(`score-${inpScore}`);
+            inpLI.textContent = inp;
+            ul.append(inpLI);
           }
-          return (p75Value);
-        };
 
-        // add core web vital to facets
-        const ul = document.createElement('ul');
-        ul.classList.add('cwv');
-
-        // add lcp
-        let lcp = '-';
-        let lcpScore = '';
-        if (cwv[facetName][optionKey] && cwv[facetName][optionKey].lcp) {
-          const lcpValue = getP75('lcp');
-          lcp = `${toHumanReadable(lcpValue / 1000)} s`;
-          lcpScore = scoreCWV(lcpValue, 'lcp');
+          div.append(input, label, ul);
+          fieldSet.append(div);
         }
-        const lcpLI = document.createElement('li');
-        lcpLI.classList.add(`score-${lcpScore}`);
-        lcpLI.textContent = lcp;
-        ul.append(lcpLI);
-
-        // add cls
-        let cls = '-';
-        let clsScore = '';
-        if (cwv[facetName][optionKey] && cwv[facetName][optionKey].cls) {
-          const clsValue = getP75('cls');
-          cls = `${toHumanReadable(clsValue)}`;
-          clsScore = scoreCWV(clsValue, 'cls');
-        }
-        const clsLI = document.createElement('li');
-        clsLI.classList.add(`score-${clsScore}`);
-        clsLI.textContent = cls;
-        ul.append(clsLI);
-
-        // add inp
-        let inp = '-';
-        let inpScore = '';
-        if (cwv[facetName][optionKey] && cwv[facetName][optionKey].inp) {
-          const inpValue = getP75('inp');
-          inp = `${toHumanReadable(inpValue / 1000)} s`;
-          inpScore = scoreCWV(inpValue, 'inp');
-        }
-        const inpLI = document.createElement('li');
-        inpLI.classList.add(`score-${inpScore}`);
-        inpLI.textContent = inp;
-        ul.append(inpLI);
-
-        div.append(input, label, ul);
-        fieldSet.append(div);
-      }
-    });
-    facetsElement.append(fieldSet);
+      });
+      facetsElement.append(fieldSet);
+    }
   });
 }
 
@@ -634,9 +683,9 @@ async function draw() {
   };
 
   const facets = {
-    checkpoint: {},
-    url: {},
     userAgent: {},
+    url: {},
+    checkpoint: {},
   };
 
   const cwv = structuredClone(facets);
