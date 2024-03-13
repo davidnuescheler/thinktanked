@@ -42,17 +42,17 @@ const chart = new Chart(canvas, {
     },
     {
       label: 'Good',
-      backgroundColor: '#0cce6a',
+      backgroundColor: '#49cc93',
       data: [],
     },
     {
       label: 'Needs Improvement',
-      backgroundColor: '#ffa400',
+      backgroundColor: '#ffa037',
       data: [],
     },
     {
       label: 'Poor',
-      backgroundColor: '#ff4e43',
+      backgroundColor: '#ff7c65',
       data: [],
     }],
   },
