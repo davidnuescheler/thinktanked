@@ -6,6 +6,7 @@ import 'https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon/+esm';
 let SAMPLE_BUNDLE;
 let DOMAIN_KEY = '';
 let DOMAIN = 'www.thinktanked.org';
+const API_ENDPOINT = 'https://rum-bundles-2.david8603.workers.dev'
 
 const viewSelect = document.getElementById('view');
 const filterInput = document.getElementById('filter');
@@ -148,7 +149,7 @@ async function createRandomBundle(date, hour) {
   const sampleURLs = ['https://www.thinktanked.org/', 'https://www.thinktanked.org/pretzels', 'https://www.thinktanked.org/iba-testing'];
   const bundle = structuredClone(SAMPLE_BUNDLE);
   bundle.id = `${Math.random()}`;
-  bundle.userAgent = Math.random() < 0.3 ? 'desktop' : 'mobile';
+  bundle.user_agent = Math.random() < 0.3 ? 'desktop' : 'mobile';
   bundle.url = sampleURLs[Math.floor(Math.random() * 3)];
   bundle.timeSlot = `${date}T${hour}:00:00Z`;
 
@@ -185,13 +186,13 @@ async function generateRandomRUMBundles(num, date, hour) {
 function addCalculatedProps(bundle) {
   bundle.events.forEach((e) => {
     if (e.checkpoint === 'cwv-inp') {
-      bundle.cwvINP = e.target;
+      bundle.cwvINP = e.value;
     }
     if (e.checkpoint === 'cwv-lcp') {
-      bundle.cwvLCP = e.target;
+      bundle.cwvLCP = e.value;
     }
     if (e.checkpoint === 'cwv-cls') {
-      bundle.cwvCLS = e.target;
+      bundle.cwvCLS = e.value;
     }
   });
 }
@@ -199,7 +200,7 @@ function addCalculatedProps(bundle) {
 async function fetchUTCDay(utcISOString) {
   const [date] = utcISOString.split('T');
   const datePath = date.split('-').join('/');
-  const apiRequestURL = `https://thinktanked.org/rum-bundles/${DOMAIN}/${datePath}?domainKey=${DOMAIN_KEY}`;
+  const apiRequestURL = `${API_ENDPOINT}/rum-bundles/${DOMAIN}/${datePath}?domainkey=${DOMAIN_KEY}`;
   const resp = await fetch(apiRequestURL);
   const json = await resp.json();
   const { rumBundles } = json;
@@ -220,7 +221,7 @@ async function fetchUTCHour(utcISOString) {
   const [date, time] = utcISOString.split('T');
   const datePath = date.split('-').join('/');
   const hour = time.split(':')[0];
-  const apiRequestURL = `https://thinktanked.org/rum-bundles/${DOMAIN}/${datePath}/${hour}?domainKey=${DOMAIN_KEY}`;
+  const apiRequestURL = `${API_ENDPOINT}/rum-bundles/${DOMAIN}/${datePath}/${hour}?domainkey=${DOMAIN_KEY}`;
   console.log(apiRequestURL);
   const resp = await fetch(apiRequestURL);
   const json = await resp.json();
@@ -314,14 +315,14 @@ function filterBundle(bundle, filter, facets, cwv) {
     }
   }
 
-  /* filter userAgent */
+  /* filter user_agent */
   if (matchedAll) {
-    if (filter.userAgent.length) {
-      if (filter.userAgent.includes(bundle.userAgent)) {
-        filterMatches.userAgent = true;
+    if (filter.user_agent.length) {
+      if (filter.user_agent.includes(bundle.user_agent)) {
+        filterMatches.user_agent = true;
       } else {
         matchedAll = false;
-        filterMatches.userAgent = false;
+        filterMatches.user_agent = false;
       }
     }
   }
@@ -390,10 +391,10 @@ function filterBundle(bundle, filter, facets, cwv) {
     addToCWV('url', bundle.url);
   }
 
-  if (matchedEverythingElse('userAgent')) {
-    if (facets.userAgent[bundle.userAgent]) facets.userAgent[bundle.userAgent] += bundle.weight;
-    else facets.userAgent[bundle.userAgent] = bundle.weight;
-    addToCWV('userAgent', bundle.userAgent);
+  if (matchedEverythingElse('user_agent')) {
+    if (facets.user_agent[bundle.user_agent]) facets.user_agent[bundle.user_agent] += bundle.weight;
+    else facets.user_agent[bundle.user_agent] = bundle.weight;
+    addToCWV('user_agent', bundle.user_agent);
   }
 
   return (matchedAll);
@@ -590,9 +591,20 @@ function updateFacets(facets, cwv) {
             // eslint-disable-next-line no-use-before-define
             draw();
           });
+          const createLabelHTML = (labelText) => {
+            if (labelText.startsWith('https://') && labelText.includes('media_')) {
+              return `<img src="${labelText}?width=2000&format=png&optimize=medium"">`;
+            }
+
+            if (labelText.startsWith('https://')) {
+              return `<a href="${labelText}" target="_new">${labelText}</a>`;
+            }
+            return (labelText);
+          };
+
           const label = document.createElement('label');
           label.setAttribute('for', `${facetName}-${optionKey}`);
-          label.textContent = `${optionKey} (${toHumanReadable(optionValue)})`;
+          label.innerHTML = `${createLabelHTML(optionKey)} (${toHumanReadable(optionValue)})`;
 
           const getP75 = (metric) => {
             const cwvMetric = `cwv${metric.toUpperCase()}`;
@@ -669,7 +681,7 @@ async function draw() {
   const checkpoint = params.getAll('checkpoint');
   const target = params.getAll('target');
   const url = params.getAll('url');
-  const userAgent = params.getAll('userAgent');
+  const user_agent = params.getAll('user_agent');
   const view = params.get('view') || 'week';
 
   const filterText = params.get('filter') || '';
@@ -679,11 +691,11 @@ async function draw() {
     checkpoint,
     target,
     url,
-    userAgent,
+    user_agent,
   };
 
   const facets = {
-    userAgent: {},
+    user_agent: {},
     url: {},
     checkpoint: {},
   };
