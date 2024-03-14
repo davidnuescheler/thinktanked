@@ -43,6 +43,7 @@ async function traverseCurrentFolder() {
     }
   }
   await traverseFolder(rootPath);
+  URLs.sort();
   console.log(URLs.join('\n'));
 }
 
