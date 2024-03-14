@@ -185,6 +185,12 @@ async function generateRandomRUMBundles(num, date, hour) {
 
 function addCalculatedProps(bundle) {
   bundle.events.forEach((e) => {
+    if (e.checkpoint === 'enter') {
+      bundle.visit = true;
+    }
+    if (e.checkpoint === 'click') {
+      bundle.conversion = true;
+    }
     if (e.checkpoint === 'cwv-inp') {
       bundle.cwvINP = e.value;
     }
@@ -417,6 +423,8 @@ function scoreCWV(value, name) {
 
 function updateKeyMetrics(keyMetrics) {
   document.querySelector('#pageviews p').textContent = toHumanReadable(keyMetrics.pageViews);
+  document.querySelector('#visits p').textContent = toHumanReadable(keyMetrics.visits);
+  document.querySelector('#conversions p').textContent = toHumanReadable(keyMetrics.conversions);
 
   const lcpElem = document.querySelector('#lcp p');
   lcpElem.textContent = `${toHumanReadable(keyMetrics.lcp / 1000)} s`;
@@ -453,6 +461,8 @@ function createChartData(bundles, config) {
     if (!stats[localTimeSlot]) {
       const s = {
         total: 0,
+        conversions: 0,
+        visits: 0,
         lcp: cwvStructure(),
         inp: cwvStructure(),
         cls: cwvStructure(),
@@ -472,6 +482,9 @@ function createChartData(bundles, config) {
 
     const stat = stats[localTimeSlot];
     stat.total += bundle.weight;
+    if (bundle.conversion) stat.conversions += bundle.weight;
+    if (bundle.visit) stat.visits += bundle.weight;
+
     if (bundle.cwvLCP) {
       const score = scoreCWV(bundle.cwvLCP, 'lcp');
       const bucket = stat.lcp[score];
@@ -765,6 +778,8 @@ async function draw() {
     lcp: getP75('lcp'),
     cls: getP75('cls'),
     inp: getP75('inp'),
+    conversions: statsKeys.reduce((cv, nv) => cv + stats[nv].conversions, 0),
+    visits: statsKeys.reduce((cv, nv) => cv + stats[nv].visits, 0),
   };
 
   updateKeyMetrics(keyMetrics);
