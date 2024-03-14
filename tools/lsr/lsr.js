@@ -20,6 +20,7 @@ async function traverseCurrentFolder() {
     const files = await getFiles(path);
     files.forEach((file) => {
       let cleanPath = '';
+      console.log(file);
       if (file.endsWith('.docx')) cleanPath = file.split('.')[0].substring(rootPath.length);
       if (file.endsWith('.xlsx')) cleanPath = file.split('.')[0].substring(rootPath.length) + '.json';
       if (file.endsWith('.pdf')) cleanPath = file.split('.')[0].substring(rootPath.length) + '.pdf';
