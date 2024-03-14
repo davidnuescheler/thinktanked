@@ -414,7 +414,7 @@ function scoreValue(value, ni, poor) {
 
 function scoreCWV(value, name) {
   const limits = {
-    lcp: [2000, 4000],
+    lcp: [2500, 4000],
     cls: [0.1, 0.25],
     inp: [200, 500],
   };
