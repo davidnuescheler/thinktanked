@@ -274,6 +274,10 @@ function filterBundle(bundle, filter, facets, cwv) {
 
   /* create sub facets */
   filter.checkpoint.forEach((cp) => {
+    if (!facets[`${cp}.value`]) {
+      facets[`${cp}.value`] = {};
+      cwv[`${cp}.value`] = {};
+    }
     if (!facets[`${cp}.target`]) {
       facets[`${cp}.target`] = {};
       cwv[`${cp}.target`] = {};
@@ -285,22 +289,39 @@ function filterBundle(bundle, filter, facets, cwv) {
   });
 
   filterMatches.text = true;
-  if (!bundle.url.includes(filter.text)) {
-    matchedAll = false;
-    filterMatches.text = false;
-  }
 
   const checkpointEvents = {};
   const checkpoints = bundle.events.map((e) => {
     if (!checkpointEvents[e.checkpoint]) checkpointEvents[e.checkpoint] = [];
     checkpointEvents[e.checkpoint].push(e);
     return (e.checkpoint);
-  });
+  }).filter((cp, index, array) => array.indexOf(cp) === index);
+
+  /* fulltext filter */
+  const fullText = `${bundle.url} ${checkpoints.join()}`;
+  if (!fullText.includes(filter.text)) {
+    matchedAll = false;
+    filterMatches.text = false;
+  }
 
   /* filter checkpoint */
   if (matchedAll) {
     if (filter.checkpoint.length) {
       if (filter.checkpoint.every((cp) => checkpoints.includes(cp))) {
+        filter.checkpoint.forEach((cp) => {
+          const props = ['source', 'target', 'value'];
+          props.forEach((prop) => {
+            if (filter[`${cp}.${prop}`]) {
+              let anyEventMatchedPropValue = false;
+              const propFilters = filter[`${cp}.${prop}`];
+              checkpointEvents[cp].forEach((cpEvent) => {
+                if (propFilters.includes(cpEvent[prop])) anyEventMatchedPropValue = true;
+              });
+              filterMatches[`${cp}.${prop}`] = anyEventMatchedPropValue;
+              if (!anyEventMatchedPropValue) matchedAll = false;
+            }
+          });
+        });
         filterMatches.checkpoint = true;
       } else {
         matchedAll = false;
@@ -361,30 +382,55 @@ function filterBundle(bundle, filter, facets, cwv) {
       else facets.checkpoint[val] = bundle.weight;
       addToCWV('checkpoint', val);
       if (filter.checkpoint.includes(val)) {
+        const facetOptionsAdded = [];
         checkpointEvents[val].forEach((e) => {
           if (e.target) {
             const facetName = `${val}.target`;
             const facet = facets[facetName];
             const option = e.target;
 
-            if (facet[option]) {
-              facet[option] += bundle.weight;
-            } else {
-              facet[option] = bundle.weight;
+            const facetOptionName = `${facetName}=${option}`;
+            if (!facetOptionsAdded.includes(facetOptionName)) {
+              facetOptionsAdded.push(facetOptionName);
+              if (facet[option]) {
+                facet[option] += bundle.weight;
+              } else {
+                facet[option] = bundle.weight;
+              }
+              addToCWV(facetName, option);
             }
-            addToCWV(facetName, option);
           }
           if (e.source) {
             const facetName = `${val}.source`;
             const facet = facets[facetName];
             const option = e.source;
 
-            if (facet[option]) {
-              facet[option] += bundle.weight;
-            } else {
-              facet[option] = bundle.weight;
+            const facetOptionName = `${facetName}=${option}`;
+            if (!facetOptionsAdded.includes(facetOptionName)) {
+              facetOptionsAdded.push(facetOptionName);
+              if (facet[option]) {
+                facet[option] += bundle.weight;
+              } else {
+                facet[option] = bundle.weight;
+              }
+              addToCWV(facetName, option);
             }
-            addToCWV(facetName, option);
+          }
+          if (e.value) {
+            const facetName = `${val}.value`;
+            const facet = facets[facetName];
+            const option = e.value;
+
+            const facetOptionName = `${facetName}=${option}`;
+            if (!facetOptionsAdded.includes(facetOptionName)) {
+              facetOptionsAdded.push(facetOptionName);
+              if (facet[option]) {
+                facet[option] += bundle.weight;
+              } else {
+                facet[option] = bundle.weight;
+              }
+              addToCWV(facetName, option);
+            }
           }
         });
       }
@@ -694,6 +740,7 @@ async function draw() {
   const checkpoint = params.getAll('checkpoint');
   const target = params.getAll('target');
   const url = params.getAll('url');
+  // eslint-disable-next-line camelcase
   const user_agent = params.getAll('user_agent');
   const view = params.get('view') || 'week';
 
@@ -704,8 +751,19 @@ async function draw() {
     checkpoint,
     target,
     url,
+    // eslint-disable-next-line camelcase
     user_agent,
   };
+
+  checkpoint.forEach((cp) => {
+    const props = ['target', 'source', 'value'];
+    props.forEach((prop) => {
+      const values = params.getAll(`${cp}.${prop}`);
+      if (values.length) {
+        filter[`${cp}.${prop}`] = values;
+      }
+    });
+  });
 
   const facets = {
     user_agent: {},
@@ -820,6 +878,9 @@ const h1 = document.querySelector('h1');
 h1.textContent = ` ${DOMAIN}`;
 const img = document.createElement('img');
 img.src = `https://${DOMAIN}/favicon.ico`;
+img.addEventListener('error', () => {
+  img.src = './website.svg';
+});
 h1.prepend(img);
 
 const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;

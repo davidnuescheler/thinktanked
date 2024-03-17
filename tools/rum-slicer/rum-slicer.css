@@ -13,7 +13,7 @@
 
   --light-blue: #cae8ff;
   --medium-blue: #78bbfa;
-
+  --dark-blue: #147af3;
 }
 
 body {
@@ -213,4 +213,42 @@ figure {
   height: 60px;
 }
 
+h1 img {
+  height: 32px;
+}
 
+select {
+  border: 1px solid currentcolor;
+  border-radius: 32px;
+  background-color: var(--dark-blue);
+  padding: 4px 16px;
+  text-align: end;
+  font-size: 16px;
+  font-size: 24px;
+  display: inline-block;
+  height: 40px;
+  color: white;
+}
+
+.title {
+  display: flex;
+  padding: 0 16px;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.quick-filter {
+  font-size: 16px;
+  padding: 16px 0;
+  display: flex;
+}
+
+.quick-filter input {
+  font-size: 16px;
+  width: 100%;
+  border: none;
+  border-radius: 0;
+  padding: 4px;
+  background-color: #eee;
+  border-bottom: 2px solid #ccc;
+}
