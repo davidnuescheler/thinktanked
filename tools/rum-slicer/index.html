@@ -11,12 +11,9 @@
     </head>
     <body>
         <header>
-        DomainKey:
-        <input type="password" id="domainKey">
-        Domain:
-        <input type="text" id="domain">
         </header>
         <main>
+            <div class="output">
             <div class="title">
             <h1><img src="https://www.aem.live/favicon.ico"> www.aem.live</h1>
             <select id="view">
@@ -59,13 +56,15 @@
                 <span id="timezone"></span>
               </figcaption>
             </figure>
-            <div class="quick-filter">
+          </div>
+
+          <div class="filters">
+          <div class="quick-filter">
             Quick Filter:
             <input type="text" id="filter">
           </div>
-
-      </main>
-        <aside id="facets">
+          
+          <aside id="facets">
             <fieldset>
                 <legend>Events</legend>
               
@@ -95,5 +94,7 @@
             </fieldset>
 
         </aside>
+      </div>
+        </main>
     </body>
 </html>

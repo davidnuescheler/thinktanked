@@ -252,3 +252,19 @@ select {
   background-color: #eee;
   border-bottom: 2px solid #ccc;
 }
+
+@media (min-width: 2000px) {
+  main {
+    display: flex;
+    gap: 16px;
+    margin: 16px;
+  }
+
+  main > div {
+    width: 100%;
+  }
+
+  body {
+    max-width: 2400px;
+  }
+}
