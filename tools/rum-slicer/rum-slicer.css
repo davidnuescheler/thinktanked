@@ -253,6 +253,30 @@ select {
   border-bottom: 2px solid #ccc;
 }
 
+figure {
+  position: relative;
+}
+
+.filter-tags {
+  position: absolute;
+  top: 50px;
+  left: 60px;
+  width: 60%;
+}
+
+.filter-tags > span {
+  border: 1px solid currentcolor;
+  border-radius: 16px;
+  background-color: #eee;
+  padding: 4px 16px;
+  text-align: end;
+  opacity: 0.6;
+  margin-right: 8px;
+  margin-bottom: 8px;
+  white-space: nowrap;
+  display: inline-block;
+}
+
 @media (min-width: 2000px) {
   main {
     display: flex;

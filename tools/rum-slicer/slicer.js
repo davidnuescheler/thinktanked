@@ -619,6 +619,16 @@ function createChartData(bundles, config) {
 }
 
 function updateFacets(facets, cwv) {
+  const filterTags = document.querySelector('.filter-tags');
+  filterTags.textContent = '';
+  const addFilterTag = (name, value) => {
+    const tag = document.createElement('span');
+    tag.textContent = `${name}: ${value}`;
+    filterTags.append(tag);
+  };
+
+  if (filterInput.value) addFilterTag('text', filterInput.value);
+
   const url = new URL(window.location);
 
   facetsElement.textContent = '';
@@ -640,7 +650,10 @@ function updateFacets(facets, cwv) {
           input.type = 'checkbox';
           input.value = optionKey;
           input.checked = url.searchParams.getAll(facetName).includes(optionKey);
-          if (input.checked) div.ariaSelected = true;
+          if (input.checked) {
+            addFilterTag(facetName, optionKey);
+            div.ariaSelected = true;
+          }
           input.id = `${facetName}-${optionKey}`;
           div.addEventListener('click', (evt) => {
             if (evt.target !== input) input.checked = !input.checked;
