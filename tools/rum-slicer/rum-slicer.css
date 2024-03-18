@@ -14,6 +14,19 @@
   --light-blue: #cae8ff;
   --medium-blue: #78bbfa;
   --dark-blue: #147af3;
+
+  --light-fuchsia: #ffdafa;
+  --medium-fuchsia: #f592f3;
+  --dark-fuchsia: #9d039e;
+
+  --light-purple: #eeddff;
+  --medium-purple: #cca4fd;
+  --dark-purple: #7326d3;
+
+  --light-indigo: #d3d5ff;
+  --medium-indigo: #acafff;
+  --dark-indigo: #4046ca;
+
 }
 
 body {
@@ -61,11 +74,30 @@ body {
 }
 
 fieldset {
- padding: 8px 0 0; 
+ padding: 8px 0 0;
+ color: var(--dark-indigo);
+ background-color: var(--light-indigo);
+ border-color: currentColor;
+ border-radius: 8px;
+ margin-top: 16px;
+}
+
+fieldset a:any-link {
+  color: currentColor;
+}
+
+fieldset.facet-user_agent {
+ color: var(--dark-fuchsia);
+ background-color: var(--light-fuchsia);
+}
+
+fieldset.facet-url {
+ color: var(--dark-purple);
+ background-color: var(--light-purple);
 }
 
 legend {
-  margin-left: 16px;
+  margin-left: 20px;
 }
 
 fieldset > div {
@@ -255,6 +287,7 @@ select {
 
 figure {
   position: relative;
+  margin: 0;
 }
 
 .filter-tags {
@@ -265,9 +298,10 @@ figure {
 }
 
 .filter-tags > span {
+  color: var(--dark-indigo);
   border: 1px solid currentcolor;
   border-radius: 16px;
-  background-color: #eee;
+  background-color: var(--light-indigo);
   padding: 4px 16px;
   text-align: end;
   opacity: 0.6;
@@ -275,6 +309,16 @@ figure {
   margin-bottom: 8px;
   white-space: nowrap;
   display: inline-block;
+}
+
+.filter-tags > span.filter-tag-user_agent {
+  color: var(--dark-fuchsia);
+  background-color: var(--light-fuchsia);
+}
+
+.filter-tags > span.filter-tag-url {
+  color: var(--dark-purple);
+  background-color: var(--light-purple);
 }
 
 @media (min-width: 2000px) {

@@ -624,6 +624,7 @@ function updateFacets(facets, cwv) {
   const addFilterTag = (name, value) => {
     const tag = document.createElement('span');
     tag.textContent = `${name}: ${value}`;
+    tag.classList.add(`filter-tag-${name}`);
     filterTags.append(tag);
   };
 
@@ -638,6 +639,7 @@ function updateFacets(facets, cwv) {
     const optionKeys = Object.keys(facet);
     if (optionKeys.length) {
       const fieldSet = document.createElement('fieldset');
+      fieldSet.classList.add(`facet-${facetName}`);
       const legend = document.createElement('legend');
       legend.textContent = facetName;
       fieldSet.append(legend);
