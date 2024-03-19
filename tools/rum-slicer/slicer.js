@@ -1,12 +1,8 @@
-// eslint-disable-next-line no-unused-vars, import/no-unresolved
-import { DateTime } from 'https://cdn.jsdelivr.net/npm/luxon@3.4.4/+esm';
-// eslint-disable-next-line import/no-unresolved
-import 'https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon/+esm';
-
-let SAMPLE_BUNDLE;
+/* globals */
 let DOMAIN_KEY = '';
 let DOMAIN = 'www.thinktanked.org';
-const API_ENDPOINT = 'https://rum-bundles-2.david8603.workers.dev'
+let chart;
+const API_ENDPOINT = 'https://rum-bundles-2.david8603.workers.dev';
 
 const viewSelect = document.getElementById('view');
 const filterInput = document.getElementById('filter');
@@ -17,102 +13,22 @@ const lowDataWarning = document.getElementById('low-data-warning');
 
 let dataChunks = [];
 
-function toISOStringWithTimezone(date) {
-  // Pad a number to 2 digits
-  const pad = (n) => `${Math.floor(Math.abs(n))}`.padStart(2, '0');
+/* helpers */
 
-  // Get timezone offset in ISO format (+hh:mm or -hh:mm)
-  const getTimezoneOffset = () => {
-    const tzOffset = -date.getTimezoneOffset();
-    const diff = tzOffset >= 0 ? '+' : '-';
-    return `${diff}${pad(tzOffset / 60)}:${pad(tzOffset % 60)}`;
-  };
-
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}${getTimezoneOffset()}`;
+function scoreValue(value, ni, poor) {
+  if (value >= poor) return 'poor';
+  if (value >= ni) return 'ni';
+  return 'good';
 }
 
-// eslint-disable-next-line no-undef, no-new
-const chart = new Chart(canvas, {
-  type: 'bar',
-  data: {
-    labels: [],
-    datasets: [{
-      label: 'No CVW',
-      backgroundColor: '#888',
-      data: [],
-    },
-    {
-      label: 'Good',
-      backgroundColor: '#49cc93',
-      data: [],
-    },
-    {
-      label: 'Needs Improvement',
-      backgroundColor: '#ffa037',
-      data: [],
-    },
-    {
-      label: 'Poor',
-      backgroundColor: '#ff7c65',
-      data: [],
-    }],
-  },
-  options: {
-    plugins: {
-      tooltip: {
-        callbacks: {
-          label: (context) => {
-            const { datasets } = context.chart.data;
-            const value = context.parsed.y;
-            const i = context.dataIndex;
-            const total = datasets.reduce((pv, cv) => pv + cv.data[i], 0);
-
-            return (`${context.dataset.label}: ${Math.round((value / total) * 1000) / 10}%`);
-          },
-        },
-      },
-    },
-    interaction: {
-      mode: 'x',
-    },
-    animation: {
-      duration: 300,
-    },
-    datasets: {
-      bar: {
-        barPercentage: 1,
-        categoryPercentage: 0.9,
-        borderSkipped: false,
-        borderRadius: {
-          topLeft: 3,
-          topRight: 3,
-          bottomLeft: 3,
-          bottomRight: 3,
-        },
-      },
-    },
-    responsive: true,
-    scales: {
-      x: {
-        type: 'time',
-        display: true,
-        offset: true,
-        time: {
-          unit: 'day',
-        },
-        stacked: true,
-        ticks: {
-          minRotation: 90,
-          maxRotation: 90,
-          autoSkip: false,
-        },
-      },
-      y: {
-        stacked: true,
-      },
-    },
-  },
-});
+function scoreCWV(value, name) {
+  const limits = {
+    lcp: [2500, 4000],
+    cls: [0.1, 0.25],
+    inp: [200, 500],
+  };
+  return scoreValue(value, ...limits[name]);
+}
 
 function toHumanReadable(num) {
   const dp = 3;
@@ -137,51 +53,21 @@ function toHumanReadable(num) {
   return `${number.toFixed(precision)}${units[u]}`;
 }
 
-async function loadSampleBundle() {
-  const resp = await fetch('./sampleRUMBundle.json');
-  return (resp.json());
+function toISOStringWithTimezone(date) {
+  // Pad a number to 2 digits
+  const pad = (n) => `${Math.floor(Math.abs(n))}`.padStart(2, '0');
+
+  // Get timezone offset in ISO format (+hh:mm or -hh:mm)
+  const getTimezoneOffset = () => {
+    const tzOffset = -date.getTimezoneOffset();
+    const diff = tzOffset >= 0 ? '+' : '-';
+    return `${diff}${pad(tzOffset / 60)}:${pad(tzOffset % 60)}`;
+  };
+
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}${getTimezoneOffset()}`;
 }
 
-async function createRandomBundle(date, hour) {
-  if (!SAMPLE_BUNDLE) {
-    SAMPLE_BUNDLE = await loadSampleBundle();
-  }
-  const sampleURLs = ['https://www.thinktanked.org/', 'https://www.thinktanked.org/pretzels', 'https://www.thinktanked.org/iba-testing'];
-  const bundle = structuredClone(SAMPLE_BUNDLE);
-  bundle.id = `${Math.random()}`;
-  bundle.user_agent = Math.random() < 0.3 ? 'desktop' : 'mobile';
-  bundle.url = sampleURLs[Math.floor(Math.random() * 3)];
-  bundle.timeSlot = `${date}T${hour}:00:00Z`;
-
-  // deal with inp
-  if (Math.random() < 0.5) bundle.events.splice(10, 1);
-  else bundle.events[10].target = Math.floor(Math.random() * 600);
-
-  // deal with cls
-  if (Math.random() < 0.5) bundle.events.splice(9, 1);
-  else bundle.events[9].target = Math.random() * 0.3;
-
-  // deal with lcp
-  if (Math.random() < 0.5) bundle.events.splice(8, 1);
-  else bundle.events[8].target = Math.floor(Math.random() * 5000);
-
-  // remove leave
-  if (Math.random() < 0.3) bundle.events.splice(6, 1);
-  // remove enter
-  if (Math.random() < 0.3) bundle.events.splice(3, 1);
-
-  return (bundle);
-}
-
-async function generateRandomRUMBundles(num, date, hour) {
-  const bundles = [];
-  for (let i = 0; i < num; i += 1) {
-    // eslint-disable-next-line no-await-in-loop
-    const bundle = await createRandomBundle(date, (`${hour}`).padStart(2, '0'));
-    bundles.push(bundle);
-  }
-  return (bundles);
-}
+/* fetch and process raw bundles */
 
 function addCalculatedProps(bundle) {
   bundle.events.forEach((e) => {
@@ -210,15 +96,6 @@ async function fetchUTCDay(utcISOString) {
   const resp = await fetch(apiRequestURL);
   const json = await resp.json();
   const { rumBundles } = json;
-  /*
-  const rumBundles = [];
-  for (let hour = 0; hour < 24; hour += 1) {
-    // eslint-disable-next-line no-await-in-loop
-    const hourBundles = await generateRandomRUMBundles(Math.random() * 100, date, hour);
-    hourBundles.forEach((bundle) => addCalculatedProps(bundle));
-    rumBundles.push(...hourBundles);
-  }
-  */
   rumBundles.forEach((bundle) => addCalculatedProps(bundle));
   return { date, rumBundles };
 }
@@ -228,13 +105,9 @@ async function fetchUTCHour(utcISOString) {
   const datePath = date.split('-').join('/');
   const hour = time.split(':')[0];
   const apiRequestURL = `${API_ENDPOINT}/rum-bundles/${DOMAIN}/${datePath}/${hour}?domainkey=${DOMAIN_KEY}`;
-  console.log(apiRequestURL);
   const resp = await fetch(apiRequestURL);
   const json = await resp.json();
   const { rumBundles } = json;
-  /*
-  const rumBundles = await generateRandomRUMBundles(Math.random() * 100, date, hour);
-  */
   rumBundles.forEach((bundle) => addCalculatedProps(bundle));
   return { date, hour, rumBundles };
 }
@@ -267,6 +140,8 @@ export async function fetchLast31Days() {
   }
   return chunks;
 }
+
+/* filter, slice and dice bundles */
 
 function filterBundle(bundle, filter, facets, cwv) {
   let matchedAll = true;
@@ -452,20 +327,7 @@ function filterBundle(bundle, filter, facets, cwv) {
   return (matchedAll);
 }
 
-function scoreValue(value, ni, poor) {
-  if (value >= poor) return 'poor';
-  if (value >= ni) return 'ni';
-  return 'good';
-}
-
-function scoreCWV(value, name) {
-  const limits = {
-    lcp: [2500, 4000],
-    cls: [0.1, 0.25],
-    inp: [200, 500],
-  };
-  return scoreValue(value, ...limits[name]);
-}
+/* update UX */
 
 function updateKeyMetrics(keyMetrics) {
   document.querySelector('#pageviews p').textContent = toHumanReadable(keyMetrics.pageViews);
@@ -818,16 +680,6 @@ async function draw() {
   updateFacets(facets, cwv);
   const statsKeys = Object.keys(stats);
 
-  const getAverage = (metric) => {
-    const avg = statsKeys.reduce((cv, nv) => (stats[nv][metric].weight ? {
-      weight: cv.weight + stats[nv].lcp.weight,
-      average: ((cv.average * cv.weight)
-      + (stats[nv][metric].average * stats[nv].lcp.weight))
-      / (cv.weight + stats[nv][metric].weight),
-    } : cv), { average: 0, weight: 0 });
-    return avg.average;
-  };
-
   const getP75 = (metric) => {
     const cwvMetric = `cwv${metric.toUpperCase()}`;
     const totalWeight = statsKeys.reduce((cv, nv) => (cv + stats[nv][metric].weight), 0);
@@ -883,6 +735,90 @@ function updateState() {
   url.searchParams.set('domainkey', DOMAIN_KEY);
   window.history.replaceState({}, '', url);
 }
+
+// eslint-disable-next-line no-undef, no-new
+chart = new Chart(canvas, {
+  type: 'bar',
+  data: {
+    labels: [],
+    datasets: [{
+      label: 'No CVW',
+      backgroundColor: '#888',
+      data: [],
+    },
+    {
+      label: 'Good',
+      backgroundColor: '#49cc93',
+      data: [],
+    },
+    {
+      label: 'Needs Improvement',
+      backgroundColor: '#ffa037',
+      data: [],
+    },
+    {
+      label: 'Poor',
+      backgroundColor: '#ff7c65',
+      data: [],
+    }],
+  },
+  options: {
+    plugins: {
+      tooltip: {
+        callbacks: {
+          label: (context) => {
+            const { datasets } = context.chart.data;
+            const value = context.parsed.y;
+            const i = context.dataIndex;
+            const total = datasets.reduce((pv, cv) => pv + cv.data[i], 0);
+
+            return (`${context.dataset.label}: ${Math.round((value / total) * 1000) / 10}%`);
+          },
+        },
+      },
+    },
+    interaction: {
+      mode: 'x',
+    },
+    animation: {
+      duration: 300,
+    },
+    datasets: {
+      bar: {
+        barPercentage: 1,
+        categoryPercentage: 0.9,
+        borderSkipped: false,
+        borderRadius: {
+          topLeft: 3,
+          topRight: 3,
+          bottomLeft: 3,
+          bottomRight: 3,
+        },
+      },
+    },
+    responsive: true,
+    scales: {
+      x: {
+        type: 'time',
+        display: true,
+        offset: true,
+        time: {
+          unit: 'day',
+        },
+        stacked: true,
+        ticks: {
+          minRotation: 90,
+          maxRotation: 90,
+          autoSkip: false,
+        },
+      },
+      y: {
+        stacked: true,
+      },
+    },
+  },
+});
+
 const params = new URL(window.location).searchParams;
 filterInput.value = params.get('filter');
 const view = params.get('view') || 'week';
