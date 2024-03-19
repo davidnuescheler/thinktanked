@@ -364,6 +364,8 @@ function createChartData(bundles, config) {
 
   bundles.forEach((bundle) => {
     const slotTime = new Date(bundle.timeSlot);
+    slotTime.setMinutes(0);
+    slotTime.setSeconds(0);
     if (config.unit === 'day') slotTime.setHours(0);
 
     const localTimeSlot = toISOStringWithTimezone(slotTime);
@@ -655,6 +657,8 @@ async function draw() {
     filtered.push(...chunk.rumBundles
       .filter((bundle) => filterBundle(bundle, filter, facets, cwv)));
   });
+
+  console.log(filtered);
 
   if (filtered.length < 1000) {
     lowDataWarning.ariaHidden = 'false';
