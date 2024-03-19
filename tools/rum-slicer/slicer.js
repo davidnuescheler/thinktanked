@@ -503,11 +503,16 @@ function updateFacets(facets, cwv) {
     const facet = facets[facetName];
     const optionKeys = Object.keys(facet);
     if (optionKeys.length) {
+      let tsv = '';
       const fieldSet = document.createElement('fieldset');
       fieldSet.classList.add(`facet-${facetName}`);
       const legend = document.createElement('legend');
       legend.textContent = facetName;
+      const clipboard = document.createElement('span');
+      clipboard.className = 'clipboard';
+      legend.append(clipboard);
       fieldSet.append(legend);
+      tsv += `${facetName}\tcount\tlcp\tcls\tinp\r\n`;
       optionKeys.sort((a, b) => facet[b] - facet[a]);
       optionKeys.forEach((optionKey, i) => {
         if (i < 10) {
@@ -532,7 +537,7 @@ function updateFacets(facets, cwv) {
           });
           const createLabelHTML = (labelText) => {
             if (labelText.startsWith('https://') && labelText.includes('media_')) {
-              return `<img src="${labelText}?width=2000&format=png&optimize=medium"">`;
+              return `<img src="${labelText}?width=750&format=webply&optimize=medium"">`;
             }
 
             if (labelText.startsWith('https://')) {
@@ -604,12 +609,22 @@ function updateFacets(facets, cwv) {
             inpLI.classList.add(`score-${inpScore}`);
             inpLI.textContent = inp;
             ul.append(inpLI);
+            tsv += `${optionKey}\t${optionValue}\t${lcp}\t${cls}\t${inp}\r\n`;
           }
-
           div.append(input, label, ul);
           fieldSet.append(div);
+        } else if (i < 100) {
+          tsv += `${optionKey}\t${facet[optionKey]}\t\t\t\r\n`;
         }
       });
+
+      legend.addEventListener('click', () => {
+        navigator.clipboard.writeText(tsv);
+        const toast = document.getElementById('copied-toast');
+        toast.ariaHidden = false;
+        setTimeout(() => { toast.ariaHidden = true; }, 3000);
+      });
+
       facetsElement.append(fieldSet);
     }
   });
