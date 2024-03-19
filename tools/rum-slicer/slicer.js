@@ -73,6 +73,7 @@ function addCalculatedProps(bundle) {
   bundle.events.forEach((e) => {
     if (e.checkpoint === 'enter') {
       bundle.visit = true;
+      if (e.source === '') e.source = '(direct)';
     }
     if (e.checkpoint === 'click') {
       bundle.conversion = true;
