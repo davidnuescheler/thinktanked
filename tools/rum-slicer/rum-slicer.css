@@ -231,27 +231,27 @@ figcaption > span {
 /* filters */
 
 .quick-filter {
-  font-size: 16px;
-  padding: 16px 0;
+  padding: 12px 0 8px;
   display: flex;
 }
 
 .quick-filter input {
-  font-size: 16px;
+  font-size: 20px;
   width: 100%;
   border: none;
   border-radius: 0;
-  padding: 4px;
+  padding: 12px;
   background-color: #eee;
   border-bottom: 2px solid #ccc;
 }
 
 
 fieldset {
+  --background-color: var(--light-indigo);
  padding: 8px 0 0;
  color: var(--dark-indigo);
- background-color: var(--light-indigo);
- border-color: currentColor;
+ background-color: var(--background-color);
+ border: 2px solid currentcolor;
  border-radius: 8px;
  margin-top: 16px;
 }
@@ -262,16 +262,18 @@ fieldset a:any-link {
 
 fieldset.facet-user_agent {
  color: var(--dark-fuchsia);
- background-color: var(--light-fuchsia);
+ --background-color: var(--light-fuchsia);
 }
 
 fieldset.facet-url {
  color: var(--dark-purple);
- background-color: var(--light-purple);
+ --background-color: var(--light-purple);
 }
 
 legend {
   margin-left: 20px;
+  padding: 8px;
+  background-color: var(--background-color);
 }
 
 fieldset > div {
@@ -342,10 +344,16 @@ fieldset li::after {
     display: flex;
     gap: 16px;
     margin: 16px;
+    height: 100%;
   }
 
   main > div {
     width: 100%;
+  }
+
+  main #facets {
+    height: calc(100% - 70px);
+    overflow-y: scroll;
   }
 
   body {
