@@ -460,10 +460,34 @@ function createChartData(bundles, config) {
       const cwvPoor = stat.lcp.poor.weight + stat.cls.poor.weight + stat.inp.poor.weight;
 
       const showCWVSplit = cwvNumBundles && (cwvNumBundles > 10);
-      dataTotal.unshift(showCWVSplit ? 0 : stat.total);
-      dataGood.unshift(showCWVSplit ? Math.round(cwvGood * cwvFactor) : 0);
-      dataNI.unshift(showCWVSplit ? Math.round(cwvNI * cwvFactor) : 0);
-      dataPoor.unshift(showCWVSplit ? Math.round(cwvPoor * cwvFactor) : 0);
+      if (!config.focus) {
+        dataTotal.unshift(showCWVSplit ? 0 : stat.total);
+        dataGood.unshift(showCWVSplit ? Math.round(cwvGood * cwvFactor) : 0);
+        dataNI.unshift(showCWVSplit ? Math.round(cwvNI * cwvFactor) : 0);
+        dataPoor.unshift(showCWVSplit ? Math.round(cwvPoor * cwvFactor) : 0);
+      } else {
+        if (config.focus === 'lcp' || config.focus === 'cls' || config.focus === 'inp') {
+          const m = config.focus;
+          dataTotal.unshift(showCWVSplit ? 0 : 1);
+          dataGood.unshift(showCWVSplit ? stat[m].good.weight / stat[m].weight : 0);
+          dataNI.unshift(showCWVSplit ? stat[m].ni.weight / stat[m].weight : 0);
+          dataPoor.unshift(showCWVSplit ? stat[m].poor.weight / stat[m].weight : 0);
+        }
+        if (config.focus === 'conversions') {
+          // cls here
+          dataTotal.unshift(0);
+          dataGood.unshift(stat.conversions / stat.total);
+          dataNI.unshift(1 - (stat.conversions / stat.total));
+          dataPoor.unshift(0);
+        }
+        if (config.focus === 'visits') {
+          // cls here
+          dataTotal.unshift(stat.visits / stat.total);
+          dataGood.unshift(1 - (stat.visits / stat.total));
+          dataNI.unshift(0);
+          dataPoor.unshift(0);
+        }
+      }
     } else {
       dataTotal.unshift(0);
       dataGood.unshift(0);
@@ -483,17 +507,19 @@ function createChartData(bundles, config) {
   return { labels, datasets, stats };
 }
 
-function updateFacets(facets, cwv) {
+function updateFacets(facets, cwv, focus) {
   const filterTags = document.querySelector('.filter-tags');
   filterTags.textContent = '';
   const addFilterTag = (name, value) => {
     const tag = document.createElement('span');
-    tag.textContent = `${name}: ${value}`;
+    if (value) tag.textContent = `${name}: ${value}`;
+    else tag.textContent = `${name}`;
     tag.classList.add(`filter-tag-${name}`);
     filterTags.append(tag);
   };
 
   if (filterInput.value) addFilterTag('text', filterInput.value);
+  if (focus) addFilterTag(focus);
 
   const url = new URL(window.location);
 
@@ -635,9 +661,11 @@ async function draw() {
   const checkpoint = params.getAll('checkpoint');
   const target = params.getAll('target');
   const url = params.getAll('url');
+
   // eslint-disable-next-line camelcase
   const user_agent = params.getAll('user_agent');
   const view = params.get('view') || 'week';
+  const focus = params.get('focus');
 
   const filterText = params.get('filter') || '';
   const filtered = [];
@@ -673,8 +701,6 @@ async function draw() {
       .filter((bundle) => filterBundle(bundle, filter, facets, cwv)));
   });
 
-  console.log(filtered);
-
   if (filtered.length < 1000) {
     lowDataWarning.ariaHidden = 'false';
   } else {
@@ -685,10 +711,12 @@ async function draw() {
     view,
     unit: 'day',
     units: 30,
+    focus,
   } : {
     view,
     unit: 'hour',
     units: 24 * 7,
+    focus,
   };
   const { labels, datasets, stats } = createChartData(filtered, config);
   datasets.forEach((ds, i) => {
@@ -697,7 +725,7 @@ async function draw() {
   chart.data.labels = labels;
   chart.options.scales.x.time.unit = config.unit;
   chart.update();
-  updateFacets(facets, cwv);
+  updateFacets(facets, cwv, focus);
   const statsKeys = Object.keys(stats);
 
   const getP75 = (metric) => {
@@ -746,6 +774,8 @@ function updateState() {
   url.searchParams.set('domain', DOMAIN);
   url.searchParams.set('filter', filterInput.value);
   url.searchParams.set('view', viewSelect.value);
+  const selectedMetric = document.querySelector('.key-metrics li[aria-selected="true"]');
+  if (selectedMetric) url.searchParams.set('focus', selectedMetric.id);
 
   facetsElement.querySelectorAll('input').forEach((e) => {
     if (e.checked) {
@@ -867,4 +897,16 @@ filterInput.addEventListener('input', () => {
 viewSelect.addEventListener('input', () => {
   updateState();
   window.location.reload();
+});
+
+const metrics = [...document.querySelectorAll('.key-metrics li')];
+metrics.forEach((e) => {
+  e.addEventListener('click', (evt) => {
+    const metric = evt.currentTarget.id;
+    const selected = evt.currentTarget.ariaSelected === 'true';
+    metrics.forEach((m) => { m.ariaSelected = false; });
+    if (metric !== 'pageviews') e.ariaSelected = !selected;
+    updateState();
+    draw();
+  });
 });

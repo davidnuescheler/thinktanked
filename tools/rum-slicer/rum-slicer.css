@@ -124,6 +124,11 @@ main .key-metrics li p {
   padding: 0 16px;
 }
 
+.key-metrics li[aria-selected="true"] {
+  background-color: #444;
+  color: white;
+}
+
 /* figure */
 
 figure {
@@ -225,6 +230,14 @@ figcaption > span {
 .filter-tags > span.filter-tag-url {
   color: var(--dark-purple);
   background-color: var(--light-purple);
+}
+
+.filter-tags > span.filter-tag-lcp, 
+.filter-tags > span.filter-tag-cls, 
+.filter-tags > span.filter-tag-inp,
+.filter-tags > span.filter-tag-conversions,
+.filter-tags > span.filter-tag-visits {
+  opacity: 1;
 }
 
 
@@ -425,3 +438,4 @@ fieldset li::after {
     max-width: 2400px;
   }
 }
+
