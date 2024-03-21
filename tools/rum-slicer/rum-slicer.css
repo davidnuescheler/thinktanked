@@ -37,6 +37,10 @@ body {
     margin-top: 32px;
 }
 
+main {
+  margin: 16px;
+}
+
 /* general performance */
 
 main li.score-good {
@@ -421,7 +425,6 @@ fieldset li::after {
   main {
     display: flex;
     gap: 16px;
-    margin: 16px;
     height: 100%;
   }
 
