@@ -15,11 +15,14 @@
         <main>
             <div class="output">
               <div class="title">
-              <h1><img src="https://www.aem.live/favicon.ico"> www.aem.live</h1>
-              <select id="view">
-                <option value="week">Week</option>
-                <option value="month">Month</option>
-              </select>
+                <h1><img src="https://www.aem.live/favicon.ico"> www.aem.live</h1>
+                <div>
+                  <select id="view">
+                    <option value="week">Week</option>
+                    <option value="month">Month</option>
+                  </select>
+                  <button id="share">Share...</button>
+                </div>
               </div>
               <div class="key-metrics">
                 <ul>
@@ -97,6 +100,9 @@
         </main>
         <div id="copied-toast" class="toast" aria-hidden="true">
           Rows copied to clipboard, ready to paste into spreasheet
+        </div>
+        <div id="shared-toast" class="toast" aria-hidden="true">
+          Link copied to clipboard, ready to share
         </div>
     </body>
 </html>

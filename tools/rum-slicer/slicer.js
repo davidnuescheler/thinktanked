@@ -812,8 +812,24 @@ chart = new Chart(canvas, {
       data: [],
     }],
   },
+  plugins: [
+    {
+      id: 'customCanvasBackgroundColor',
+      beforeDraw: (ch, args, options) => {
+        const { ctx } = ch;
+        ctx.save();
+        ctx.globalCompositeOperation = 'destination-over';
+        ctx.fillStyle = options.color || '#99ffff';
+        ctx.fillRect(0, 0, ch.width, ch.height);
+        ctx.restore();
+      },
+    },
+  ],
   options: {
     plugins: {
+      customCanvasBackgroundColor: {
+        color: 'white',
+      },
       tooltip: {
         callbacks: {
           label: (context) => {
@@ -909,4 +925,22 @@ metrics.forEach((e) => {
     updateState();
     draw();
   });
+});
+
+document.getElementById('share').addEventListener('click', () => {
+  const ogHandlerOrigin = 'https://og-image-handler.david8603.workers.dev';
+  canvas.toBlob(async (blob) => {
+    const resp = await fetch(`${ogHandlerOrigin}/image-sink?path=${encodeURIComponent(window.location.pathname + window.location.search)}`, {
+      method: 'PUT',
+      body: blob,
+      headers: {
+        'content-type': 'image/png',
+      },
+    });
+    const json = await resp.json();
+    navigator.clipboard.writeText(`${ogHandlerOrigin}/share/${json.key}`);
+    const toast = document.getElementById('copied-toast');
+    toast.ariaHidden = false;
+    setTimeout(() => { toast.ariaHidden = true; }, 3000);
+  }, 'image/png');
 });
