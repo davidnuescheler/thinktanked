@@ -869,6 +869,9 @@ chart = new Chart(canvas, {
         display: true,
         offset: true,
         time: {
+          displayFormats: {
+            day: 'EEE, MMM d',
+          },
           unit: 'day',
         },
         stacked: true,
