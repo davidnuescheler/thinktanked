@@ -375,6 +375,24 @@ fieldset li::after {
   height: 60px;
 }
 
+#facets label span {
+  display: none;
+}
+
+#facets label span::before {
+  content: ' ';
+}
+
+body[data-focus=conversions] #facets label span.interesting {
+  display: inline;
+  color: var(--dark-blue);
+}
+
+body[data-focus=conversions] #facets label span.significant {
+  display: inline;
+  color: var(--dark-orange);
+}
+
 .clipboard {
   margin-left: 8px;
   box-sizing: border-box;
