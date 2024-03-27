@@ -252,6 +252,19 @@ figcaption > span {
   opacity: 1;
 }
 
+/* conversion button */
+
+h2 button {
+  /* looks like normal text */
+  color: inherit;
+  border: none;
+  background-color: transparent;
+  cursor: pointer;
+  padding: 0;
+  font-weight: inherit;
+  color: var(--dark-indigo);
+}
+
 
 /* filters */
 

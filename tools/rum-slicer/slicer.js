@@ -30,6 +30,17 @@ function scoreCWV(value, name) {
   return scoreValue(value, ...limits[name]);
 }
 
+function toHumanPercentage(num) {
+  if (num <= 0.1) {
+    // format as permille, using Intl.NumberFormat with 2 significant digits
+    return new Intl.NumberFormat('en', { style: 'percent', maximumSignificantDigits: 3, maximumFractionDigits: 2 }).format(num * 10).replace('%', '‰');
+  }
+  if (num <= 1) {
+    // format as percentage, using Intl.NumberFormat with 2 significant digits
+    return new Intl.NumberFormat('en', { style: 'percent', maximumSignificantDigits: 2, maximumFractionDigits: 2 }).format(num);
+  }
+}
+
 function toHumanReadable(num) {
   const dp = 3;
   let number = num;
@@ -67,15 +78,32 @@ function toISOStringWithTimezone(date) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}${getTimezoneOffset()}`;
 }
 
+function isConversion(e) {
+  // get conversion filters from URL
+  const criteria = Array.from(new URL(window.location).searchParams)
+    .filter(([key]) => key.startsWith('conversion'))
+    .map(([key, value]) => ([key.replace('conversion.', ''), value]))
+    .map(([key, value]) => {
+      const keys = key.split('.');
+      if (keys.length === 1) return { checkpoint: value };
+      if (keys.length === 2) return { checkpoint: keys[0], [keys[1]]: value };
+      return {};
+    })
+    // remove empty criteria
+    .filter((c) => Object.keys(c).length > 0);
+  const every = criteria.filter((c) => Object.keys(c).every((k) => e[k] === c[k]));
+  return criteria.length
+    ? every.length === criteria.length
+    : e.checkpoint === 'click'; // default to click
+}
 /* fetch and process raw bundles */
-
 function addCalculatedProps(bundle) {
   bundle.events.forEach((e) => {
     if (e.checkpoint === 'enter') {
       bundle.visit = true;
       if (e.source === '') e.source = '(direct)';
     }
-    if (e.checkpoint === 'click') {
+    if (isConversion(e)) {
       bundle.conversion = true;
     }
     if (e.checkpoint === 'cwv-inp') {
@@ -87,6 +115,16 @@ function addCalculatedProps(bundle) {
     if (e.checkpoint === 'cwv-cls') {
       bundle.cwvCLS = e.value;
     }
+  });
+}
+
+function reEvaluateConversions() {
+  // run addCalculatedProps on all bundles
+  dataChunks.forEach((chunk) => {
+    chunk.rumBundles.forEach((bundle) => {
+      bundle.conversion = false;
+      addCalculatedProps(bundle);
+    });
   });
 }
 
@@ -333,7 +371,14 @@ function filterBundle(bundle, filter, facets, cwv) {
 function updateKeyMetrics(keyMetrics) {
   document.querySelector('#pageviews p').textContent = toHumanReadable(keyMetrics.pageViews);
   document.querySelector('#visits p').textContent = toHumanReadable(keyMetrics.visits);
-  document.querySelector('#conversions p').textContent = toHumanReadable(keyMetrics.conversions);
+
+  const conversionRate = keyMetrics.pageViews ? keyMetrics.conversions / keyMetrics.pageViews : 0;
+  document.querySelector('#conversions p').textContent =
+    toHumanReadable(keyMetrics.conversions)
+    + ' (' + toHumanPercentage(conversionRate) + ')';
+  document.querySelector('#conversions button').textContent = new URL(window.location).searchParams.has('conversion.checkpoint')
+    ? 'Custom: ' + new URL(window.location).searchParams.getAll('conversion.checkpoint').join(', ')
+    : 'Click';
 
   const lcpElem = document.querySelector('#lcp p');
   lcpElem.textContent = `${toHumanReadable(keyMetrics.lcp / 1000)} s`;
@@ -524,8 +569,7 @@ function updateFacets(facets, cwv, focus) {
   const url = new URL(window.location);
 
   facetsElement.textContent = '';
-  const keys = Object.keys(facets);
-  keys.forEach((facetName) => {
+  const keys = Object.keys(facets); keys.forEach((facetName) => {
     const facet = facets[facetName];
     const optionKeys = Object.keys(facet);
     if (optionKeys.length) {
@@ -783,6 +827,13 @@ function updateState() {
     }
   });
   url.searchParams.set('domainkey', DOMAIN_KEY);
+
+  const oldUrl = new URL(window.location);
+  // loop through all search params and remove them from the url
+  Array.from(new URL(window.location).searchParams)
+    .filter(([key]) => key.startsWith('conversion'))
+    .forEach(([key, value]) => url.searchParams.set(key, value));
+
   window.history.replaceState({}, '', url);
 }
 
@@ -946,4 +997,29 @@ document.getElementById('share').addEventListener('click', () => {
     toast.ariaHidden = false;
     setTimeout(() => { toast.ariaHidden = true; }, 3000);
   }, 'image/png');
+});
+
+document.getElementById('redefine').addEventListener('click', (e) => {
+  e.stopPropagation();
+  const url = new URL(window.location);
+  // clear all conversion filters
+  Array.from(new URL(window.location).searchParams)
+    .filter(([key]) => key.startsWith('conversion'))
+    .forEach(([key]) => url.searchParams.delete(key));
+  facetsElement.querySelectorAll('input').forEach((e) => {
+    if (e.checked) {
+      url.searchParams.set('conversion.' + e.id.split('-')[0], e.value);
+      // uncheck
+      e.checked = false;
+    }
+  });
+  // push to URL
+  window.history.replaceState({}, '', url);
+
+  //console.log('data chunks', dataChunks);
+
+  reEvaluateConversions();
+  updateState();
+  draw();
+  console.log('done');
 });
