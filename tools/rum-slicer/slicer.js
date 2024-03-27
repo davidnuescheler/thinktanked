@@ -14,6 +14,14 @@ const lowDataWarning = document.getElementById('low-data-warning');
 let dataChunks = [];
 
 /* helpers */
+function p_value(control_events, control_conversions, treatment_events, treatment_conversions) {
+  const control_rate = control_conversions / control_events;
+  const treatment_rate = treatment_conversions / treatment_events;
+  const pooled_prob = (control_conversions + treatment_conversions) / (control_events + treatment_events);
+  const z = (treatment_rate - control_rate) / Math.sqrt(pooled_prob * (1 - pooled_prob) * (1 / control_events + 1 / treatment_events));
+  const p = 1 - jStat.normal.cdf(Math.abs(z), 0, 1);
+  return p;
+}
 
 function scoreValue(value, ni, poor) {
   if (value >= poor) return 'poor';
@@ -28,6 +36,17 @@ function scoreCWV(value, name) {
     inp: [200, 500],
   };
   return scoreValue(value, ...limits[name]);
+}
+
+function toHumanPercentage(num) {
+  if (num <= 0.1) {
+    // format as permille, using Intl.NumberFormat with 2 significant digits
+    return new Intl.NumberFormat('en', { style: 'percent', maximumSignificantDigits: 3, maximumFractionDigits: 2 }).format(num * 10).replace('%', '‰');
+  }
+  if (num <= 1) {
+    // format as percentage, using Intl.NumberFormat with 2 significant digits
+    return new Intl.NumberFormat('en', { style: 'percent', maximumSignificantDigits: 2, maximumFractionDigits: 2 }).format(num);
+  }
 }
 
 function toHumanReadable(num) {
@@ -67,15 +86,32 @@ function toISOStringWithTimezone(date) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}${getTimezoneOffset()}`;
 }
 
+function isConversion(e) {
+  // get conversion filters from URL
+  const criteria = Array.from(new URL(window.location).searchParams)
+    .filter(([key]) => key.startsWith('conversion'))
+    .map(([key, value]) => ([key.replace('conversion.', ''), value]))
+    .map(([key, value]) => {
+      const keys = key.split('.');
+      if (keys.length === 1) return { checkpoint: value };
+      if (keys.length === 2) return { checkpoint: keys[0], [keys[1]]: value };
+      return {};
+    })
+    // remove empty criteria
+    .filter((c) => Object.keys(c).length > 0);
+  const every = criteria.filter((c) => Object.keys(c).every((k) => e[k] === c[k]));
+  return criteria.length
+    ? every.length === criteria.length
+    : e.checkpoint === 'click'; // default to click
+}
 /* fetch and process raw bundles */
-
 function addCalculatedProps(bundle) {
   bundle.events.forEach((e) => {
     if (e.checkpoint === 'enter') {
       bundle.visit = true;
       if (e.source === '') e.source = '(direct)';
     }
-    if (e.checkpoint === 'click') {
+    if (isConversion(e)) {
       bundle.conversion = true;
     }
     if (e.checkpoint === 'cwv-inp') {
@@ -87,6 +123,16 @@ function addCalculatedProps(bundle) {
     if (e.checkpoint === 'cwv-cls') {
       bundle.cwvCLS = e.value;
     }
+  });
+}
+
+function reEvaluateConversions() {
+  // run addCalculatedProps on all bundles
+  dataChunks.forEach((chunk) => {
+    chunk.rumBundles.forEach((bundle) => {
+      bundle.conversion = false;
+      addCalculatedProps(bundle);
+    });
   });
 }
 
@@ -162,6 +208,23 @@ function filterBundle(bundle, filter, facets, cwv) {
       facets[`${cp}.source`] = {};
       cwv[`${cp}.source`] = {};
     }
+    // hidden facet for converted bundles only
+    if (!facets[`${cp}.converted`]) {
+      facets[`${cp}.converted`] = {};
+      cwv[`${cp}.converted`] = {};
+    }
+    if (!facets[`${cp}.value.converted`]) {
+      facets[`${cp}.value.converted`] = {};
+      cwv[`${cp}.value.converted`] = {};
+    }
+    if (!facets[`${cp}.target.converted`]) {
+      facets[`${cp}.target.converted`] = {};
+      cwv[`${cp}.target.converted`] = {};
+    }
+    if (!facets[`${cp}.source.converted`]) {
+      facets[`${cp}.source.converted`] = {};
+      cwv[`${cp}.source.converted`] = {};
+    }
   });
 
   filterMatches.text = true;
@@ -205,6 +268,8 @@ function filterBundle(bundle, filter, facets, cwv) {
       }
     }
   }
+
+  const hasConverted = bundle.conversion;
 
   /* filter url */
   if (matchedAll) {
@@ -308,6 +373,59 @@ function filterBundle(bundle, filter, facets, cwv) {
               addToCWV(facetName, option);
             }
           }
+          // same for converted bundles
+          // count only converted events
+          if (hasConverted) {
+            if (e.target && hasConverted) {
+              const facetName = `${val}.target.converted`;
+              const facet = facets[facetName];
+              const option = e.target;
+
+              const facetOptionName = `${facetName}=${option}`;
+              if (!facetOptionsAdded.includes(facetOptionName)) {
+                facetOptionsAdded.push(facetOptionName);
+                if (facet[option]) {
+                  facet[option] += bundle.weight;
+                } else {
+                  facet[option] = bundle.weight;
+                }
+                addToCWV(facetName, option);
+              }
+            }
+            if (e.source && hasConverted) {
+              const facetName = `${val}.source.converted`;
+              const facet = facets[facetName];
+              const option = e.source;
+
+              const facetOptionName = `${facetName}=${option}`;
+              if (!facetOptionsAdded.includes(facetOptionName)) {
+                facetOptionsAdded.push(facetOptionName);
+                if (facet[option]) {
+                  facet[option] += bundle.weight;
+                } else {
+                  facet[option] = bundle.weight;
+                }
+                addToCWV(facetName, option);
+              }
+            }
+            if (e.value && hasConverted) {
+              const facetName = `${val}.value.converted`;
+              const facet = facets[facetName];
+              const option = e.value;
+
+              const facetOptionName = `${facetName}=${option}`;
+              if (!facetOptionsAdded.includes(facetOptionName)) {
+                facetOptionsAdded.push(facetOptionName);
+                if (facet[option]) {
+                  facet[option] += bundle.weight;
+                } else {
+                  facet[option] = bundle.weight;
+                }
+                addToCWV(facetName, option);
+              }
+            }
+          }
+
         });
       }
     });
@@ -333,7 +451,14 @@ function filterBundle(bundle, filter, facets, cwv) {
 function updateKeyMetrics(keyMetrics) {
   document.querySelector('#pageviews p').textContent = toHumanReadable(keyMetrics.pageViews);
   document.querySelector('#visits p').textContent = toHumanReadable(keyMetrics.visits);
-  document.querySelector('#conversions p').textContent = toHumanReadable(keyMetrics.conversions);
+
+  const conversionRate = keyMetrics.pageViews ? keyMetrics.conversions / keyMetrics.pageViews : 0;
+  document.querySelector('#conversions p').textContent =
+    toHumanReadable(keyMetrics.conversions)
+    + ' (' + toHumanPercentage(conversionRate) + ')';
+  document.querySelector('#conversions button').textContent = new URL(window.location).searchParams.has('conversion.checkpoint')
+    ? 'Custom: ' + new URL(window.location).searchParams.getAll('conversion.checkpoint').join(', ')
+    : 'Click';
 
   const lcpElem = document.querySelector('#lcp p');
   lcpElem.textContent = `${toHumanReadable(keyMetrics.lcp / 1000)} s`;
@@ -507,7 +632,7 @@ function createChartData(bundles, config) {
   return { labels, datasets, stats };
 }
 
-function updateFacets(facets, cwv, focus) {
+function updateFacets(facets, cwv, focus, keyMetrics) {
   const filterTags = document.querySelector('.filter-tags');
   filterTags.textContent = '';
   const addFilterTag = (name, value) => {
@@ -524,9 +649,10 @@ function updateFacets(facets, cwv, focus) {
   const url = new URL(window.location);
 
   facetsElement.textContent = '';
-  const keys = Object.keys(facets);
+  const keys = Object.keys(facets).filter((key) => !key.endsWith('.converted'));
   keys.forEach((facetName) => {
     const facet = facets[facetName];
+    const conversionFacet = facets[`${facetName}.converted`];
     const optionKeys = Object.keys(facet);
     if (optionKeys.length) {
       let tsv = '';
@@ -543,6 +669,7 @@ function updateFacets(facets, cwv, focus) {
       optionKeys.forEach((optionKey, i) => {
         if (i < 10) {
           const optionValue = facet[optionKey];
+          const optionConversions = conversionFacet ? conversionFacet[optionKey] : undefined;
           const div = document.createElement('div');
           const input = document.createElement('input');
           input.type = 'checkbox';
@@ -575,6 +702,30 @@ function updateFacets(facets, cwv, focus) {
           const label = document.createElement('label');
           label.setAttribute('for', `${facetName}-${optionKey}`);
           label.innerHTML = `${createLabelHTML(optionKey)} (${toHumanReadable(optionValue)})`;
+
+          // add conversion rate for this facet, if it is 
+          // significantly deviating from the average for
+          // this facet
+          const conversionEl = document.createElement('span');
+          conversionEl.className = 'conversion-rate';
+          if (optionConversions) {
+            conversionEl.textContent = toHumanPercentage(optionConversions / optionValue);
+            // likely inflated due to sampling bias 
+            const sampleRate = 100;
+            const p = p_value(keyMetrics.pageViews / sampleRate, keyMetrics.conversions / sampleRate, optionValue / sampleRate, optionConversions / sampleRate);
+
+            if (p < 0.05) {
+              conversionEl.classList.add('significant');
+            }
+            if (p < 0.1) {
+              conversionEl.classList.add('interesting');
+            }
+            conversionEl.title = `${toHumanReadable(optionConversions)} conversions`;
+          } else {
+            conversionEl.textContent = '-';
+            conversionEl.classList.add('no-data');
+          }
+          label.append(conversionEl);
 
           const getP75 = (metric) => {
             const cwvMetric = `cwv${metric.toUpperCase()}`;
@@ -725,7 +876,7 @@ async function draw() {
   chart.data.labels = labels;
   chart.options.scales.x.time.unit = config.unit;
   chart.update();
-  updateFacets(facets, cwv, focus);
+
   const statsKeys = Object.keys(stats);
 
   const getP75 = (metric) => {
@@ -755,6 +906,7 @@ async function draw() {
     visits: statsKeys.reduce((cv, nv) => cv + stats[nv].visits, 0),
   };
 
+  updateFacets(facets, cwv, focus, keyMetrics);
   updateKeyMetrics(keyMetrics);
 }
 
@@ -775,7 +927,13 @@ function updateState() {
   url.searchParams.set('filter', filterInput.value);
   url.searchParams.set('view', viewSelect.value);
   const selectedMetric = document.querySelector('.key-metrics li[aria-selected="true"]');
-  if (selectedMetric) url.searchParams.set('focus', selectedMetric.id);
+  if (selectedMetric) {
+    url.searchParams.set('focus', selectedMetric.id);
+    document.body.dataset.focus = selectedMetric.id;
+  } else {
+    url.searchParams.delete('focus');
+    document.body.dataset.focus = '';
+  }
 
   facetsElement.querySelectorAll('input').forEach((e) => {
     if (e.checked) {
@@ -783,6 +941,13 @@ function updateState() {
     }
   });
   url.searchParams.set('domainkey', DOMAIN_KEY);
+
+  const oldUrl = new URL(window.location);
+  // loop through all search params and remove them from the url
+  Array.from(new URL(window.location).searchParams)
+    .filter(([key]) => key.startsWith('conversion'))
+    .forEach(([key, value]) => url.searchParams.set(key, value));
+
   window.history.replaceState({}, '', url);
 }
 
@@ -946,4 +1111,29 @@ document.getElementById('share').addEventListener('click', () => {
     toast.ariaHidden = false;
     setTimeout(() => { toast.ariaHidden = true; }, 3000);
   }, 'image/png');
+});
+
+document.getElementById('redefine').addEventListener('click', (e) => {
+  e.stopPropagation();
+  const url = new URL(window.location);
+  // clear all conversion filters
+  Array.from(new URL(window.location).searchParams)
+    .filter(([key]) => key.startsWith('conversion'))
+    .forEach(([key]) => url.searchParams.delete(key));
+  facetsElement.querySelectorAll('input').forEach((e) => {
+    if (e.checked) {
+      url.searchParams.set('conversion.' + e.id.split('-')[0], e.value);
+      // uncheck
+      e.checked = false;
+    }
+  });
+  // push to URL
+  window.history.replaceState({}, '', url);
+
+  //console.log('data chunks', dataChunks);
+
+  reEvaluateConversions();
+  updateState();
+  draw();
+  console.log('done');
 });
