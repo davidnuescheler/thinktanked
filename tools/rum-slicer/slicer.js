@@ -26,6 +26,7 @@ function scoreCWV(value, name) {
     lcp: [2500, 4000],
     cls: [0.1, 0.25],
     inp: [200, 500],
+    ttfb: [800, 1800],
   };
   return scoreValue(value, ...limits[name]);
 }
@@ -87,6 +88,9 @@ function addCalculatedProps(bundle) {
     if (e.checkpoint === 'cwv-cls') {
       bundle.cwvCLS = e.value;
     }
+    if (e.checkpoint === 'cwv-ttfb') {
+      bundle.cwvTTFB = e.value;
+    }
   });
 }
 
@@ -130,9 +134,9 @@ export async function fetchLastWeek() {
   return chunks;
 }
 
-export async function fetchLast31Days() {
+export async function fetchPrevious31Days(endDate) {
   const chunks = [];
-  const date = new Date();
+  const date = endDate ? new Date(endDate) : new Date();
   const days = 31;
   for (let i = 0; i < days; i += 1) {
     // eslint-disable-next-line no-await-in-loop
@@ -249,6 +253,7 @@ function filterBundle(bundle, filter, facets, cwv) {
     if (bundle.cwvLCP) addMetric('lcp');
     if (bundle.cwvCLS) addMetric('cls');
     if (bundle.cwvINP) addMetric('inp');
+    if (bundle.cwvTTFB) addMetric('ttfb');
   };
 
   /* facets */
@@ -346,9 +351,13 @@ function updateKeyMetrics(keyMetrics) {
   const inpElem = document.querySelector('#inp p');
   inpElem.textContent = `${toHumanReadable(keyMetrics.inp / 1000)} s`;
   inpElem.closest('li').className = `score-${scoreCWV(keyMetrics.inp, 'inp')}`;
+
+  const ttfbElem = document.querySelector('#ttfb p');
+  ttfbElem.textContent = `${toHumanReadable(keyMetrics.ttfb / 1000)} s`;
+  ttfbElem.closest('li').className = `score-${scoreCWV(keyMetrics.ttfb, 'ttfb')}`;
 }
 
-function createChartData(bundles, config) {
+function createChartData(bundles, config, endDate) {
   const labels = [];
   const datasets = [];
 
@@ -377,6 +386,7 @@ function createChartData(bundles, config) {
         lcp: cwvStructure(),
         inp: cwvStructure(),
         cls: cwvStructure(),
+        ttfb: cwvStructure(),
       };
 
       stats[localTimeSlot] = s;
@@ -417,6 +427,14 @@ function createChartData(bundles, config) {
       updateAverage(bundle, stat.inp, 'cwvINP');
       stat.inp.bundles.push(bundle);
     }
+
+    if (bundle.cwvTTFB) {
+      const score = scoreCWV(bundle.cwvTTFB, 'ttfb');
+      const bucket = stat.ttfb[score];
+      updateAverage(bundle, bucket, 'cwvTTFB');
+      updateAverage(bundle, stat.ttfb, 'cwvTTFB');
+      stat.ttfb.bundles.push(bundle);
+    }
   });
 
   const dataTotal = [];
@@ -424,7 +442,7 @@ function createChartData(bundles, config) {
   const dataNI = [];
   const dataPoor = [];
 
-  const date = new Date();
+  const date = endDate ? new Date(endDate) : new Date();
   date.setMinutes(0);
   date.setSeconds(0);
   if (config.unit === 'day') date.setHours(0);
@@ -449,6 +467,7 @@ function createChartData(bundles, config) {
       sumBucket(stat.lcp);
       sumBucket(stat.cls);
       sumBucket(stat.inp);
+      sumBucket(stat.ttfb);
 
       const cwvNumBundles = stat.lcp.bundles.length
       + stat.cls.bundles.length + stat.inp.bundles.length;
@@ -466,7 +485,7 @@ function createChartData(bundles, config) {
         dataNI.unshift(showCWVSplit ? Math.round(cwvNI * cwvFactor) : 0);
         dataPoor.unshift(showCWVSplit ? Math.round(cwvPoor * cwvFactor) : 0);
       } else {
-        if (config.focus === 'lcp' || config.focus === 'cls' || config.focus === 'inp') {
+        if (config.focus === 'lcp' || config.focus === 'cls' || config.focus === 'inp' || config.focus === 'ttfb') {
           const m = config.focus;
           dataTotal.unshift(showCWVSplit ? 0 : 1);
           dataGood.unshift(showCWVSplit ? stat[m].good.weight / stat[m].weight : 0);
@@ -665,6 +684,7 @@ async function draw() {
   // eslint-disable-next-line camelcase
   const user_agent = params.getAll('user_agent');
   const view = params.get('view') || 'week';
+  const endDate = params.get('endDate') ? `${params.get('endDate')}T00:00:00` : null;
   const focus = params.get('focus');
 
   const filterText = params.get('filter') || '';
@@ -718,7 +738,7 @@ async function draw() {
     units: 24 * 7,
     focus,
   };
-  const { labels, datasets, stats } = createChartData(filtered, config);
+  const { labels, datasets, stats } = createChartData(filtered, config, endDate);
   datasets.forEach((ds, i) => {
     chart.data.datasets[i].data = ds.data;
   });
@@ -751,6 +771,7 @@ async function draw() {
     lcp: getP75('lcp'),
     cls: getP75('cls'),
     inp: getP75('inp'),
+    ttfb: getP75('ttfb'),
     conversions: statsKeys.reduce((cv, nv) => cv + stats[nv].conversions, 0),
     visits: statsKeys.reduce((cv, nv) => cv + stats[nv].visits, 0),
   };
@@ -759,11 +780,14 @@ async function draw() {
 }
 
 async function loadData(scope) {
+  const params = new URL(window.location.href).searchParams;
+  const endDate = params.get('endDate') ? `${params.get('endDate')}T00:00:00` : null;
+
   if (scope === 'week') {
     dataChunks = await fetchLastWeek();
   }
   if (scope === 'month') {
-    dataChunks = await fetchLast31Days();
+    dataChunks = await fetchPrevious31Days(endDate);
   }
 
   draw();
@@ -771,9 +795,12 @@ async function loadData(scope) {
 
 function updateState() {
   const url = new URL(window.location.href.split('?')[0]);
+  const { searchParams } = new URL(window.location.href);
   url.searchParams.set('domain', DOMAIN);
   url.searchParams.set('filter', filterInput.value);
   url.searchParams.set('view', viewSelect.value);
+  if (searchParams.get('endDate')) url.searchParams.set('endDate', searchParams.get('endDate'));
+  if (searchParams.get('metrics')) url.searchParams.set('metrics', searchParams.get('metrics'));
   const selectedMetric = document.querySelector('.key-metrics li[aria-selected="true"]');
   if (selectedMetric) url.searchParams.set('focus', selectedMetric.id);
 
@@ -929,6 +956,10 @@ metrics.forEach((e) => {
     draw();
   });
 });
+
+if (params.get('metrics') === 'all') {
+  document.querySelector('.key-metrics-more').ariaHidden = false;
+}
 
 document.getElementById('share').addEventListener('click', () => {
   const ogHandlerOrigin = 'https://og-image-handler.david8603.workers.dev';

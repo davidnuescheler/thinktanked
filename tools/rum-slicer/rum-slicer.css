@@ -141,6 +141,10 @@ main .key-metrics li p {
   color: white;
 }
 
+.key-metrics [aria-hidden="true"] {
+  display: none;
+}
+
 /* figure */
 
 figure {
