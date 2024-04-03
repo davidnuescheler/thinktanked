@@ -2,7 +2,11 @@
 let DOMAIN_KEY = '';
 let DOMAIN = 'www.thinktanked.org';
 let chart;
-const API_ENDPOINT = 'https://rum-bundles-2.david8603.workers.dev';
+const API = window.location.search.includes('api=bundler') ? 'bundler' : '';
+const BUNDLER_ENDPOINT = 'https://rum.fastly-aem.page/bundles';
+// const BUNDLER_ENDPOINT = 'http://localhost:3000';
+const API_ENDPOINT = API === 'bundler' ? BUNDLER_ENDPOINT : 'https://rum-bundles-2.david8603.workers.dev/rum-bundles';
+const UA_KEY = API === 'bundler' ? 'userAgent' : 'user_agent';
 
 const viewSelect = document.getElementById('view');
 const filterInput = document.getElementById('filter');
@@ -94,10 +98,14 @@ function addCalculatedProps(bundle) {
   });
 }
 
+function apiURL(datePath, hour) {
+  return `${API_ENDPOINT}/${DOMAIN}/${datePath}${hour != null ? `/${hour}` : ''}?domainkey=${DOMAIN_KEY}`;
+}
+
 async function fetchUTCDay(utcISOString) {
   const [date] = utcISOString.split('T');
   const datePath = date.split('-').join('/');
-  const apiRequestURL = `${API_ENDPOINT}/rum-bundles/${DOMAIN}/${datePath}?domainkey=${DOMAIN_KEY}`;
+  const apiRequestURL = apiURL(datePath);
   const resp = await fetch(apiRequestURL);
   const json = await resp.json();
   const { rumBundles } = json;
@@ -109,7 +117,7 @@ async function fetchUTCHour(utcISOString) {
   const [date, time] = utcISOString.split('T');
   const datePath = date.split('-').join('/');
   const hour = time.split(':')[0];
-  const apiRequestURL = `${API_ENDPOINT}/rum-bundles/${DOMAIN}/${datePath}/${hour}?domainkey=${DOMAIN_KEY}`;
+  const apiRequestURL = apiURL(datePath, hour);
   const resp = await fetch(apiRequestURL);
   const json = await resp.json();
   const { rumBundles } = json;
@@ -224,12 +232,12 @@ function filterBundle(bundle, filter, facets, cwv) {
 
   /* filter user_agent */
   if (matchedAll) {
-    if (filter.user_agent.length) {
-      if (filter.user_agent.includes(bundle.user_agent)) {
-        filterMatches.user_agent = true;
+    if (filter[UA_KEY].length) {
+      if (filter[UA_KEY].includes(bundle[UA_KEY])) {
+        filterMatches[UA_KEY] = true;
       } else {
         matchedAll = false;
-        filterMatches.user_agent = false;
+        filterMatches[UA_KEY] = false;
       }
     }
   }
@@ -324,10 +332,10 @@ function filterBundle(bundle, filter, facets, cwv) {
     addToCWV('url', bundle.url);
   }
 
-  if (matchedEverythingElse('user_agent')) {
-    if (facets.user_agent[bundle.user_agent]) facets.user_agent[bundle.user_agent] += bundle.weight;
-    else facets.user_agent[bundle.user_agent] = bundle.weight;
-    addToCWV('user_agent', bundle.user_agent);
+  if (matchedEverythingElse(UA_KEY)) {
+    if (facets[UA_KEY][bundle[UA_KEY]]) facets[UA_KEY][bundle[UA_KEY]] += bundle.weight;
+    else facets[UA_KEY][bundle[UA_KEY]] = bundle.weight;
+    addToCWV(UA_KEY, bundle[UA_KEY]);
   }
 
   return (matchedAll);
@@ -681,8 +689,7 @@ async function draw() {
   const target = params.getAll('target');
   const url = params.getAll('url');
 
-  // eslint-disable-next-line camelcase
-  const user_agent = params.getAll('user_agent');
+  const userAgent = params.getAll(UA_KEY);
   const view = params.get('view') || 'week';
   const endDate = params.get('endDate') ? `${params.get('endDate')}T00:00:00` : null;
   const focus = params.get('focus');
@@ -694,8 +701,7 @@ async function draw() {
     checkpoint,
     target,
     url,
-    // eslint-disable-next-line camelcase
-    user_agent,
+    [UA_KEY]: userAgent,
   };
 
   checkpoint.forEach((cp) => {
@@ -709,7 +715,7 @@ async function draw() {
   });
 
   const facets = {
-    user_agent: {},
+    [UA_KEY]: {},
     url: {},
     checkpoint: {},
   };

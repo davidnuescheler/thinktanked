@@ -31,10 +31,10 @@
 }
 
 body {
-    font-family: Arial, Helvetica, sans-serif;
-    max-width: 1200px;
-    margin: auto;
-    margin-top: 32px;
+  font-family: Arial, Helvetica, sans-serif;
+  max-width: 1200px;
+  margin: auto;
+  margin-top: 32px;
 }
 
 main {
@@ -115,13 +115,13 @@ main .key-metrics li h2 {
 }
 
 main .key-metrics li h2::before {
-    content: ' ';
-    background-color: currentcolor;
-    width: 14px;
-    height: 14px;
-    margin-right: 8px;
-    display: inline-block;
-    border-radius: 14px;
+  content: ' ';
+  background-color: currentcolor;
+  width: 14px;
+  height: 14px;
+  margin-right: 8px;
+  display: inline-block;
+  border-radius: 14px;
 }
 
 main .key-metrics li p {
@@ -161,7 +161,7 @@ figure {
 }
 
 #timezone::before {
-  content: 'Timzone: ';
+  content: 'Timezone: ';
 }
 
 .danger-icon {
@@ -277,12 +277,12 @@ figcaption > span {
 
 fieldset {
   --background-color: var(--light-indigo);
- padding: 8px 0 0;
- color: var(--dark-indigo);
- background-color: var(--background-color);
- border: 2px solid currentcolor;
- border-radius: 8px;
- margin-top: 16px;
+  padding: 8px 0 0;
+  color: var(--dark-indigo);
+  background-color: var(--background-color);
+  border: 2px solid currentcolor;
+  border-radius: 8px;
+  margin-top: 16px;
 }
 
 fieldset a:any-link {
@@ -290,13 +290,13 @@ fieldset a:any-link {
 }
 
 fieldset.facet-user_agent {
- color: var(--dark-fuchsia);
- --background-color: var(--light-fuchsia);
+  color: var(--dark-fuchsia);
+  --background-color: var(--light-fuchsia);
 }
 
 fieldset.facet-url {
- color: var(--dark-purple);
- --background-color: var(--light-purple);
+  color: var(--dark-purple);
+  --background-color: var(--light-purple);
 }
 
 legend {
