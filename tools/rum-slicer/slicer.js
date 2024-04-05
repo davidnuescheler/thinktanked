@@ -2,11 +2,12 @@
 let DOMAIN_KEY = '';
 let DOMAIN = 'www.thinktanked.org';
 let chart;
-const API = window.location.search.includes('api=bundler') ? 'bundler' : '';
 const BUNDLER_ENDPOINT = 'https://rum.fastly-aem.page/bundles';
 // const BUNDLER_ENDPOINT = 'http://localhost:3000';
-const API_ENDPOINT = API === 'bundler' ? BUNDLER_ENDPOINT : 'https://rum-bundles-2.david8603.workers.dev/rum-bundles';
-const UA_KEY = API === 'bundler' ? 'userAgent' : 'user_agent';
+const API_ENDPOINT = BUNDLER_ENDPOINT;
+const UA_KEY = 'userAgent';
+// const API_ENDPOINT = 'https://rum-bundles-2.david8603.workers.dev/rum-bundles';
+// const UA_KEY = 'user_agent';
 
 const viewSelect = document.getElementById('view');
 const filterInput = document.getElementById('filter');
