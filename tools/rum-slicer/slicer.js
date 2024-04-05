@@ -195,7 +195,9 @@ function filterBundle(bundle, filter, facets, cwv) {
               let anyEventMatchedPropValue = false;
               const propFilters = filter[`${cp}.${prop}`];
               checkpointEvents[cp].forEach((cpEvent) => {
-                if (propFilters.includes(cpEvent[prop])) anyEventMatchedPropValue = true;
+                const propValue = (cp.startsWith('cwv-') && prop === 'value') ? scoreCWV(cpEvent[prop], cp.split('-')[1]) : `${cpEvent[prop]}`;
+                console.log(propValue);
+                if (propFilters.includes(propValue)) anyEventMatchedPropValue = true;
               });
               filterMatches[`${cp}.${prop}`] = anyEventMatchedPropValue;
               if (!anyEventMatchedPropValue) matchedAll = false;
@@ -300,7 +302,7 @@ function filterBundle(bundle, filter, facets, cwv) {
           if (e.value) {
             const facetName = `${val}.value`;
             const facet = facets[facetName];
-            const option = e.value;
+            const option = val.startsWith('cwv-') ? scoreCWV(e.value, val.split('-')[1]) : e.value;
 
             const facetOptionName = `${facetName}=${option}`;
             if (!facetOptionsAdded.includes(facetOptionName)) {
@@ -571,7 +573,7 @@ function updateFacets(facets, cwv, focus) {
             addFilterTag(facetName, optionKey);
             div.ariaSelected = true;
           }
-          input.id = `${facetName}-${optionKey}`;
+          input.id = `${facetName}=${optionKey}`;
           div.addEventListener('click', (evt) => {
             if (evt.target !== input) input.checked = !input.checked;
             evt.stopPropagation();
@@ -806,7 +808,7 @@ function updateState() {
 
   facetsElement.querySelectorAll('input').forEach((e) => {
     if (e.checked) {
-      url.searchParams.append(e.id.split('-')[0], e.value);
+      url.searchParams.append(e.id.split('=')[0], e.value);
     }
   });
   url.searchParams.set('domainkey', DOMAIN_KEY);
@@ -973,7 +975,7 @@ document.getElementById('share').addEventListener('click', () => {
     });
     const json = await resp.json();
     navigator.clipboard.writeText(`${ogHandlerOrigin}/share/${json.key}`);
-    const toast = document.getElementById('copied-toast');
+    const toast = document.getElementById('shared-toast');
     toast.ariaHidden = false;
     setTimeout(() => { toast.ariaHidden = true; }, 3000);
   }, 'image/png');
