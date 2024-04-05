@@ -1,3 +1,5 @@
+import { fetchPlaceholders } from '../../scripts/aem.js';
+
 /* globals */
 let DOMAIN_KEY = '';
 let DOMAIN = 'www.thinktanked.org';
@@ -528,7 +530,8 @@ function createChartData(bundles, config, endDate) {
   return { labels, datasets, stats };
 }
 
-function updateFacets(facets, cwv, focus) {
+function updateFacets(facets, cwv, focus, mode, ph) {
+  const numOptions = mode === 'all' ? 20 : 10;
   const filterTags = document.querySelector('.filter-tags');
   filterTags.textContent = '';
   const addFilterTag = (name, value) => {
@@ -561,8 +564,10 @@ function updateFacets(facets, cwv, focus) {
       fieldSet.append(legend);
       tsv += `${facetName}\tcount\tlcp\tcls\tinp\r\n`;
       optionKeys.sort((a, b) => facet[b] - facet[a]);
-      optionKeys.forEach((optionKey, i) => {
-        if (i < 10) {
+      const filterKeys = facetName === 'checkpoint' && mode !== 'all';
+      const filteredKeys = filterKeys ? optionKeys.filter((a) => !!(ph[a])) : optionKeys;
+      filteredKeys.forEach((optionKey, i) => {
+        if (i < numOptions) {
           const optionValue = facet[optionKey];
           const div = document.createElement('div');
           const input = document.createElement('input');
@@ -582,7 +587,7 @@ function updateFacets(facets, cwv, focus) {
             // eslint-disable-next-line no-use-before-define
             draw();
           });
-          const createLabelHTML = (labelText) => {
+          const createLabelHTML = (labelText, usePlaceholders) => {
             if (labelText.startsWith('https://') && labelText.includes('media_')) {
               return `<img src="${labelText}?width=750&format=webply&optimize=medium"">`;
             }
@@ -590,12 +595,16 @@ function updateFacets(facets, cwv, focus) {
             if (labelText.startsWith('https://')) {
               return `<a href="${labelText}" target="_new">${labelText}</a>`;
             }
+
+            if (usePlaceholders && ph[labelText]) {
+              return (`${ph[labelText]} [${labelText}]`);
+            }
             return (labelText);
           };
 
           const label = document.createElement('label');
           label.setAttribute('for', `${facetName}-${optionKey}`);
-          label.innerHTML = `${createLabelHTML(optionKey)} (${toHumanReadable(optionValue)})`;
+          label.innerHTML = `${createLabelHTML(optionKey, facetName === 'checkpoint')} (${toHumanReadable(optionValue)})`;
 
           const getP75 = (metric) => {
             const cwvMetric = `cwv${metric.toUpperCase()}`;
@@ -678,10 +687,12 @@ function updateFacets(facets, cwv, focus) {
 }
 
 async function draw() {
+  const ph = await fetchPlaceholders('/tools/rum-slicer');
   const params = new URL(window.location).searchParams;
   const checkpoint = params.getAll('checkpoint');
   const target = params.getAll('target');
   const url = params.getAll('url');
+  const mode = params.get('metrics');
 
   // eslint-disable-next-line camelcase
   const user_agent = params.getAll('user_agent');
@@ -747,7 +758,7 @@ async function draw() {
   chart.data.labels = labels;
   chart.options.scales.x.time.unit = config.unit;
   chart.update();
-  updateFacets(facets, cwv, focus);
+  updateFacets(facets, cwv, focus, mode, ph);
   const statsKeys = Object.keys(stats);
 
   const getP75 = (metric) => {
