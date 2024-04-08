@@ -198,7 +198,6 @@ function filterBundle(bundle, filter, facets, cwv) {
               const propFilters = filter[`${cp}.${prop}`];
               checkpointEvents[cp].forEach((cpEvent) => {
                 const propValue = (cp.startsWith('cwv-') && prop === 'value') ? scoreCWV(cpEvent[prop], cp.split('-')[1]) : `${cpEvent[prop]}`;
-                console.log(propValue);
                 if (propFilters.includes(propValue)) anyEventMatchedPropValue = true;
               });
               filterMatches[`${cp}.${prop}`] = anyEventMatchedPropValue;
@@ -391,6 +390,7 @@ function createChartData(bundles, config, endDate) {
         inp: cwvStructure(),
         cls: cwvStructure(),
         ttfb: cwvStructure(),
+        bundles: [],
       };
 
       stats[localTimeSlot] = s;
@@ -406,6 +406,7 @@ function createChartData(bundles, config, endDate) {
     };
 
     const stat = stats[localTimeSlot];
+    stat.bundles.push(bundle);
     stat.total += bundle.weight;
     if (bundle.conversion) stat.conversions += bundle.weight;
     if (bundle.visit) stat.visits += bundle.weight;
@@ -760,6 +761,7 @@ async function draw() {
   chart.update();
   updateFacets(facets, cwv, focus, mode, ph);
   const statsKeys = Object.keys(stats);
+  if (mode === 'all') console.log(stats);
 
   const getP75 = (metric) => {
     const cwvMetric = `cwv${metric.toUpperCase()}`;
