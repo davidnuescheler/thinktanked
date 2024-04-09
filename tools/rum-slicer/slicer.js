@@ -728,6 +728,7 @@ async function draw() {
     checkpoint: {},
   };
 
+  const startTime = new Date();
   const cwv = structuredClone(facets);
 
   dataChunks.forEach((chunk) => {
@@ -759,6 +760,8 @@ async function draw() {
   chart.data.labels = labels;
   chart.options.scales.x.time.unit = config.unit;
   chart.update();
+
+  console.log(`filtered to ${filtered.length} bundles in ${new Date() - startTime}ms`);
   updateFacets(facets, cwv, focus, mode, ph);
   const statsKeys = Object.keys(stats);
   if (mode === 'all') console.log(stats);
