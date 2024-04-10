@@ -1,3 +1,5 @@
+import { fetchPlaceholders } from '../../scripts/aem.js';
+
 /* globals */
 let DOMAIN_KEY = '';
 let DOMAIN = 'www.thinktanked.org';
@@ -204,7 +206,8 @@ function filterBundle(bundle, filter, facets, cwv) {
               let anyEventMatchedPropValue = false;
               const propFilters = filter[`${cp}.${prop}`];
               checkpointEvents[cp].forEach((cpEvent) => {
-                if (propFilters.includes(cpEvent[prop])) anyEventMatchedPropValue = true;
+                const propValue = (cp.startsWith('cwv-') && prop === 'value') ? scoreCWV(cpEvent[prop], cp.split('-')[1]) : `${cpEvent[prop]}`;
+                if (propFilters.includes(propValue)) anyEventMatchedPropValue = true;
               });
               filterMatches[`${cp}.${prop}`] = anyEventMatchedPropValue;
               if (!anyEventMatchedPropValue) matchedAll = false;
@@ -309,7 +312,7 @@ function filterBundle(bundle, filter, facets, cwv) {
           if (e.value) {
             const facetName = `${val}.value`;
             const facet = facets[facetName];
-            const option = e.value;
+            const option = val.startsWith('cwv-') ? scoreCWV(e.value, val.split('-')[1]) : e.value;
 
             const facetOptionName = `${facetName}=${option}`;
             if (!facetOptionsAdded.includes(facetOptionName)) {
@@ -396,6 +399,7 @@ function createChartData(bundles, config, endDate) {
         inp: cwvStructure(),
         cls: cwvStructure(),
         ttfb: cwvStructure(),
+        bundles: [],
       };
 
       stats[localTimeSlot] = s;
@@ -411,6 +415,7 @@ function createChartData(bundles, config, endDate) {
     };
 
     const stat = stats[localTimeSlot];
+    stat.bundles.push(bundle);
     stat.total += bundle.weight;
     if (bundle.conversion) stat.conversions += bundle.weight;
     if (bundle.visit) stat.visits += bundle.weight;
@@ -535,7 +540,8 @@ function createChartData(bundles, config, endDate) {
   return { labels, datasets, stats };
 }
 
-function updateFacets(facets, cwv, focus) {
+function updateFacets(facets, cwv, focus, mode, ph) {
+  const numOptions = mode === 'all' ? 20 : 10;
   const filterTags = document.querySelector('.filter-tags');
   filterTags.textContent = '';
   const addFilterTag = (name, value) => {
@@ -568,8 +574,10 @@ function updateFacets(facets, cwv, focus) {
       fieldSet.append(legend);
       tsv += `${facetName}\tcount\tlcp\tcls\tinp\r\n`;
       optionKeys.sort((a, b) => facet[b] - facet[a]);
-      optionKeys.forEach((optionKey, i) => {
-        if (i < 10) {
+      const filterKeys = facetName === 'checkpoint' && mode !== 'all';
+      const filteredKeys = filterKeys ? optionKeys.filter((a) => !!(ph[a])) : optionKeys;
+      filteredKeys.forEach((optionKey, i) => {
+        if (i < numOptions) {
           const optionValue = facet[optionKey];
           const div = document.createElement('div');
           const input = document.createElement('input');
@@ -580,7 +588,7 @@ function updateFacets(facets, cwv, focus) {
             addFilterTag(facetName, optionKey);
             div.ariaSelected = true;
           }
-          input.id = `${facetName}-${optionKey}`;
+          input.id = `${facetName}=${optionKey}`;
           div.addEventListener('click', (evt) => {
             if (evt.target !== input) input.checked = !input.checked;
             evt.stopPropagation();
@@ -589,7 +597,7 @@ function updateFacets(facets, cwv, focus) {
             // eslint-disable-next-line no-use-before-define
             draw();
           });
-          const createLabelHTML = (labelText) => {
+          const createLabelHTML = (labelText, usePlaceholders) => {
             if (labelText.startsWith('https://') && labelText.includes('media_')) {
               return `<img src="${labelText}?width=750&format=webply&optimize=medium"">`;
             }
@@ -597,12 +605,16 @@ function updateFacets(facets, cwv, focus) {
             if (labelText.startsWith('https://')) {
               return `<a href="${labelText}" target="_new">${labelText}</a>`;
             }
+
+            if (usePlaceholders && ph[labelText]) {
+              return (`${ph[labelText]} [${labelText}]`);
+            }
             return (labelText);
           };
 
           const label = document.createElement('label');
           label.setAttribute('for', `${facetName}-${optionKey}`);
-          label.innerHTML = `${createLabelHTML(optionKey)} (${toHumanReadable(optionValue)})`;
+          label.innerHTML = `${createLabelHTML(optionKey, facetName === 'checkpoint')} (${toHumanReadable(optionValue)})`;
 
           const getP75 = (metric) => {
             const cwvMetric = `cwv${metric.toUpperCase()}`;
@@ -685,10 +697,12 @@ function updateFacets(facets, cwv, focus) {
 }
 
 async function draw() {
+  const ph = await fetchPlaceholders('/tools/rum-slicer');
   const params = new URL(window.location).searchParams;
   const checkpoint = params.getAll('checkpoint');
   const target = params.getAll('target');
   const url = params.getAll('url');
+  const mode = params.get('metrics');
 
   const userAgent = params.getAll(UA_KEY);
   const view = params.get('view') || 'week';
@@ -721,6 +735,7 @@ async function draw() {
     checkpoint: {},
   };
 
+  const startTime = new Date();
   const cwv = structuredClone(facets);
 
   dataChunks.forEach((chunk) => {
@@ -752,8 +767,11 @@ async function draw() {
   chart.data.labels = labels;
   chart.options.scales.x.time.unit = config.unit;
   chart.update();
-  updateFacets(facets, cwv, focus);
+
+  console.log(`filtered to ${filtered.length} bundles in ${new Date() - startTime}ms`);
+  updateFacets(facets, cwv, focus, mode, ph);
   const statsKeys = Object.keys(stats);
+  if (mode === 'all') console.log(stats);
 
   const getP75 = (metric) => {
     const cwvMetric = `cwv${metric.toUpperCase()}`;
@@ -813,7 +831,7 @@ function updateState() {
 
   facetsElement.querySelectorAll('input').forEach((e) => {
     if (e.checked) {
-      url.searchParams.append(e.id.split('-')[0], e.value);
+      url.searchParams.append(e.id.split('=')[0], e.value);
     }
   });
   url.searchParams.set('domainkey', DOMAIN_KEY);
@@ -980,7 +998,7 @@ document.getElementById('share').addEventListener('click', () => {
     });
     const json = await resp.json();
     navigator.clipboard.writeText(`${ogHandlerOrigin}/share/${json.key}`);
-    const toast = document.getElementById('copied-toast');
+    const toast = document.getElementById('shared-toast');
     toast.ariaHidden = false;
     setTimeout(() => { toast.ariaHidden = true; }, 3000);
   }, 'image/png');
