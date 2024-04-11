@@ -213,27 +213,23 @@ function filterBundle(bundle, filter, facets, cwv) {
     }
   }
 
-  /* filter url */
-  if (matchedAll) {
-    if (filter.url.length) {
-      if (filter.url.includes(bundle.url)) {
-        filterMatches.url = true;
-      } else {
-        matchedAll = false;
-        filterMatches.url = false;
-      }
+  /* filter user_agent */
+  if (filter.user_agent.length) {
+    if (filter.user_agent.includes(bundle.user_agent)) {
+      filterMatches.user_agent = true;
+    } else {
+      matchedAll = false;
+      filterMatches.user_agent = false;
     }
   }
 
-  /* filter user_agent */
-  if (matchedAll) {
-    if (filter.user_agent.length) {
-      if (filter.user_agent.includes(bundle.user_agent)) {
-        filterMatches.user_agent = true;
-      } else {
-        matchedAll = false;
-        filterMatches.user_agent = false;
-      }
+  /* filter url */
+  if (filter.url.length) {
+    if (filter.url.includes(bundle.url)) {
+      filterMatches.url = true;
+    } else {
+      matchedAll = false;
+      filterMatches.url = false;
     }
   }
 
