@@ -721,6 +721,21 @@ function updateFacets(facets, cwv, focus, mode, ph) {
   });
 }
 
+async function fetchDomainKey(domain) {
+  try {
+    const auth = localStorage.getItem('rum-bundler-token');
+    const resp = await fetch(`https://rum.fastly-aem.page/domainkey/${domain}`, {
+      headers: {
+        authorization: auth,
+      },
+    });
+    const json = await resp.json();
+    return (json.domainkey);
+  } catch {
+    return '';
+  }
+}
+
 async function draw() {
   const ph = await fetchPlaceholders('/tools/rum-slicer');
   const params = new URL(window.location).searchParams;
@@ -994,6 +1009,18 @@ img.addEventListener('error', () => {
   img.src = './website.svg';
 });
 h1.prepend(img);
+h1.addEventListener('click', async () => {
+  // eslint-disable-next-line no-alert
+  let domain = window.prompt('enter domain or URL');
+  try {
+    const url = new URL(domain);
+    domain = url.host;
+  } catch {
+    // nothing
+  }
+  const domainkey = await fetchDomainKey(domain);
+  window.location = `${window.location.pathname}?domain=${domain}&domainkey=${domainkey}`;
+});
 
 const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 timezoneElement.textContent = timezone;
