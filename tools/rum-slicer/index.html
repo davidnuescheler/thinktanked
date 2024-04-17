@@ -1,118 +1,122 @@
 <html>
-    <head>
-        <title>
-            RUM Slicer
-        </title>
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/luxon"></script>
-        <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon"></script>
-        <script src="./slicer.js" type="module"></script>
-        <link rel="stylesheet" href="./rum-slicer.css">
-    </head>
-    <body>
-        <header>
-        </header>
-        <main>
-            <div class="output">
-              <div class="title">
-                <h1><img src="https://www.aem.live/favicon.ico"> www.aem.live</h1>
-                <div>
-                  <select id="view">
-                    <option value="week">Week</option>
-                    <option value="month">Month</option>
-                    <!-- option value="year">Year</option -->
-                  </select>
-                  <button id="share">Share...</button>
-                </div>
-              </div>
-              <div class="key-metrics">
-                <ul>
-                  <li id="pageviews">
-                    <h2>Pageviews</h2>
-                    <p>0</p>
-                  </li>
-                  <li id="visits">
-                    <h2>Visits</h2>
-                    <p>0</p>
-                  </li>
-                  <li id="conversions">
-                    <h2>Conversions</h2>
-                    <p>0</p>
-                  </li>
-                  <li id="lcp">
-                    <h2>LCP</h2>
-                    <p>0</p>
-                  </li>
-                  <li id="cls">
-                    <h2>CLS</h2>
-                    <p>0</p>
-                  </li>
-                  <li id="inp">
-                    <h2>INP</h2>
-                    <p>0</p>
-                  </li>
-                </ul>
-                <div class="key-metrics-more" aria-hidden="true">
-                  <ul>
-                    <li id="ttfb">
-                      <h2>TTFB</h2>
-                      <p>0</p>
-                    </li>  
-                  </ul>
-                </div>
-              </div>
-    
-              <figure>
-                <canvas id="time-series"></canvas>
-                <div class="filter-tags"></div>
-                <figcaption>
-                  <span aria-hidden="true" id="low-data-warning"><span class="danger-icon"></span> small sample size, accuracy reduced.</span>
-                  <span id="timezone"></span>
-                </figcaption>
-              </figure>
-            </div>
 
-          <div class="filters">
-            <div class="quick-filter">
-              <input type="text" id="filter" placeholder="Type to filter...">
-            </div>
-            
-              <aside id="facets">
-                <fieldset>
-                    <legend>Events</legend>
-                  
-                    <div>
-                      <input type="checkbox" id="top" name="top" checked />
-                      <label for="top">top</label>
-                    </div>
-                  
-                    <div>
-                      <input type="checkbox" id="enter" name="enter" />
-                      <label for="enter">enter</label>
-                    </div>
-                </fieldset>
+<head>
+  <title>
+    RUM Slicer
+  </title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/luxon"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon"></script>
+  <script src="./slicer.js" type="module"></script>
+  <link rel="stylesheet" href="./rum-slicer.css">
+</head>
 
-                <fieldset>
-                    <legend>Target</legend>
-                  
-                    <div>
-                      <input type="checkbox" id="target" name="target" checked />
-                      <label for="target">target</label>
-                    </div>
-                  
-                    <div>
-                      <input type="checkbox" id="enter" name="enter" />
-                      <label for="horns">enter</label>
-                    </div>
-                </fieldset>
-            </aside>
+<body>
+  <header>
+  </header>
+  <main>
+    <div class="output">
+      <div class="title">
+        <h1><img src="https://www.aem.live/favicon.ico"> www.aem.live</h1>
+        <div>
+          <select id="view">
+            <option value="week">Week</option>
+            <option value="month">Month</option>
+            <option value="year">Year</option>
+          </select>
+          <button id="share">Share...</button>
+        </div>
+      </div>
+      <div class="key-metrics">
+        <ul>
+          <li id="pageviews">
+            <h2>Pageviews</h2>
+            <p>0</p>
+          </li>
+          <li id="visits">
+            <h2>Visits</h2>
+            <p>0</p>
+          </li>
+          <li id="conversions">
+            <h2>Conversions</h2>
+            <p>0</p>
+          </li>
+          <li id="lcp">
+            <h2>LCP</h2>
+            <p>0</p>
+          </li>
+          <li id="cls">
+            <h2>CLS</h2>
+            <p>0</p>
+          </li>
+          <li id="inp">
+            <h2>INP</h2>
+            <p>0</p>
+          </li>
+        </ul>
+        <div class="key-metrics-more" aria-hidden="true">
+          <ul>
+            <li id="ttfb">
+              <h2>TTFB</h2>
+              <p>0</p>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <figure>
+        <canvas id="time-series"></canvas>
+        <div class="filter-tags"></div>
+        <figcaption>
+          <span aria-hidden="true" id="low-data-warning"><span class="danger-icon"></span> small sample size, accuracy
+            reduced.</span>
+          <span id="timezone"></span>
+        </figcaption>
+      </figure>
+    </div>
+
+    <div class="filters">
+      <div class="quick-filter">
+        <input type="text" id="filter" placeholder="Type to filter...">
+      </div>
+
+      <aside id="facets">
+        <fieldset>
+          <legend>Events</legend>
+
+          <div>
+            <input type="checkbox" id="top" name="top" checked />
+            <label for="top">top</label>
           </div>
-        </main>
-        <div id="copied-toast" class="toast" aria-hidden="true">
-          Rows copied to clipboard, ready to paste into spreasheet
-        </div>
-        <div id="shared-toast" class="toast" aria-hidden="true">
-          Link copied to clipboard, ready to share
-        </div>
-    </body>
+
+          <div>
+            <input type="checkbox" id="enter" name="enter" />
+            <label for="enter">enter</label>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Target</legend>
+
+          <div>
+            <input type="checkbox" id="target" name="target" checked />
+            <label for="target">target</label>
+          </div>
+
+          <div>
+            <input type="checkbox" id="enter" name="enter" />
+            <label for="horns">enter</label>
+          </div>
+        </fieldset>
+      </aside>
+    </div>
+  </main>
+  <div id="copied-toast" class="toast" aria-hidden="true">
+    Rows copied to clipboard, ready to paste into spreasheet
+  </div>
+  <div id="shared-toast" class="toast" aria-hidden="true">
+    Link copied to clipboard, ready to share
+  </div>
+</body>
+
 </html>
