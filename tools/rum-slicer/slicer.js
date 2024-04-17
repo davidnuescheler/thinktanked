@@ -222,27 +222,23 @@ function filterBundle(bundle, filter, facets, cwv) {
     }
   }
 
-  /* filter url */
-  if (matchedAll) {
-    if (filter.url.length) {
-      if (filter.url.includes(bundle.url)) {
-        filterMatches.url = true;
-      } else {
-        matchedAll = false;
-        filterMatches.url = false;
-      }
+  /* filter user_agent */
+  if (filter[UA_KEY].length) {
+    if (filter[UA_KEY].includes(bundle[UA_KEY])) {
+      filterMatches[UA_KEY] = true;
+    } else {
+      matchedAll = false;
+      filterMatches[UA_KEY] = false;
     }
   }
 
-  /* filter user_agent */
-  if (matchedAll) {
-    if (filter[UA_KEY].length) {
-      if (filter[UA_KEY].includes(bundle[UA_KEY])) {
-        filterMatches[UA_KEY] = true;
-      } else {
-        matchedAll = false;
-        filterMatches[UA_KEY] = false;
-      }
+  /* filter url */
+  if (filter.url.length) {
+    if (filter.url.includes(bundle.url)) {
+      filterMatches.url = true;
+    } else {
+      matchedAll = false;
+      filterMatches.url = false;
     }
   }
 
