@@ -1019,7 +1019,7 @@ h1.addEventListener('click', async () => {
     // nothing
   }
   const domainkey = await fetchDomainKey(domain);
-  window.location = `${window.location.pathname}?domain=${domain}&domainkey=${domainkey}`;
+  window.location = `${window.location.pathname}?domain=${domain}&view=month&domainkey=${domainkey}`;
 });
 
 const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
