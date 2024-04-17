@@ -105,6 +105,19 @@ function apiURL(datePath, hour) {
   return `${API_ENDPOINT}/${DOMAIN}/${datePath}${hour != null ? `/${hour}` : ''}?domainkey=${DOMAIN_KEY}`;
 }
 
+async function fetchUTCMonth(utcISOString) {
+  const [date] = utcISOString.split('T');
+  const dateSplits = date.split('-');
+  dateSplits.pop();
+  const monthPath = dateSplits.join('/');
+  const apiRequestURL = apiURL(monthPath);
+  const resp = await fetch(apiRequestURL);
+  const json = await resp.json();
+  const { rumBundles } = json;
+  rumBundles.forEach((bundle) => addCalculatedProps(bundle));
+  return { date, rumBundles };
+}
+
 async function fetchUTCDay(utcISOString) {
   const [date] = utcISOString.split('T');
   const datePath = date.split('-').join('/');
@@ -152,6 +165,18 @@ export async function fetchPrevious31Days(endDate) {
   for (let i = 0; i < days; i += 1) {
     promises.push(fetchUTCDay(date.toISOString()));
     date.setDate(date.getDate() - 1);
+  }
+  const chunks = Promise.all(promises);
+  return chunks;
+}
+
+export async function fetchPrevious12Months(endDate) {
+  const date = endDate ? new Date(endDate) : new Date();
+  const months = 12;
+  const promises = [];
+  for (let i = 0; i < months; i += 1) {
+    promises.push(fetchUTCMonth(date.toISOString()));
+    date.setMonth(date.getMonth() - 1);
   }
   const chunks = Promise.all(promises);
   return chunks;
@@ -383,9 +408,11 @@ function createChartData(bundles, config, endDate) {
     const slotTime = new Date(bundle.timeSlot);
     slotTime.setMinutes(0);
     slotTime.setSeconds(0);
-    if (config.unit === 'day') slotTime.setHours(0);
+    if (config.unit === 'day' || config.unit === 'month') slotTime.setHours(0);
+    if (config.unit === 'month') slotTime.setDate(1);
 
     const localTimeSlot = toISOStringWithTimezone(slotTime);
+    console.log(localTimeSlot);
     if (!stats[localTimeSlot]) {
       const s = {
         total: 0,
@@ -455,7 +482,8 @@ function createChartData(bundles, config, endDate) {
   const date = endDate ? new Date(endDate) : new Date();
   date.setMinutes(0);
   date.setSeconds(0);
-  if (config.unit === 'day') date.setHours(0);
+  if (config.unit === 'day' || config.unit === 'month') date.setHours(0);
+  if (config.unit === 'month') date.setDate(1);
 
   for (let i = 0; i < config.units; i += 1) {
     const localTimeSlot = toISOStringWithTimezone(date);
@@ -526,6 +554,7 @@ function createChartData(bundles, config, endDate) {
 
     if (config.unit === 'hour') date.setTime(date.getTime() - (3600 * 1000));
     if (config.unit === 'day') date.setDate(date.getDate() - 1);
+    if (config.unit === 'month') date.setMonth(date.getMonth() - 1);
   }
 
   datasets.push({ data: dataTotal });
@@ -745,17 +774,29 @@ async function draw() {
     lowDataWarning.ariaHidden = 'true';
   }
 
-  const config = view === 'month' ? {
-    view,
-    unit: 'day',
-    units: 30,
-    focus,
-  } : {
-    view,
-    unit: 'hour',
-    units: 24 * 7,
-    focus,
+  const configs = {
+    month: {
+      view,
+      unit: 'day',
+      units: 30,
+      focus,
+    },
+    week: {
+      view,
+      unit: 'hour',
+      units: 24 * 7,
+      focus,
+    },
+    year: {
+      view,
+      unit: 'month',
+      units: 12,
+      focus,
+    },
   };
+
+  const config = configs[view];
+
   const { labels, datasets, stats } = createChartData(filtered, config, endDate);
   datasets.forEach((ds, i) => {
     chart.data.datasets[i].data = ds.data;
@@ -809,6 +850,9 @@ async function loadData(scope) {
   }
   if (scope === 'month') {
     dataChunks = await fetchPrevious31Days(endDate);
+  }
+  if (scope === 'year') {
+    dataChunks = await fetchPrevious12Months(endDate);
   }
 
   draw();
