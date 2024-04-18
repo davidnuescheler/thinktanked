@@ -1012,14 +1012,16 @@ h1.prepend(img);
 h1.addEventListener('click', async () => {
   // eslint-disable-next-line no-alert
   let domain = window.prompt('enter domain or URL');
-  try {
-    const url = new URL(domain);
-    domain = url.host;
-  } catch {
-    // nothing
+  if (domain) {
+    try {
+      const url = new URL(domain);
+      domain = url.host;
+    } catch {
+      // nothing
+    }
+    const domainkey = await fetchDomainKey(domain);
+    window.location = `${window.location.pathname}?domain=${domain}&view=month&domainkey=${domainkey}`;
   }
-  const domainkey = await fetchDomainKey(domain);
-  window.location = `${window.location.pathname}?domain=${domain}&view=month&domainkey=${domainkey}`;
 });
 
 const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
