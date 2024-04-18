@@ -1,7 +1,7 @@
 {
   "project": "thinktanked",
   "host": "https://thinktanked.org/",
-  "reviewHost": "main--thinktanked--davidnuescheler.aem.page",
+  "previewHost": "main--thinktanked--davidnuescheler.aem.page",
   "liveHost": "main--thinktanked--davidnuescheler.aem.live",
   "plugins": [
     {
