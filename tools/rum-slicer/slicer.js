@@ -726,7 +726,7 @@ async function fetchDomainKey(domain) {
     const auth = localStorage.getItem('rum-bundler-token');
     const resp = await fetch(`https://rum.fastly-aem.page/domainkey/${domain}`, {
       headers: {
-        authorization: auth,
+        authorization: `Bearer ${auth}`,
       },
     });
     const json = await resp.json();
