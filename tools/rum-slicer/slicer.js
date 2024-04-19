@@ -408,11 +408,10 @@ function createChartData(bundles, config, endDate) {
     const slotTime = new Date(bundle.timeSlot);
     slotTime.setMinutes(0);
     slotTime.setSeconds(0);
-    if (config.unit === 'day' || config.unit === 'month') slotTime.setHours(0);
+    if (config.unit === 'day' || config.unit === 'week' || config.unit === 'month') slotTime.setHours(0);
     if (config.unit === 'month') slotTime.setDate(1);
 
     const localTimeSlot = toISOStringWithTimezone(slotTime);
-    console.log(localTimeSlot);
     if (!stats[localTimeSlot]) {
       const s = {
         total: 0,
@@ -482,7 +481,7 @@ function createChartData(bundles, config, endDate) {
   const date = endDate ? new Date(endDate) : new Date();
   date.setMinutes(0);
   date.setSeconds(0);
-  if (config.unit === 'day' || config.unit === 'month') date.setHours(0);
+  if (config.unit === 'day' || config.unit === 'month' || config.unit === 'week') date.setHours(0);
   if (config.unit === 'month') date.setDate(1);
 
   for (let i = 0; i < config.units; i += 1) {
@@ -554,6 +553,7 @@ function createChartData(bundles, config, endDate) {
 
     if (config.unit === 'hour') date.setTime(date.getTime() - (3600 * 1000));
     if (config.unit === 'day') date.setDate(date.getDate() - 1);
+    if (config.unit === 'week') date.setDate(date.getDate() - 7);
     if (config.unit === 'month') date.setMonth(date.getMonth() - 1);
   }
 
@@ -804,8 +804,8 @@ async function draw() {
     },
     year: {
       view,
-      unit: 'month',
-      units: 12,
+      unit: 'week',
+      units: 52,
       focus,
     },
   };
