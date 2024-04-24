@@ -873,6 +873,7 @@ async function loadData(scope) {
   }
 
   draw();
+  sampleRUM('lazy');
 }
 
 function updateState() {
