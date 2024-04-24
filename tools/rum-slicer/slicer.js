@@ -1,4 +1,4 @@
-import { fetchPlaceholders } from '../../scripts/aem.js';
+import { fetchPlaceholders, sampleRUM } from '../../scripts/aem.js';
 
 /* globals */
 let DOMAIN_KEY = '';
@@ -21,6 +21,8 @@ const lowDataWarning = document.getElementById('low-data-warning');
 let dataChunks = [];
 
 /* helpers */
+
+document.addEventListener('click', () => sampleRUM('click'));
 
 function scoreValue(value, ni, poor) {
   if (value >= poor) return 'poor';
