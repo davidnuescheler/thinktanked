@@ -366,6 +366,17 @@ fieldset li::after {
   height: 60px;
 }
 
+#facets fieldset div.load-more {
+  grid-column: 2 / span 2;  
+  display: block;
+  padding: 10px 0;
+}
+
+#facets fieldset div.load-more label {
+  cursor: pointer;
+  padding-right: 50px;
+}
+
 .clipboard {
   margin-left: 8px;
   box-sizing: border-box;

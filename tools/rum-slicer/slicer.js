@@ -567,7 +567,7 @@ function createChartData(bundles, config, endDate) {
   return { labels, datasets, stats };
 }
 
-function updateFacets(facets, cwv, focus, mode, ph) {
+function updateFacets(facets, cwv, focus, mode, ph, show = {}) {
   const numOptions = mode === 'all' ? 20 : 10;
   const filterTags = document.querySelector('.filter-tags');
   filterTags.textContent = '';
@@ -603,8 +603,9 @@ function updateFacets(facets, cwv, focus, mode, ph) {
       optionKeys.sort((a, b) => facet[b] - facet[a]);
       const filterKeys = facetName === 'checkpoint' && mode !== 'all';
       const filteredKeys = filterKeys ? optionKeys.filter((a) => !!(ph[a])) : optionKeys;
+      const nbToShow = show[facetName] || numOptions;
       filteredKeys.forEach((optionKey, i) => {
-        if (i < numOptions) {
+        if (i < nbToShow) {
           const optionValue = facet[optionKey];
           const div = document.createElement('div');
           const input = document.createElement('input');
@@ -710,6 +711,34 @@ function updateFacets(facets, cwv, focus, mode, ph) {
           tsv += `${optionKey}\t${facet[optionKey]}\t\t\t\r\n`;
         }
       });
+
+      if (filteredKeys.length > numOptions) {
+        // add "more" link
+        const div = document.createElement('div');
+        div.className = 'load-more';
+        const more = document.createElement('label');
+        more.textContent = 'more...';
+        more.addEventListener('click', (evt) => {
+          evt.preventDefault();
+          // increase number of keys shown
+          updateFacets(facets, cwv, focus, mode, ph, { [facetName]: (show[facetName] || numOptions) + numOptions });
+        });
+
+        div.append(more);
+
+        const all = document.createElement('label');
+        all.textContent = `all (${filteredKeys.length})`;
+        all.addEventListener('click', (evt) => {
+          evt.preventDefault();
+          // increase number of keys shown
+          updateFacets(facets, cwv, focus,mode, ph, { [facetName]: filteredKeys.length });
+        });
+        div.append(all);
+        const container = document.createElement('div');
+        container.classList.add('more-container');
+        container.append(div);
+        fieldSet.append(container);
+      }
 
       legend.addEventListener('click', () => {
         navigator.clipboard.writeText(tsv);
