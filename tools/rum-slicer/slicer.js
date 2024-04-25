@@ -712,7 +712,7 @@ function updateFacets(facets, cwv, focus, mode, ph, show = {}) {
         }
       });
 
-      if (filteredKeys.length > numOptions) {
+      if (filteredKeys.length > nbToShow) {
         // add "more" link
         const div = document.createElement('div');
         div.className = 'load-more';
