@@ -1,8 +1,15 @@
+import { fetchPlaceholders, sampleRUM } from '../../scripts/aem.js';
+
 /* globals */
 let DOMAIN_KEY = '';
 let DOMAIN = 'www.thinktanked.org';
 let chart;
-const API_ENDPOINT = 'https://rum-bundles-2.david8603.workers.dev';
+const BUNDLER_ENDPOINT = 'https://rum.fastly-aem.page/bundles';
+// const BUNDLER_ENDPOINT = 'http://localhost:3000';
+const API_ENDPOINT = BUNDLER_ENDPOINT;
+const UA_KEY = 'userAgent';
+// const API_ENDPOINT = 'https://rum-bundles-2.david8603.workers.dev/rum-bundles';
+// const UA_KEY = 'user_agent';
 
 const viewSelect = document.getElementById('view');
 const filterInput = document.getElementById('filter');
@@ -14,6 +21,9 @@ const lowDataWarning = document.getElementById('low-data-warning');
 let dataChunks = [];
 
 /* helpers */
+
+document.addEventListener('click', () => sampleRUM('click'));
+
 function p_value(control_events, control_conversions, treatment_events, treatment_conversions) {
   const control_rate = control_conversions / control_events;
   const treatment_rate = treatment_conversions / treatment_events;
@@ -130,6 +140,23 @@ function addCalculatedProps(bundle) {
   });
 }
 
+function apiURL(datePath, hour) {
+  return `${API_ENDPOINT}/${DOMAIN}/${datePath}${hour != null ? `/${hour}` : ''}?domainkey=${DOMAIN_KEY}`;
+}
+
+async function fetchUTCMonth(utcISOString) {
+  const [date] = utcISOString.split('T');
+  const dateSplits = date.split('-');
+  dateSplits.pop();
+  const monthPath = dateSplits.join('/');
+  const apiRequestURL = apiURL(monthPath);
+  const resp = await fetch(apiRequestURL);
+  const json = await resp.json();
+  const { rumBundles } = json;
+  rumBundles.forEach((bundle) => addCalculatedProps(bundle));
+  return { date, rumBundles };
+}
+
 function reEvaluateConversions() {
   // run addCalculatedProps on all bundles
   dataChunks.forEach((chunk) => {
@@ -143,7 +170,7 @@ function reEvaluateConversions() {
 async function fetchUTCDay(utcISOString) {
   const [date] = utcISOString.split('T');
   const datePath = date.split('-').join('/');
-  const apiRequestURL = `${API_ENDPOINT}/rum-bundles/${DOMAIN}/${datePath}?domainkey=${DOMAIN_KEY}`;
+  const apiRequestURL = apiURL(datePath);
   const resp = await fetch(apiRequestURL);
   const json = await resp.json();
   const { rumBundles } = json;
@@ -155,7 +182,7 @@ async function fetchUTCHour(utcISOString) {
   const [date, time] = utcISOString.split('T');
   const datePath = date.split('-').join('/');
   const hour = time.split(':')[0];
-  const apiRequestURL = `${API_ENDPOINT}/rum-bundles/${DOMAIN}/${datePath}/${hour}?domainkey=${DOMAIN_KEY}`;
+  const apiRequestURL = apiURL(datePath, hour);
   const resp = await fetch(apiRequestURL);
   const json = await resp.json();
   const { rumBundles } = json;
@@ -169,26 +196,38 @@ export function setDomain(domain, key) {
 }
 
 export async function fetchLastWeek() {
-  const chunks = [];
   const date = new Date();
   const hoursInWeek = 7 * 24;
+  const promises = [];
   for (let i = 0; i < hoursInWeek; i += 1) {
-    // eslint-disable-next-line no-await-in-loop
-    chunks.unshift(await fetchUTCHour(date.toISOString()));
+    promises.push(fetchUTCHour(date.toISOString()));
     date.setTime(date.getTime() - (3600 * 1000));
   }
+  const chunks = Promise.all(promises);
   return chunks;
 }
 
 export async function fetchPrevious31Days(endDate) {
-  const chunks = [];
   const date = endDate ? new Date(endDate) : new Date();
   const days = 31;
+  const promises = [];
   for (let i = 0; i < days; i += 1) {
-    // eslint-disable-next-line no-await-in-loop
-    chunks.unshift(await fetchUTCDay(date.toISOString()));
+    promises.push(fetchUTCDay(date.toISOString()));
     date.setDate(date.getDate() - 1);
   }
+  const chunks = Promise.all(promises);
+  return chunks;
+}
+
+export async function fetchPrevious12Months(endDate) {
+  const date = endDate ? new Date(endDate) : new Date();
+  const months = 12;
+  const promises = [];
+  for (let i = 0; i < months; i += 1) {
+    promises.push(fetchUTCMonth(date.toISOString()));
+    date.setMonth(date.getMonth() - 1);
+  }
+  const chunks = Promise.all(promises);
   return chunks;
 }
 
@@ -258,7 +297,8 @@ function filterBundle(bundle, filter, facets, cwv) {
               let anyEventMatchedPropValue = false;
               const propFilters = filter[`${cp}.${prop}`];
               checkpointEvents[cp].forEach((cpEvent) => {
-                if (propFilters.includes(cpEvent[prop])) anyEventMatchedPropValue = true;
+                const propValue = (cp.startsWith('cwv-') && prop === 'value') ? scoreCWV(cpEvent[prop], cp.split('-')[1]) : `${cpEvent[prop]}`;
+                if (propFilters.includes(propValue)) anyEventMatchedPropValue = true;
               });
               filterMatches[`${cp}.${prop}`] = anyEventMatchedPropValue;
               if (!anyEventMatchedPropValue) matchedAll = false;
@@ -273,29 +313,25 @@ function filterBundle(bundle, filter, facets, cwv) {
     }
   }
 
-  const hasConverted = bundle.conversion;
-
-  /* filter url */
-  if (matchedAll) {
-    if (filter.url.length) {
-      if (filter.url.includes(bundle.url)) {
-        filterMatches.url = true;
-      } else {
-        matchedAll = false;
-        filterMatches.url = false;
-      }
+  /* filter user_agent */
+  if (filter[UA_KEY].length) {
+    if (filter[UA_KEY].includes(bundle[UA_KEY])) {
+      filterMatches[UA_KEY] = true;
+    } else {
+      matchedAll = false;
+      filterMatches[UA_KEY] = false;
     }
   }
 
-  /* filter user_agent */
-  if (matchedAll) {
-    if (filter.user_agent.length) {
-      if (filter.user_agent.includes(bundle.user_agent)) {
-        filterMatches.user_agent = true;
-      } else {
-        matchedAll = false;
-        filterMatches.user_agent = false;
-      }
+  const hasConverted = bundle.conversion;
+
+  /* filter url */
+  if (filter.url.length) {
+    if (filter.url.includes(bundle.url)) {
+      filterMatches.url = true;
+    } else {
+      matchedAll = false;
+      filterMatches.url = false;
     }
   }
 
@@ -365,7 +401,7 @@ function filterBundle(bundle, filter, facets, cwv) {
           if (e.value) {
             const facetName = `${val}.value`;
             const facet = facets[facetName];
-            const option = e.value;
+            const option = val.startsWith('cwv-') ? scoreCWV(e.value, val.split('-')[1]) : e.value;
 
             const facetOptionName = `${facetName}=${option}`;
             if (!facetOptionsAdded.includes(facetOptionName)) {
@@ -400,7 +436,7 @@ function filterBundle(bundle, filter, facets, cwv) {
             if (e.source && hasConverted) {
               const facetName = `${val}.source.converted`;
               const facet = facets[facetName];
-              const option = e.source;
+              const option = val.startsWith('cwv-') ? scoreCWV(e.value, val.split('-')[1]) : e.value;
 
               const facetOptionName = `${facetName}=${option}`;
               if (!facetOptionsAdded.includes(facetOptionName)) {
@@ -416,7 +452,7 @@ function filterBundle(bundle, filter, facets, cwv) {
             if (e.value && hasConverted) {
               const facetName = `${val}.value.converted`;
               const facet = facets[facetName];
-              const option = e.value;
+              const option = val.startsWith('cwv-') ? scoreCWV(e.value, val.split('-')[1]) : e.value;
 
               const facetOptionName = `${facetName}=${option}`;
               if (!facetOptionsAdded.includes(facetOptionName)) {
@@ -442,10 +478,10 @@ function filterBundle(bundle, filter, facets, cwv) {
     addToCWV('url', bundle.url);
   }
 
-  if (matchedEverythingElse('user_agent')) {
-    if (facets.user_agent[bundle.user_agent]) facets.user_agent[bundle.user_agent] += bundle.weight;
-    else facets.user_agent[bundle.user_agent] = bundle.weight;
-    addToCWV('user_agent', bundle.user_agent);
+  if (matchedEverythingElse(UA_KEY)) {
+    if (facets[UA_KEY][bundle[UA_KEY]]) facets[UA_KEY][bundle[UA_KEY]] += bundle.weight;
+    else facets[UA_KEY][bundle[UA_KEY]] = bundle.weight;
+    addToCWV(UA_KEY, bundle[UA_KEY]);
   }
 
   return (matchedAll);
@@ -500,7 +536,8 @@ function createChartData(bundles, config, endDate) {
     const slotTime = new Date(bundle.timeSlot);
     slotTime.setMinutes(0);
     slotTime.setSeconds(0);
-    if (config.unit === 'day') slotTime.setHours(0);
+    if (config.unit === 'day' || config.unit === 'week' || config.unit === 'month') slotTime.setHours(0);
+    if (config.unit === 'month') slotTime.setDate(1);
 
     const localTimeSlot = toISOStringWithTimezone(slotTime);
     if (!stats[localTimeSlot]) {
@@ -512,6 +549,7 @@ function createChartData(bundles, config, endDate) {
         inp: cwvStructure(),
         cls: cwvStructure(),
         ttfb: cwvStructure(),
+        bundles: [],
       };
 
       stats[localTimeSlot] = s;
@@ -527,6 +565,7 @@ function createChartData(bundles, config, endDate) {
     };
 
     const stat = stats[localTimeSlot];
+    stat.bundles.push(bundle);
     stat.total += bundle.weight;
     if (bundle.conversion) stat.conversions += bundle.weight;
     if (bundle.visit) stat.visits += bundle.weight;
@@ -570,7 +609,8 @@ function createChartData(bundles, config, endDate) {
   const date = endDate ? new Date(endDate) : new Date();
   date.setMinutes(0);
   date.setSeconds(0);
-  if (config.unit === 'day') date.setHours(0);
+  if (config.unit === 'day' || config.unit === 'month' || config.unit === 'week') date.setHours(0);
+  if (config.unit === 'month') date.setDate(1);
 
   for (let i = 0; i < config.units; i += 1) {
     const localTimeSlot = toISOStringWithTimezone(date);
@@ -641,6 +681,8 @@ function createChartData(bundles, config, endDate) {
 
     if (config.unit === 'hour') date.setTime(date.getTime() - (3600 * 1000));
     if (config.unit === 'day') date.setDate(date.getDate() - 1);
+    if (config.unit === 'week') date.setDate(date.getDate() - 7);
+    if (config.unit === 'month') date.setMonth(date.getMonth() - 1);
   }
 
   datasets.push({ data: dataTotal });
@@ -651,7 +693,8 @@ function createChartData(bundles, config, endDate) {
   return { labels, datasets, stats };
 }
 
-function updateFacets(facets, cwv, focus, keyMetrics) {
+function updateFacets(facets, cwv, focus, mode, ph, keyMetrics, show = {}) {
+  const numOptions = mode === 'all' ? 20 : 10;
   const filterTags = document.querySelector('.filter-tags');
   filterTags.textContent = '';
   const addFilterTag = (name, value) => {
@@ -685,8 +728,11 @@ function updateFacets(facets, cwv, focus, keyMetrics) {
       fieldSet.append(legend);
       tsv += `${facetName}\tcount\tlcp\tcls\tinp\r\n`;
       optionKeys.sort((a, b) => facet[b] - facet[a]);
-      optionKeys.forEach((optionKey, i) => {
-        if (i < 10) {
+      const filterKeys = facetName === 'checkpoint' && mode !== 'all';
+      const filteredKeys = filterKeys ? optionKeys.filter((a) => !!(ph[a])) : optionKeys;
+      const nbToShow = show[facetName] || numOptions;
+      filteredKeys.forEach((optionKey, i) => {
+        if (i < nbToShow) {
           const optionValue = facet[optionKey];
           const optionConversions = conversionFacet ? conversionFacet[optionKey] : undefined;
           const div = document.createElement('div');
@@ -698,7 +744,7 @@ function updateFacets(facets, cwv, focus, keyMetrics) {
             addFilterTag(facetName, optionKey);
             div.ariaSelected = true;
           }
-          input.id = `${facetName}-${optionKey}`;
+          input.id = `${facetName}=${optionKey}`;
           div.addEventListener('click', (evt) => {
             if (evt.target !== input) input.checked = !input.checked;
             evt.stopPropagation();
@@ -707,7 +753,7 @@ function updateFacets(facets, cwv, focus, keyMetrics) {
             // eslint-disable-next-line no-use-before-define
             draw();
           });
-          const createLabelHTML = (labelText) => {
+          const createLabelHTML = (labelText, usePlaceholders) => {
             if (labelText.startsWith('https://') && labelText.includes('media_')) {
               return `<img src="${labelText}?width=750&format=webply&optimize=medium"">`;
             }
@@ -715,12 +761,16 @@ function updateFacets(facets, cwv, focus, keyMetrics) {
             if (labelText.startsWith('https://')) {
               return `<a href="${labelText}" target="_new">${labelText}</a>`;
             }
+
+            if (usePlaceholders && ph[labelText]) {
+              return (`${ph[labelText]} [${labelText}]`);
+            }
             return (labelText);
           };
 
           const label = document.createElement('label');
           label.setAttribute('for', `${facetName}-${optionKey}`);
-          label.innerHTML = `${createLabelHTML(optionKey)} (${toHumanReadable(optionValue)})`;
+          label.innerHTML = `${createLabelHTML(optionKey, facetName === 'checkpoint')} (${toHumanReadable(optionValue)})`;
 
           // add conversion rate for this facet, if it is 
           // significantly deviating from the average for
@@ -814,6 +864,34 @@ function updateFacets(facets, cwv, focus, keyMetrics) {
         }
       });
 
+      if (filteredKeys.length > nbToShow) {
+        // add "more" link
+        const div = document.createElement('div');
+        div.className = 'load-more';
+        const more = document.createElement('label');
+        more.textContent = 'more...';
+        more.addEventListener('click', (evt) => {
+          evt.preventDefault();
+          // increase number of keys shown
+          updateFacets(facets, cwv, focus, mode, ph, { [facetName]: (show[facetName] || numOptions) + numOptions });
+        });
+
+        div.append(more);
+
+        const all = document.createElement('label');
+        all.textContent = `all (${filteredKeys.length})`;
+        all.addEventListener('click', (evt) => {
+          evt.preventDefault();
+          // increase number of keys shown
+          updateFacets(facets, cwv, focus,mode, ph, { [facetName]: filteredKeys.length });
+        });
+        div.append(all);
+        const container = document.createElement('div');
+        container.classList.add('more-container');
+        container.append(div);
+        fieldSet.append(container);
+      }
+
       legend.addEventListener('click', () => {
         navigator.clipboard.writeText(tsv);
         const toast = document.getElementById('copied-toast');
@@ -826,14 +904,30 @@ function updateFacets(facets, cwv, focus, keyMetrics) {
   });
 }
 
+async function fetchDomainKey(domain) {
+  try {
+    const auth = localStorage.getItem('rum-bundler-token');
+    const resp = await fetch(`https://rum.fastly-aem.page/domainkey/${domain}`, {
+      headers: {
+        authorization: `Bearer ${auth}`,
+      },
+    });
+    const json = await resp.json();
+    return (json.domainkey);
+  } catch {
+    return '';
+  }
+}
+
 async function draw() {
+  const ph = await fetchPlaceholders('/tools/rum-slicer');
   const params = new URL(window.location).searchParams;
   const checkpoint = params.getAll('checkpoint');
   const target = params.getAll('target');
   const url = params.getAll('url');
+  const mode = params.get('metrics');
 
-  // eslint-disable-next-line camelcase
-  const user_agent = params.getAll('user_agent');
+  const userAgent = params.getAll(UA_KEY);
   const view = params.get('view') || 'week';
   const endDate = params.get('endDate') ? `${params.get('endDate')}T00:00:00` : null;
   const focus = params.get('focus');
@@ -845,8 +939,7 @@ async function draw() {
     checkpoint,
     target,
     url,
-    // eslint-disable-next-line camelcase
-    user_agent,
+    [UA_KEY]: userAgent,
   };
 
   checkpoint.forEach((cp) => {
@@ -860,11 +953,12 @@ async function draw() {
   });
 
   const facets = {
-    user_agent: {},
+    [UA_KEY]: {},
     url: {},
     checkpoint: {},
   };
 
+  const startTime = new Date();
   const cwv = structuredClone(facets);
 
   dataChunks.forEach((chunk) => {
@@ -878,17 +972,29 @@ async function draw() {
     lowDataWarning.ariaHidden = 'true';
   }
 
-  const config = view === 'month' ? {
-    view,
-    unit: 'day',
-    units: 30,
-    focus,
-  } : {
-    view,
-    unit: 'hour',
-    units: 24 * 7,
-    focus,
+  const configs = {
+    month: {
+      view,
+      unit: 'day',
+      units: 30,
+      focus,
+    },
+    week: {
+      view,
+      unit: 'hour',
+      units: 24 * 7,
+      focus,
+    },
+    year: {
+      view,
+      unit: 'week',
+      units: 52,
+      focus,
+    },
   };
+
+  const config = configs[view];
+
   const { labels, datasets, stats } = createChartData(filtered, config, endDate);
   datasets.forEach((ds, i) => {
     chart.data.datasets[i].data = ds.data;
@@ -897,7 +1003,10 @@ async function draw() {
   chart.options.scales.x.time.unit = config.unit;
   chart.update();
 
+  console.log(`filtered to ${filtered.length} bundles in ${new Date() - startTime}ms`);
+  updateFacets(facets, cwv, focus, mode, ph);
   const statsKeys = Object.keys(stats);
+  if (mode === 'all') console.log(stats);
 
   const getP75 = (metric) => {
     const cwvMetric = `cwv${metric.toUpperCase()}`;
@@ -941,8 +1050,12 @@ async function loadData(scope) {
   if (scope === 'month') {
     dataChunks = await fetchPrevious31Days(endDate);
   }
+  if (scope === 'year') {
+    dataChunks = await fetchPrevious12Months(endDate);
+  }
 
   draw();
+  sampleRUM('lazy');
 }
 
 function updateState() {
@@ -964,7 +1077,7 @@ function updateState() {
 
   facetsElement.querySelectorAll('input').forEach((e) => {
     if (e.checked) {
-      url.searchParams.append(e.id.split('-')[0], e.value);
+      url.searchParams.append(e.id.split('=')[0], e.value);
     }
   });
   url.searchParams.set('domainkey', DOMAIN_KEY);
@@ -1094,6 +1207,20 @@ img.addEventListener('error', () => {
   img.src = './website.svg';
 });
 h1.prepend(img);
+h1.addEventListener('click', async () => {
+  // eslint-disable-next-line no-alert
+  let domain = window.prompt('enter domain or URL');
+  if (domain) {
+    try {
+      const url = new URL(domain);
+      domain = url.host;
+    } catch {
+      // nothing
+    }
+    const domainkey = await fetchDomainKey(domain);
+    window.location = `${window.location.pathname}?domain=${domain}&view=month&domainkey=${domainkey}`;
+  }
+});
 
 const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 timezoneElement.textContent = timezone;
@@ -1138,7 +1265,7 @@ document.getElementById('share').addEventListener('click', () => {
     });
     const json = await resp.json();
     navigator.clipboard.writeText(`${ogHandlerOrigin}/share/${json.key}`);
-    const toast = document.getElementById('copied-toast');
+    const toast = document.getElementById('shared-toast');
     toast.ariaHidden = false;
     setTimeout(() => { toast.ariaHidden = true; }, 3000);
   }, 'image/png');
