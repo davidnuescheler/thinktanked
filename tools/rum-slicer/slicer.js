@@ -740,6 +740,25 @@ function updateFacets(facets, cwv, focus, mode, ph, show = {}) {
         fieldSet.append(container);
       }
 
+      if (filterKeys) {
+        const div = document.createElement('div');
+        div.className = 'unfilter';
+
+        const unfilter = document.createElement('label');
+        unfilter.textContent = `unfilter...`;
+        unfilter.addEventListener('click', (evt) => {
+          evt.preventDefault();
+          // increase number of keys shown
+          updateFacets(facets, cwv, focus, 'all', ph, show);
+        });
+        div.append(unfilter);
+
+        const container = document.createElement('div');
+        container.classList.add('unfilter-container');
+        container.append(div);
+        fieldSet.append(container);
+      }
+
       legend.addEventListener('click', () => {
         navigator.clipboard.writeText(tsv);
         const toast = document.getElementById('copied-toast');

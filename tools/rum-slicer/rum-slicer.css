@@ -366,13 +366,15 @@ fieldset li::after {
   height: 60px;
 }
 
-#facets fieldset div.load-more {
+#facets fieldset div.load-more,
+#facets fieldset div.unfilter {
   grid-column: 2 / span 2;  
   display: block;
   padding: 10px 0;
 }
 
-#facets fieldset div.load-more label {
+#facets fieldset div.load-more label,
+#facets fieldset div.unfilter label {
   cursor: pointer;
   padding-right: 50px;
 }
