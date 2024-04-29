@@ -8,6 +8,12 @@
         <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon"></script>
         <script src="./slicer.js" type="module"></script>
         <link rel="stylesheet" href="./rum-slicer.css">
+        <script>
+          const { search } = window.location;
+          const redirect = `https://www.aem.live/tools/rum/explorer.html${search}`;
+          window.alert('This page has a new home on www.aem.live, please update your bookmark');
+          window.location.href = `https://www.aem.live/tools/rum/explorer.html${search}`;
+        </script>
     </head>
     <body>
         <header>

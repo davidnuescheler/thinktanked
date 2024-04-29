@@ -721,7 +721,14 @@ function updateFacets(facets, cwv, focus, mode, ph, show = {}) {
         more.addEventListener('click', (evt) => {
           evt.preventDefault();
           // increase number of keys shown
-          updateFacets(facets, cwv, focus, mode, ph, { [facetName]: (show[facetName] || numOptions) + numOptions });
+          updateFacets(
+            facets,
+            cwv,
+            focus,
+            mode,
+            ph,
+            { [facetName]: (show[facetName] || numOptions) + numOptions },
+          );
         });
 
         div.append(more);
@@ -731,7 +738,7 @@ function updateFacets(facets, cwv, focus, mode, ph, show = {}) {
         all.addEventListener('click', (evt) => {
           evt.preventDefault();
           // increase number of keys shown
-          updateFacets(facets, cwv, focus,mode, ph, { [facetName]: filteredKeys.length });
+          updateFacets(facets, cwv, focus, mode, ph, { [facetName]: filteredKeys.length });
         });
         div.append(all);
         const container = document.createElement('div');
