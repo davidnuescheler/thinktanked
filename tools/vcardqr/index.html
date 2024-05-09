@@ -1,0 +1,30 @@
+<html>
+    <head>
+        <title>encode vcard to qr-code</title>
+        <script src=
+"https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js">
+    </script>
+    </head>
+    <body>
+        <textarea rows="20" cols="80">BEGIN:VCARD
+VERSION:3.0
+N:Doe;John;;;
+FN:John Doe
+TEL;type=HOME;type=VOICE;type=pref:+1 (123) 123-1234
+END:VCARD
+        </textarea>
+        <div id="qrcode">
+        </div>
+        <script>
+            const qrcode = document.getElementById('qrcode');
+            const textarea = document.querySelector('textarea')
+            const updateQRCode = () => {
+                qrcode.textContent = '';
+                new QRCode('qrcode', textarea.value);
+            }
+            updateQRCode();
+            textarea.addEventListener('input', updateQRCode);
+
+        </script>
+    </body>
+</html>
