@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Sitemap to Table</title>
+        <style>
+            body {
+                font-family: 'Courier New', Courier, monospace;
+            }
+            .inputbar {
+                display: flex;
+                margin-bottom: 32px;
+            }
+
+            .inputbar input {
+                width: 100%;
+            }
+
+            textarea {
+                height: 100%;
+                width: 100%;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Convert sitemap.xml to a Table</h1>
+        <div class="inputbar">
+        Sitemap URL: <input id="url"> <button id="convert">convert</button>
+        </div>
+        <textarea id="output" rows="100"></textarea>
+        <script>
+
+            async function loadSitemap(sitemapURL, sitemapURLs = []) {
+                try {
+                    const resp = await fetch(`https://little-forest-58aa.david8603.workers.dev/?url=${sitemapURL}`);
+                    const xml = await resp.text();
+                    const sitemap = new DOMParser().parseFromString(xml, 'text/xml');
+                    const subSitemaps = [...sitemap.querySelectorAll('sitemap loc')];
+                    for (let i = 0; i < subSitemaps.length; i += 1) {
+                        const loc = subSitemaps[i];
+                        const subSitemapURL = new URL(loc.textContent.trim(), sitemapURL);
+                        // eslint-disable-next-line no-await-in-loop
+                        await loadSitemap(subSitemapURL.href, sitemapURLs);
+                    }
+                    const urlLocs = sitemap.querySelectorAll('url loc');
+                    urlLocs.forEach((loc) => {
+                        const locURL = new URL(loc.textContent.trim());
+                        sitemapURLs.push(locURL);
+                    });
+                    return sitemapURLs;
+                } catch (e) {
+                    console.log (e);
+                }
+            }
+
+            document.getElementById('convert').addEventListener('click', async () => {
+                const url = document.getElementById('url').value;
+                const urls = await loadSitemap(url);
+                const output = document.getElementById('output');
+                output.value = urls.join(`\r\n`);
+            })
+        </script>
+    </body>
+</html>
