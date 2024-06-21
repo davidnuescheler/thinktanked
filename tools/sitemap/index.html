@@ -52,11 +52,40 @@
                 }
             }
 
+            async function getRootSitemaps(url) {
+                console.log(url);
+                const resp = await fetch(`https://little-forest-58aa.david8603.workers.dev/?url=${url}robots.txt`);
+                const txt = await resp.text();
+                const lines = txt.split(`\n`);
+                console.log(txt);
+                const sitemapURLs = [];
+                lines.forEach((line) => {
+                    const [name, value] = line.split(/:(.*)/s);
+                    if (name.trim().toLowerCase() === 'sitemap') {
+                        sitemapURLs.push(value.trim());
+                    }
+                })
+                return sitemapURLs;
+            }
+
+
             document.getElementById('convert').addEventListener('click', async () => {
-                const url = document.getElementById('url').value;
-                const urls = await loadSitemap(url);
                 const output = document.getElementById('output');
-                output.value = urls.join(`\r\n`);
+                const fetchAndAppend = async (url) => {
+                    const urls = await loadSitemap(url);
+                    output.value += urls.join(`\r\n`);
+                }
+                const url = new URL(document.getElementById('url').value);
+                console.log(url);
+                if (url.pathname === '/') {
+                    console.log('root');
+                    const rootSitemaps = await getRootSitemaps(url.href);
+                    rootSitemaps.forEach(async (sitemap) => {
+                        await fetchAndAppend(sitemap);
+                    });
+                } else {
+                    await fetchAndAppend(url.href);
+                }
             })
         </script>
     </body>
