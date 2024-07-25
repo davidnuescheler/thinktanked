@@ -6,7 +6,8 @@ async function checkURL(url) {
     if (seconds > (3 * 3600)) return `(${Math.round(seconds / 3600)}h)`;
     if (seconds > (5 * 60)) return `(${Math.round(seconds / 60)}m)`;
     return '';
-  }
+  };
+
   const resp = await fetch(`https://little-forest-58aa.david8603.workers.dev/?url=${url}&cache=off`, {
     headers: {
       'fastly-debug': 'true',
