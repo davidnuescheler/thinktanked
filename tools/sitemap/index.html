@@ -41,10 +41,13 @@
                         // eslint-disable-next-line no-await-in-loop
                         await loadSitemap(subSitemapURL.href, sitemapURLs);
                     }
-                    const urlLocs = sitemap.querySelectorAll('url loc');
-                    urlLocs.forEach((loc) => {
+                    const urlLocs = sitemap.querySelectorAll('url');
+                    urlLocs.forEach((url) => {
+                        const loc = url.querySelector('loc');
                         const locURL = new URL(loc.textContent.trim());
-                        sitemapURLs.push(locURL);
+                        const lastMod = url.querySelector('lastmod');
+                        const lastModDate = lastMod ? lastMod.textContent.trim() : '';
+                        sitemapURLs.push(`${locURL}\t${lastModDate}`);
                     });
                     return sitemapURLs;
                 } catch (e) {
