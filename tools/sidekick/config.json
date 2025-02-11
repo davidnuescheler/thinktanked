@@ -5,13 +5,15 @@
   "liveHost": "main--thinktanked--davidnuescheler.aem.live",
   "plugins": [
     {
-      "id": "move-to-review",
-      "title": "Move to Review",
+      "id": "review",
+      "title": "Review...",
       "environments": [
         "dev",
         "preview"
       ],
-      "event": "move-to-review"
+      "url": "https://snapshot-admin--helix-labs-website--adobe.aem.page/tools/snapshot-admin/index.html",
+      "isPalette": true,
+      "event": "review"
     },
     {
       "id": "publish",
