@@ -11,7 +11,7 @@
         "dev",
         "preview"
       ],
-      "url": "https://snapshot-admin--helix-labs-website--adobe.aem.page/tools/snapshot-admin/palette.html",
+      "url": "http://localhost:3000/tools/snapshot-admin/palette.html",
       "isPalette": true,
       "paletteRect": "left:calc(50% - 70px);bottom:113px;height:200px;width:200px;",
       "event": "review"
