@@ -13,6 +13,7 @@
       ],
       "url": "https://snapshot-admin--helix-labs-website--adobe.aem.page/tools/snapshot-admin/palette.html",
       "isPalette": true,
+      "paletteRect": "left:calc(50%-100px);bottom:10%;height:675px;width:200px;",
       "event": "review"
     },
     {
