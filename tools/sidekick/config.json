@@ -26,6 +26,19 @@
       "includePaths": [
         "**/drafts/**"
       ]
+    },
+    {
+      "id": "review",
+      "title": "Review (local)...",
+      "environments": [
+        "dev",
+        "preview"
+      ],
+      "url": "http://localhost:3000/tools/snapshot-admin/palette.html",
+      "isPalette": true,
+      "paletteRect": "left:calc(50% - 70px);bottom:113px;height:200px;width:200px;",
+      "passConfig": true,
+      "passReferrer": true
     }
   ]
 }
