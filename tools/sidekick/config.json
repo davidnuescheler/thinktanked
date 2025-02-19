@@ -28,7 +28,7 @@
       ]
     },
     {
-      "id": "review",
+      "id": "review-local",
       "title": "Review (local)...",
       "environments": [
         "dev",
