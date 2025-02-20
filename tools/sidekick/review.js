@@ -303,7 +303,7 @@ function waitForSidekickPlugins(sk) {
   function openSidekick(callback) {
     const env = getReviewEnv();
 
-    const SIDEKICK_EXTENSION_ID = 'ccfggkjabjahcjoljmgmklhpaccedipo';
+    const SIDEKICK_EXTENSION_ID = 'igkmdomcgoebiipaifhmpfjhbjccggml';
     if (window.chrome && window.chrome.runtime) {
       const payload = { owner: env.owner, repo: env.repo, action: 'loadSidekick' };
       window.chrome.runtime.sendMessage(SIDEKICK_EXTENSION_ID, payload, callback);
