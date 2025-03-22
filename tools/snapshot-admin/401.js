@@ -25,7 +25,7 @@ window.addEventListener('DOMContentLoaded', () => {
     </div>`;
   const link = document.createElement('link');
   link.rel = 'stylesheet';
-  link.href = 'styles.css';
+  link.href = 'https://main--thinktanked--davidnuescheler.aem.live/tools/snapshot-admin/401-styles.css';
   document.head.append(link);
   const sha256 = async (message) => {
     const encoder = new TextEncoder();
@@ -36,7 +36,7 @@ window.addEventListener('DOMContentLoaded', () => {
       .map((b) => b.toString(16).padStart(2, '0'))
       .join('');
     return hash;
-  }
+  };
 
   document.querySelector('form').addEventListener('submit', async (e) => {
     e.preventDefault();
