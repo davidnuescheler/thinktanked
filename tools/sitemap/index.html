@@ -16,7 +16,7 @@
             }
 
             textarea {
-                height: 100%;
+                height: 60vh;
                 width: 100%;
             }
         </style>
@@ -27,8 +27,18 @@
         Sitemap URL: <input id="url"> <button id="convert">convert</button>
         </div>
         <textarea id="output" rows="100"></textarea>
-        <script>
+        <div class="stats">
+            <div>
+                <span>Total URLs:</span>
+                <span id="total-urls">0</span>
+            </div>
+            <div>
+                <ul id="top-folders">
 
+                </ul>
+            </div>
+        </div>
+        <script>
             async function loadSitemap(sitemapURL, sitemapURLs = []) {
                 try {
                     const resp = await fetch(`https://little-forest-58aa.david8603.workers.dev/?url=${sitemapURL}`);
@@ -77,6 +87,7 @@
                 const fetchAndAppend = async (url) => {
                     const urls = await loadSitemap(url);
                     output.value += urls.join(`\r\n`);
+                    updateStats();
                 }
                 const url = new URL(document.getElementById('url').value);
                 console.log(url);
@@ -90,6 +101,34 @@
                     await fetchAndAppend(url.href);
                 }
             })
+
+            function updateStats() {
+                const output = document.getElementById('output');
+                const urls = output.value.split('\n');
+                const totalUrls = urls.length;
+                document.getElementById('total-urls').textContent = totalUrls;
+                const topFolders = urls.map((url) => {
+                    const parts = url.split('\t');
+                    const loc = parts[0];
+                    const folder = new URL(loc).pathname.split('/').filter(Boolean);
+                    return folder[0];
+                })
+                const folderCounts = topFolders.reduce((acc, folder) => {
+                    acc[folder] = (acc[folder] || 0) + 1;
+                    return acc;
+                }, {});
+                const sortedFolders = Object.entries(folderCounts).sort((a, b) => b[1] - a[1]);
+                const topFoldersList = document.getElementById('top-folders');
+                topFoldersList.innerHTML = '';
+                sortedFolders.forEach(([folder, count]) => {
+                    const li = document.createElement('li');
+                    li.textContent = `${folder} (${count})`;
+                    topFoldersList.appendChild(li);
+                });
+            }
+
+            const output = document.getElementById('output');
+            output.addEventListener('input', updateStats);
         </script>
     </body>
 </html>
