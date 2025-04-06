@@ -49,7 +49,7 @@
                         const lastModDate = lastMod ? lastMod.textContent.trim() : '';
                         sitemapURLs.push(`${locURL}\t${lastModDate}`);
                     });
-                    return sitemapURLs;
+                    return sitemapURLs.sort();
                 } catch (e) {
                     console.log (e);
                 }
