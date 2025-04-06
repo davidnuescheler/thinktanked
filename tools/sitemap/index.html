@@ -23,9 +23,11 @@
     </head>
     <body>
         <h1>Convert sitemap.xml to a Table</h1>
-        <div class="inputbar">
-        Sitemap URL: <input id="url"> <button id="convert">convert</button>
+        <form id="input-form">
+            <div class="inputbar">
+                Sitemap URL: <input id="url"> <button type="submit" id="convert">convert</button>
         </div>
+        </form>
         <textarea id="output" rows="100"></textarea>
         <div class="stats">
             <div>
@@ -82,8 +84,10 @@
             }
 
 
-            document.getElementById('convert').addEventListener('click', async () => {
+            document.getElementById('input-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
                 const output = document.getElementById('output');
+                output.value = '';
                 const fetchAndAppend = async (url) => {
                     const urls = await loadSitemap(url);
                     output.value += urls.join(`\r\n`);
