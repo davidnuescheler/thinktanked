@@ -35,9 +35,9 @@
                 <span id="total-urls">0</span>
             </div>
             <div>
-                <ul id="top-folders">
+                <pre id="top-folders">
 
-                </ul>
+                </pre>
             </div>
         </div>
         <script>
@@ -123,12 +123,7 @@
                 }, {});
                 const sortedFolders = Object.entries(folderCounts).sort((a, b) => b[1] - a[1]);
                 const topFoldersList = document.getElementById('top-folders');
-                topFoldersList.innerHTML = '';
-                sortedFolders.forEach(([folder, count]) => {
-                    const li = document.createElement('li');
-                    li.textContent = `${folder} (${count})`;
-                    topFoldersList.appendChild(li);
-                });
+                topFoldersList.innerHTML = sortedFolders.map(([folder, count]) => `${folder}\t${count}\r\n`).join('');
             }
 
             const output = document.getElementById('output');
