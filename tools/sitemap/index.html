@@ -43,7 +43,8 @@
         <script>
             async function loadSitemap(sitemapURL, sitemapURLs = []) {
                 try {
-                    const resp = await fetch(`https://little-forest-58aa.david8603.workers.dev/?url=${sitemapURL}`);
+                    console.log('loading', sitemapURL);
+                    const resp = await fetch(`https://little-forest-58aa.david8603.workers.dev/?url=${sitemapURL}&redirect=follow`);
                     const xml = await resp.text();
                     const sitemap = new DOMParser().parseFromString(xml, 'text/xml');
                     const subSitemaps = [...sitemap.querySelectorAll('sitemap loc')];
@@ -80,12 +81,15 @@
                         sitemapURLs.push(value.trim());
                     }
                 })
+                console.log(sitemapURLs);
                 return sitemapURLs;
             }
 
 
             document.getElementById('input-form').addEventListener('submit', async (e) => {
                 e.preventDefault();
+                const url = new URL(document.getElementById('url').value);
+                history.pushState({}, '', `${window.location.pathname}?url=${encodeURIComponent(url.href)}`);
                 const output = document.getElementById('output');
                 output.value = '';
                 const fetchAndAppend = async (url) => {
@@ -93,7 +97,6 @@
                     output.value += urls.join(`\r\n`);
                     updateStats();
                 }
-                const url = new URL(document.getElementById('url').value);
                 console.log(url);
                 if (url.pathname === '/') {
                     console.log('root');
@@ -128,6 +131,12 @@
 
             const output = document.getElementById('output');
             output.addEventListener('input', updateStats);
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('url')) {
+                const urlElem = document.getElementById('url');
+                urlElem.value = params.get('url');
+                document.getElementById('input-form').dispatchEvent(new Event('submit'));
+            }
         </script>
     </body>
 </html>
