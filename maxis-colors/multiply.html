@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grid Layout</title>
+    <style>
+        table {
+            margin: 0 auto;
+            border-collapse: collapse;
+            width: 80vh;
+            aspect-ratio: 1/1;
+            table-layout: fixed;
+        }
+        th {
+            color: #888;
+            font-size: 3vh;
+            font-weight: bold;
+            font-family: sans-serif;
+        }
+        td {
+            aspect-ratio: 1/1;
+            border: 1px solid #ddd;
+            text-align: center;
+            font-size: 3vh;
+            font-weight: bold;
+            font-family: sans-serif;
+        }
+    </style>
+</head>
+<body>
+    <table></table>
+    <script>
+        const table = document.querySelector('table');
+        const rows = 10;
+        const cols = 10;
+
+        const tr = document.createElement('tr');
+        table.appendChild(tr);
+        const th = document.createElement('th');
+        th.textContent = `x`;
+        tr.appendChild(th);
+
+        for (let i = 1; i <= cols; i++) {
+            const th = document.createElement('th');
+            th.textContent = `${i}`;
+            tr.appendChild(th);
+        }
+
+        const counters = new Array(rows * cols + 1).fill(0);
+        
+        for (let i = 1; i <= rows; i++) {
+            const row = document.createElement('tr');
+            const th = document.createElement('th');
+            th.textContent = `${i}`;
+            row.appendChild(th);
+            for (let j = 1; j <= cols; j++) {
+                const cell = document.createElement('td');
+                cell.textContent = `${i*j}`;
+                counters[i*j]++;
+                cell.addEventListener('click', () => {
+                   table.querySelectorAll('td').forEach((td)  => {
+                    if (td.textContent === `${i*j}`) {
+                        const colors = ['violet', 'lightskyblue', 'gold', 'lightsalmon', 'mediumpurple', 'palegreen'];
+                        td.style.backgroundColor = colors[counters[i*j] - 1];
+                        console.log(counters[i*j]);
+                    } else {
+                        // td.style.backgroundColor = `transparent`;
+                    }
+                   });
+                });
+                row.appendChild(cell);
+            }
+            table.appendChild(row);
+        }
+    </script>
+</body>
+</html>
