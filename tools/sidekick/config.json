@@ -29,20 +29,6 @@
       ]
     },
     {
-      "id": "review-local",
-      "title": "Review (local)...",
-      "environments": [
-        "dev",
-        "preview",
-        "review"
-      ],
-      "url": "http://localhost:3000/tools/snapshot-admin/palette.html",
-      "isPopover": true,
-      "popoverRect": "width:200px; height: 200px",
-      "passConfig": true,
-      "passReferrer": true
-    },
-    {
       "id": "orphaned-pages",
       "title": "Orphaned Pages ... (local)",
       "environments": [
