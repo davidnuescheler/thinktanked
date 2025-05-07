@@ -59,15 +59,12 @@
                 cell.textContent = `${i*j}`;
                 counters[i*j]++;
                 cell.addEventListener('click', () => {
-                   table.querySelectorAll('td').forEach((td)  => {
-                    if (td.textContent === `${i*j}`) {
-                        const colors = ['violet', 'lightskyblue', 'gold', 'lightsalmon', 'mediumpurple', 'palegreen'];
-                        td.style.backgroundColor = colors[counters[i*j] - 1];
-                        console.log(counters[i*j]);
+                    const colors = ['violet', 'lightskyblue', 'gold', 'lightsalmon', 'mediumpurple', 'palegreen'];
+                    if (cell.style.backgroundColor) {
+                        cell.style = '';
                     } else {
-                        // td.style.backgroundColor = `transparent`;
+                        cell.style.backgroundColor = colors[counters[i*j] - 1];
                     }
-                   });
                 });
                 row.appendChild(cell);
             }
