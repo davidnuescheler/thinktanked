@@ -36,7 +36,7 @@
         "preview",
         "live"
       ],
-      "url": "http://localhost:3000/tools/page-admin/orphaned-pages-popover.html",
+      "url": "http://localhost:3000/tools/page-status/orphaned-pages-popover.html",
       "isPopover": true,
       "popoverRect": "width:200px; height: 200px",
       "passConfig": true,
