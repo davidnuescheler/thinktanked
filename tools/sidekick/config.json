@@ -19,16 +19,6 @@
       "passReferrer": true
     },
     {
-      "id": "publish",
-      "title": "Publish",
-      "excludePaths": [
-        "/**"
-      ],
-      "includePaths": [
-        "**/drafts/**"
-      ]
-    },
-    {
       "id": "orphaned-pages",
       "title": "Orphaned Pages ... (local)",
       "environments": [
