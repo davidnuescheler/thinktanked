@@ -7,6 +7,11 @@ class SoundManager {
         this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
         this.masterVolume = 0.3;
         this.muted = false;
+        
+        // Music system
+        this.musicPlaying = false;
+        this.musicGainNode = null;
+        this.currentMusicNotes = [];
     }
     
     playTone(frequency, duration, type = 'square', volume = 0.3) {
@@ -158,7 +163,231 @@ class SoundManager {
     
     toggle() {
         this.muted = !this.muted;
+        if (this.muted) {
+            this.stopMusic();
+        } else if (!this.musicPlaying) {
+            this.startMusic();
+        }
         return this.muted;
+    }
+    
+    startMusic() {
+        if (this.musicPlaying || this.muted) return;
+        
+        this.musicPlaying = true;
+        this.playMusicLoop();
+    }
+    
+    stopMusic() {
+        this.musicPlaying = false;
+        
+        // Stop all current music notes
+        this.currentMusicNotes.forEach(note => {
+            if (note.oscillator) {
+                note.oscillator.stop();
+            }
+        });
+        this.currentMusicNotes = [];
+        
+        if (this.musicGainNode) {
+            this.musicGainNode.gain.exponentialRampToValueAtTime(
+                0.01, 
+                this.audioContext.currentTime + 0.1
+            );
+        }
+    }
+    
+    playMusicLoop() {
+        if (!this.musicPlaying || this.muted) return;
+        
+        // Astronomia-inspired melody (upbeat electronic dance)
+        // Extended pattern - 32 beats (4 sections x 8 beats) for less repetition
+        const bpm = 130;
+        const beatDuration = 60 / bpm; // seconds per beat
+        
+        // Main melody - 32 beat progression with variations
+        const melody = [
+            // SECTION 1 (Beats 0-7): Intro - Ascending pattern
+            {note: 261.63, beat: 0, duration: 0.4},    // C4
+            {note: 329.63, beat: 0.5, duration: 0.4},  // E4
+            {note: 392.00, beat: 1, duration: 0.4},    // G4
+            {note: 523.25, beat: 1.5, duration: 0.4},  // C5
+            {note: 392.00, beat: 2, duration: 0.3},    // G4
+            {note: 440.00, beat: 2.5, duration: 0.3},  // A4
+            {note: 493.88, beat: 3, duration: 0.3},    // B4
+            {note: 523.25, beat: 3.5, duration: 0.5},  // C5
+            
+            {note: 587.33, beat: 4, duration: 0.4},    // D5
+            {note: 523.25, beat: 4.5, duration: 0.4},  // C5
+            {note: 493.88, beat: 5, duration: 0.4},    // B4
+            {note: 392.00, beat: 5.5, duration: 0.4},  // G4
+            {note: 329.63, beat: 6, duration: 0.6},    // E4
+            {note: 392.00, beat: 7, duration: 0.6},    // G4
+            
+            // SECTION 2 (Beats 8-15): Main Astronomia riff
+            {note: 523.25, beat: 8, duration: 0.4},    // C5
+            {note: 493.88, beat: 8.5, duration: 0.4},  // B4
+            {note: 392.00, beat: 9, duration: 0.4},    // G4
+            {note: 329.63, beat: 9.5, duration: 0.4},  // E4
+            {note: 523.25, beat: 10, duration: 0.4},   // C5
+            {note: 493.88, beat: 10.5, duration: 0.4}, // B4
+            {note: 392.00, beat: 11, duration: 0.4},   // G4
+            {note: 329.63, beat: 11.5, duration: 0.4}, // E4
+            
+            {note: 587.33, beat: 12, duration: 0.4},   // D5
+            {note: 523.25, beat: 12.5, duration: 0.4}, // C5
+            {note: 440.00, beat: 13, duration: 0.4},   // A4
+            {note: 392.00, beat: 13.5, duration: 0.4}, // G4
+            {note: 523.25, beat: 14, duration: 0.8},   // C5 (longer)
+            {note: 392.00, beat: 15, duration: 0.8},   // G4 (longer)
+            
+            // SECTION 3 (Beats 16-23): Bridge - Higher melody
+            {note: 659.25, beat: 16, duration: 0.5},   // E5
+            {note: 587.33, beat: 16.5, duration: 0.3}, // D5
+            {note: 523.25, beat: 17, duration: 0.4},   // C5
+            {note: 493.88, beat: 17.5, duration: 0.4}, // B4
+            {note: 659.25, beat: 18, duration: 0.5},   // E5
+            {note: 587.33, beat: 18.5, duration: 0.3}, // D5
+            {note: 523.25, beat: 19, duration: 0.8},   // C5
+            
+            {note: 783.99, beat: 20, duration: 0.4},   // G5 (high point)
+            {note: 659.25, beat: 20.5, duration: 0.4}, // E5
+            {note: 587.33, beat: 21, duration: 0.4},   // D5
+            {note: 523.25, beat: 21.5, duration: 0.4}, // C5
+            {note: 493.88, beat: 22, duration: 0.6},   // B4
+            {note: 440.00, beat: 23, duration: 0.6},   // A4
+            
+            // SECTION 4 (Beats 24-31): Build up and climax
+            {note: 523.25, beat: 24, duration: 0.3},   // C5
+            {note: 587.33, beat: 24.5, duration: 0.3}, // D5
+            {note: 659.25, beat: 25, duration: 0.3},   // E5
+            {note: 783.99, beat: 25.5, duration: 0.3}, // G5
+            {note: 880.00, beat: 26, duration: 0.5},   // A5 (peak)
+            {note: 783.99, beat: 26.5, duration: 0.5}, // G5
+            
+            {note: 659.25, beat: 27, duration: 0.4},   // E5
+            {note: 587.33, beat: 27.5, duration: 0.4}, // D5
+            {note: 523.25, beat: 28, duration: 0.4},   // C5
+            {note: 493.88, beat: 28.5, duration: 0.4}, // B4
+            {note: 440.00, beat: 29, duration: 0.4},   // A4
+            {note: 392.00, beat: 29.5, duration: 0.4}, // G4
+            {note: 523.25, beat: 30, duration: 1.5},   // C5 (long ending note)
+        ];
+        
+        // Harmony line (triangle wave for softer texture)
+        const harmony = [
+            // Section 1 harmony
+            {note: 329.63, beat: 1.5, duration: 0.4},  // E4
+            {note: 392.00, beat: 3.5, duration: 0.5},  // G4
+            {note: 440.00, beat: 5.5, duration: 0.4},  // A4
+            {note: 329.63, beat: 7, duration: 0.6},    // E4
+            
+            // Section 2 harmony
+            {note: 392.00, beat: 9.5, duration: 0.4},  // G4
+            {note: 329.63, beat: 11.5, duration: 0.4}, // E4
+            {note: 440.00, beat: 13.5, duration: 0.4}, // A4
+            {note: 329.63, beat: 15, duration: 0.8},   // E4
+            
+            // Section 3 harmony
+            {note: 523.25, beat: 17.5, duration: 0.4}, // C5
+            {note: 493.88, beat: 19, duration: 0.8},   // B4
+            {note: 587.33, beat: 21.5, duration: 0.4}, // D5
+            {note: 392.00, beat: 23, duration: 0.6},   // G4
+            
+            // Section 4 harmony
+            {note: 659.25, beat: 26, duration: 0.5},   // E5
+            {note: 587.33, beat: 28, duration: 0.4},   // D5
+            {note: 493.88, beat: 29.5, duration: 0.4}, // B4
+            {note: 392.00, beat: 30, duration: 1.5},   // G4
+        ];
+        
+        // Bass line - varied pattern with chord changes
+        const bass = [
+            // Section 1: Building bass
+            {note: 130.81, beat: 0, duration: 0.3},    // C2
+            {note: 130.81, beat: 1, duration: 0.3},    // C2
+            {note: 130.81, beat: 2, duration: 0.3},    // C2
+            {note: 130.81, beat: 3, duration: 0.3},    // C2
+            {note: 146.83, beat: 4, duration: 0.3},    // D2
+            {note: 146.83, beat: 5, duration: 0.3},    // D2
+            {note: 130.81, beat: 6, duration: 0.3},    // C2
+            {note: 110.00, beat: 7, duration: 0.3},    // A1
+            
+            // Section 2: Main bass (four-on-the-floor)
+            {note: 130.81, beat: 8, duration: 0.3},    // C2
+            {note: 130.81, beat: 9, duration: 0.3},    // C2
+            {note: 130.81, beat: 10, duration: 0.3},   // C2
+            {note: 130.81, beat: 11, duration: 0.3},   // C2
+            {note: 146.83, beat: 12, duration: 0.3},   // D2
+            {note: 146.83, beat: 13, duration: 0.3},   // D2
+            {note: 130.81, beat: 14, duration: 0.3},   // C2
+            {note: 123.47, beat: 15, duration: 0.3},   // B1
+            
+            // Section 3: Bridge bass with more movement
+            {note: 110.00, beat: 16, duration: 0.3},   // A1
+            {note: 110.00, beat: 17, duration: 0.3},   // A1
+            {note: 110.00, beat: 18, duration: 0.3},   // A1
+            {note: 110.00, beat: 19, duration: 0.3},   // A1
+            {note: 146.83, beat: 20, duration: 0.3},   // D2
+            {note: 146.83, beat: 21, duration: 0.3},   // D2
+            {note: 123.47, beat: 22, duration: 0.3},   // B1
+            {note: 110.00, beat: 23, duration: 0.3},   // A1
+            
+            // Section 4: Climax bass
+            {note: 130.81, beat: 24, duration: 0.3},   // C2
+            {note: 130.81, beat: 25, duration: 0.3},   // C2
+            {note: 110.00, beat: 26, duration: 0.3},   // A1
+            {note: 110.00, beat: 27, duration: 0.3},   // A1
+            {note: 146.83, beat: 28, duration: 0.3},   // D2
+            {note: 123.47, beat: 29, duration: 0.3},   // B1
+            {note: 130.81, beat: 30, duration: 1.5},   // C2 (long)
+        ];
+        
+        // Play all layers
+        melody.forEach(note => {
+            const startTime = this.audioContext.currentTime + (note.beat * beatDuration);
+            this.playMusicNote(note.note, startTime, note.duration, 'square', 0.11);
+        });
+        
+        harmony.forEach(note => {
+            const startTime = this.audioContext.currentTime + (note.beat * beatDuration);
+            this.playMusicNote(note.note, startTime, note.duration, 'triangle', 0.08);
+        });
+        
+        bass.forEach(note => {
+            const startTime = this.audioContext.currentTime + (note.beat * beatDuration);
+            this.playMusicNote(note.note, startTime, note.duration, 'sawtooth', 0.14);
+        });
+        
+        // Schedule next loop (32 beats instead of 8)
+        const loopDuration = 32 * beatDuration * 1000; // Convert to milliseconds
+        setTimeout(() => this.playMusicLoop(), loopDuration);
+    }
+    
+    playMusicNote(frequency, startTime, duration, type, volume) {
+        if (!this.musicPlaying || this.muted) return;
+        
+        const oscillator = this.audioContext.createOscillator();
+        const gainNode = this.audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(this.audioContext.destination);
+        
+        oscillator.type = type;
+        oscillator.frequency.value = frequency;
+        
+        gainNode.gain.setValueAtTime(volume * this.masterVolume * 0.3, startTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+        
+        oscillator.start(startTime);
+        oscillator.stop(startTime + duration);
+        
+        // Track this note so we can stop it if needed
+        this.currentMusicNotes.push({oscillator: oscillator, endTime: startTime + duration});
+        
+        // Clean up old notes
+        const currentTime = this.audioContext.currentTime;
+        this.currentMusicNotes = this.currentMusicNotes.filter(n => n.endTime > currentTime);
     }
 }
 
@@ -204,7 +433,7 @@ class Game {
         // Flying power-up
         this.isFlying = false;
         this.flyingTimer = 0;
-        this.flyingDuration = 600; // 10 seconds at 60fps
+        this.flyingDuration = 300; // 5 seconds at 60fps
         
         // Cheetah slow-motion power-up
         this.slowMotion = false;
@@ -792,6 +1021,9 @@ class Game {
         this.frameCount = 0;
         this.initLevel();
         this.updateUI();
+        
+        // Start background music
+        this.sound.startMusic();
     }
     
     restart() {
@@ -803,16 +1035,19 @@ class Game {
     
     pause() {
         this.state = 'paused';
+        this.sound.stopMusic();
         document.getElementById('pauseScreen').classList.remove('hidden');
     }
     
     resume() {
         this.state = 'playing';
+        this.sound.startMusic();
         document.getElementById('pauseScreen').classList.add('hidden');
     }
     
     gameOver() {
         this.state = 'gameover';
+        this.sound.stopMusic();
         this.sound.gameOver();
         document.getElementById('finalScore').textContent = this.score;
         document.getElementById('gameOverScreen').classList.remove('hidden');
@@ -820,6 +1055,7 @@ class Game {
     
     win() {
         this.score += 1000; // Bonus for winning
+        this.sound.stopMusic();
         this.sound.win();
         
         // Check if there are more levels
@@ -860,6 +1096,9 @@ class Game {
         this.state = 'playing';
         this.initLevel();
         this.updateUI();
+        
+        // Restart music
+        this.sound.startMusic();
     }
     
     playerDeath(x, y) {
@@ -879,104 +1118,12 @@ class Game {
     }
     
     respawnPlayer() {
-        // Find a safe respawn point near death position
-        const safeSpawn = this.findSafeRespawnPoint(this.deathPosition.x, this.deathPosition.y);
-        
-        // Reset player position to safe location
-        this.player.x = safeSpawn.x;
-        this.player.y = safeSpawn.y;
+        // Respawn at the top of the screen at the same x position where player died
+        this.player.x = this.deathPosition.x;
+        this.player.y = 0; // Top of the screen
         this.player.vx = 0;
         this.player.vy = 0;
         this.state = 'playing';
-    }
-    
-    findSafeRespawnPoint(deathX, deathY) {
-        // Search radius around death position
-        const searchRadius = 300;
-        let bestPlatform = null;
-        let bestDistance = Infinity;
-        
-        // Find the nearest ground or platform to the death position
-        this.platforms.forEach(platform => {
-            const platformCenterX = platform.x + platform.width / 2;
-            const platformTopY = platform.y;
-            
-            // Calculate distance from death position
-            const distance = Math.abs(platformCenterX - deathX);
-            
-            // Check if this platform is within search radius and closer than current best
-            if (distance < searchRadius && distance < bestDistance) {
-                // Make sure it's not too high above death position (within reasonable jump height)
-                if (platformTopY <= deathY + 200) {
-                    bestDistance = distance;
-                    bestPlatform = platform;
-                }
-            }
-        });
-        
-        // If no suitable platform found nearby, use starting position
-        if (!bestPlatform) {
-            return { x: 100, y: 100 };
-        }
-        
-        // Place player on top of the platform, centered
-        let spawnX = bestPlatform.x + bestPlatform.width / 2 - this.player.width / 2;
-        const spawnY = bestPlatform.y - this.player.height;
-        
-        // Check for obstacles at spawn point
-        const checkRadius = 100;
-        let isSafe = true;
-        
-        // Check for spikes near spawn point
-        this.obstacles.forEach(obstacle => {
-            if (obstacle.type === 'spikes') {
-                const obsDistance = Math.abs(obstacle.x - spawnX);
-                if (obsDistance < checkRadius) {
-                    isSafe = false;
-                }
-            }
-        });
-        
-        // If spawn point has spikes, try moving left or right on the same platform
-        if (!isSafe && bestPlatform.width > 150) {
-            // Try left side of platform
-            const leftX = bestPlatform.x + 50;
-            let leftSafe = true;
-            this.obstacles.forEach(obstacle => {
-                if (obstacle.type === 'spikes' && Math.abs(obstacle.x - leftX) < 80) {
-                    leftSafe = false;
-                }
-            });
-            
-            if (leftSafe) {
-                spawnX = leftX;
-                isSafe = true;
-            } else {
-                // Try right side of platform
-                const rightX = bestPlatform.x + bestPlatform.width - 50 - this.player.width;
-                let rightSafe = true;
-                this.obstacles.forEach(obstacle => {
-                    if (obstacle.type === 'spikes' && Math.abs(obstacle.x - rightX) < 80) {
-                        rightSafe = false;
-                    }
-                });
-                
-                if (rightSafe) {
-                    spawnX = rightX;
-                    isSafe = true;
-                }
-            }
-        }
-        
-        // If still not safe, fall back to starting position
-        if (!isSafe) {
-            return { x: 100, y: 100 };
-        }
-        
-        // Keep spawn position within level bounds
-        spawnX = Math.max(0, Math.min(spawnX, this.levelWidth - this.player.width));
-        
-        return { x: spawnX, y: spawnY };
     }
     
     updateUI() {

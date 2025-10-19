@@ -22,7 +22,7 @@ RaeMax Sisters is a retro-style jump and run platformer featuring:
 - **Arrow Keys (← →)**: Move left and right
 - **Space or ↑**: Jump
 - **P**: Pause/Resume
-- **Sound Button**: Toggle sound effects on/off
+- **Sound Button**: Toggle sound effects and background music on/off
 
 **Mobile/Touch:**
 - **◀ Button**: Move left
@@ -73,9 +73,8 @@ RaeMax Sisters is a retro-style jump and run platformer featuring:
 
 ### Death & Respawn
 - When you die, you'll see an explosion animation
-- You respawn close to where you died on the nearest safe platform
-- The game automatically finds a safe spot free of spikes and enemies
-- If no safe spot is found nearby, you'll respawn at the level start
+- You respawn at the **top of the screen** at the same horizontal position where you died
+- You'll drop down with gravity, so position yourself carefully!
 
 ## 🚀 Running the Game
 
@@ -99,11 +98,15 @@ python -m http.server 8000
   - **Heart Character** (Level 1): Large, adorable pink heart with animated legs, eyes, and a cute smile! ❤️
   - **Star Character** (Level 2): Bright golden star with sparkle effects and determined expression! ⭐
 - **Multiple Levels**: Two complete levels with progressive difficulty
-- **8-bit Sound Effects**: Authentic chiptune sounds generated with Web Audio API
+- **8-bit Sound Effects & Music**: Authentic chiptune sounds generated with Web Audio API
+  - **Background Music**: Extended electronic dance track inspired by Astronomia ⚰️🎵
+    - 4 distinct sections (intro, main riff, bridge, climax) spanning ~15 seconds
+    - 3-layer composition (melody, harmony, bass) for rich sound
+    - Dynamic chord progressions and varied melodic patterns
   - Jump sounds, gem collection chimes, flying power-up melody
   - Enemy defeat sounds, explosion effects, hit sounds
   - Victory fanfare and game over music
-  - Toggle sound on/off with mute button
+  - Toggle sound/music on/off with mute button
 - **Smooth Physics**: Realistic gravity, jumping, and collision detection
 - **Flying Power-Up**: Adorable floating kitties give you 10 seconds of flight with animated wings!
 - **Slow-Motion Power-Up**: Spotted cheetahs grant 10 seconds of slow-motion where enemies move at half speed!
@@ -111,7 +114,7 @@ python -m http.server 8000
 - **Varied Obstacles**: Dangerous spikes, solid crates, and brick blocks scattered throughout the level
 - **Particle Effects**: Visual feedback for collecting items and defeating enemies
 - **Animated Sprites**: Walking animations, enemy movements, gem sparkles, and floating kitties
-- **Smart Respawn System**: Respawn close to where you died in a safe location free of hazards
+- **Drop-In Respawn System**: Respawn from the top at your death position and fall with gravity
 - **Mobile Touch Controls**: On-screen buttons for playing on phones and tablets
 - **Multiple Game States**: Start screen, pause menu, game over, and victory screens
 - **Responsive Design**: Works on different screen sizes
