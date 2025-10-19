@@ -215,6 +215,8 @@ class Game {
         this.deathPosition = { x: 100, y: 100 };
         
         // Level settings
+        this.currentLevel = 1;
+        this.maxLevels = 2;
         this.levelWidth = 4000;
         this.gravity = 0.1;
         
@@ -333,6 +335,12 @@ class Game {
     }
     
     initLevel() {
+        // Clear power-ups when starting a new level
+        this.isFlying = false;
+        this.flyingTimer = 0;
+        this.slowMotion = false;
+        this.slowMotionTimer = 0;
+        
         // Create player (2x size)
         this.player = {
             x: 100,
@@ -349,6 +357,15 @@ class Game {
             animTimer: 0
         };
         
+        // Load the appropriate level
+        if (this.currentLevel === 1) {
+            this.initLevel1();
+        } else if (this.currentLevel === 2) {
+            this.initLevel2();
+        }
+    }
+    
+    initLevel1() {
         // Create platforms (ground and floating platforms)
         this.platforms = [];
         
@@ -547,6 +564,223 @@ class Game {
         });
     }
     
+    initLevel2() {
+        // Level 2 - HARDER! Wider gaps, higher platforms, more enemies
+        
+        // Create platforms (ground and floating platforms)
+        this.platforms = [];
+        
+        // Ground level (with some gaps!)
+        for (let i = 0; i < 100; i++) {
+            // Create gaps in the ground for added difficulty
+            const isGap = (i >= 15 && i < 20) || (i >= 35 && i < 40) || 
+                          (i >= 55 && i < 62) || (i >= 75 && i < 82);
+            
+            if (!isGap) {
+                this.platforms.push({
+                    x: i * 40,
+                    y: 460,
+                    width: 40,
+                    height: 40,
+                    type: 'ground'
+                });
+            }
+        }
+        
+        // Floating platforms - MUCH harder layout with wider gaps and higher jumps
+        const platformData = [
+            // Starting gauntlet - immediate challenge
+            { x: 200, y: 360, w: 80, h: 20 },
+            { x: 360, y: 280, w: 70, h: 20 },  // Higher jump
+            { x: 520, y: 220, w: 80, h: 20 },  // Even higher
+            { x: 680, y: 160, w: 70, h: 20 },  // Very high
+            { x: 850, y: 240, w: 80, h: 20 },  // Drop down
+            
+            // Mid section - tricky platforming
+            { x: 1020, y: 300, w: 90, h: 20 },
+            { x: 1200, y: 360, w: 70, h: 20 },
+            { x: 1380, y: 280, w: 80, h: 20 },  // Wide gap
+            { x: 1560, y: 200, w: 60, h: 20 },  // Small platform, high up
+            { x: 1700, y: 140, w: 80, h: 20 },  // Very high
+            { x: 1860, y: 220, w: 70, h: 20 },
+            { x: 2020, y: 300, w: 90, h: 20 },
+            { x: 2200, y: 340, w: 80, h: 20 },
+            
+            // Upper challenge - maximum height
+            { x: 2400, y: 260, w: 70, h: 20 },
+            { x: 2570, y: 180, w: 60, h: 20 },  // Tiny platform
+            { x: 2720, y: 120, w: 80, h: 20 },  // Highest point in level
+            { x: 2890, y: 180, w: 70, h: 20 },
+            { x: 3050, y: 260, w: 80, h: 20 },
+            { x: 3220, y: 320, w: 70, h: 20 },
+            
+            // Final gauntlet - most difficult
+            { x: 3400, y: 240, w: 60, h: 20 },  // Small
+            { x: 3550, y: 180, w: 70, h: 20 },
+            { x: 3720, y: 140, w: 60, h: 20 },  // Tiny and high
+            { x: 3870, y: 200, w: 90, h: 20 },  // Final platform
+        ];
+        
+        platformData.forEach(p => {
+            this.platforms.push({
+                x: p.x,
+                y: p.y,
+                width: p.w,
+                height: p.h,
+                type: 'platform'
+            });
+        });
+        
+        // Create gems - spread out in hard-to-reach places
+        this.gems = [];
+        const gemPositions = [
+            { x: 240, y: 320 }, { x: 400, y: 240 }, { x: 560, y: 180 },
+            { x: 720, y: 120 }, { x: 890, y: 200 }, { x: 1060, y: 260 },
+            { x: 1240, y: 320 }, { x: 1420, y: 240 }, { x: 1600, y: 160 },
+            { x: 1740, y: 100 }, { x: 1900, y: 180 }, { x: 2060, y: 260 },
+            { x: 2240, y: 300 }, { x: 2440, y: 220 }, { x: 2610, y: 140 },
+            { x: 2760, y: 80 },  // Very high gem
+            { x: 2930, y: 140 }, { x: 3090, y: 220 }, { x: 3260, y: 280 },
+            { x: 3440, y: 200 }, { x: 3590, y: 140 }, { x: 3760, y: 100 },
+            { x: 3910, y: 160 }
+        ];
+        
+        gemPositions.forEach(pos => {
+            this.gems.push({
+                x: pos.x,
+                y: pos.y,
+                width: 16,
+                height: 16,
+                collected: false,
+                animFrame: 0
+            });
+        });
+        
+        // Create enemies - MORE enemies, faster movement
+        this.enemies = [];
+        const enemyPositions = [
+            { x: 300, y: 330, range: 60 },
+            { x: 600, y: 190, range: 60 },
+            { x: 900, y: 210, range: 80 },
+            { x: 1300, y: 330, range: 70 },
+            { x: 1600, y: 170, range: 50 },   // High up enemy
+            { x: 1900, y: 190, range: 60 },
+            { x: 2200, y: 310, range: 80 },
+            { x: 2500, y: 230, range: 60 },
+            { x: 2800, y: 90, range: 60 },    // Very high enemy
+            { x: 3100, y: 230, range: 70 },
+            { x: 3400, y: 210, range: 50 },   // Small patrol area
+            { x: 3700, y: 110, range: 50 },   // Final high enemy
+        ];
+        
+        enemyPositions.forEach(pos => {
+            this.enemies.push({
+                x: pos.x,
+                y: pos.y,
+                width: 24,
+                height: 24,
+                vx: 1.0,  // Faster than level 1 (was 0.75)
+                startX: pos.x,
+                range: pos.range,
+                animFrame: 0
+            });
+        });
+        
+        // Create kitties - fewer and harder to reach
+        this.kitties = [];
+        const kittyPositions = [
+            { x: 700, y: 100 },   // Very high
+            { x: 1750, y: 90 },   // Highest area
+            { x: 2750, y: 70 },   // At the peak
+            { x: 3600, y: 100 }   // Near the end
+        ];
+        
+        kittyPositions.forEach(pos => {
+            this.kitties.push({
+                x: pos.x,
+                y: pos.y,
+                width: 20,
+                height: 20,
+                collected: false,
+                animFrame: 0
+            });
+        });
+        
+        // Create cheetahs - fewer slow-motion power-ups
+        this.cheetahs = [];
+        const cheetahPositions = [
+            { x: 1000, y: 250 },
+            { x: 2100, y: 250 },
+            { x: 3300, y: 270 }
+        ];
+        
+        cheetahPositions.forEach(pos => {
+            this.cheetahs.push({
+                x: pos.x,
+                y: pos.y,
+                width: 24,
+                height: 20,
+                collected: false,
+                animFrame: 0
+            });
+        });
+        
+        // Create ground obstacles - MORE spikes and obstacles
+        this.obstacles = [];
+        const obstacleData = [
+            // Ground level hazards (between pit sections)
+            { x: 240, y: 428, w: 48, h: 32, type: 'spikes' },
+            { x: 340, y: 420, w: 40, h: 40, type: 'crate' },
+            { x: 440, y: 428, w: 40, h: 32, type: 'spikes' },
+            { x: 540, y: 428, w: 32, h: 32, type: 'block' },
+            
+            // More intense ground obstacles
+            { x: 840, y: 428, w: 48, h: 32, type: 'spikes' },
+            { x: 940, y: 420, w: 40, h: 40, type: 'crate' },
+            { x: 1040, y: 428, w: 40, h: 32, type: 'spikes' },
+            { x: 1160, y: 428, w: 48, h: 32, type: 'spikes' },
+            { x: 1280, y: 420, w: 40, h: 40, type: 'crate' },
+            { x: 1360, y: 428, w: 32, h: 32, type: 'block' },
+            { x: 1460, y: 428, w: 40, h: 32, type: 'spikes' },
+            { x: 1560, y: 428, w: 32, h: 32, type: 'block' },
+            { x: 1660, y: 428, w: 48, h: 32, type: 'spikes' },
+            { x: 1760, y: 420, w: 40, h: 40, type: 'crate' },
+            { x: 1880, y: 428, w: 40, h: 32, type: 'spikes' },
+            { x: 1980, y: 428, w: 32, h: 32, type: 'block' },
+            
+            // Upper section obstacles
+            { x: 2100, y: 428, w: 48, h: 32, type: 'spikes' },
+            { x: 2200, y: 428, w: 32, h: 32, type: 'block' },
+            { x: 2320, y: 428, w: 40, h: 32, type: 'spikes' },
+            { x: 2420, y: 420, w: 40, h: 40, type: 'crate' },
+            { x: 2540, y: 428, w: 48, h: 32, type: 'spikes' },
+            { x: 2660, y: 428, w: 32, h: 32, type: 'block' },
+            { x: 2760, y: 428, w: 40, h: 32, type: 'spikes' },
+            { x: 2880, y: 420, w: 40, h: 40, type: 'crate' },
+            { x: 2980, y: 428, w: 48, h: 32, type: 'spikes' },
+            
+            // Final gauntlet - most intense
+            { x: 3100, y: 428, w: 48, h: 32, type: 'spikes' },
+            { x: 3200, y: 428, w: 32, h: 32, type: 'block' },
+            { x: 3280, y: 428, w: 40, h: 32, type: 'spikes' },
+            { x: 3380, y: 420, w: 40, h: 40, type: 'crate' },
+            { x: 3480, y: 428, w: 48, h: 32, type: 'spikes' },
+            { x: 3580, y: 428, w: 32, h: 32, type: 'block' },
+            { x: 3660, y: 428, w: 40, h: 32, type: 'spikes' },
+            { x: 3760, y: 428, w: 48, h: 32, type: 'spikes' }
+        ];
+        
+        obstacleData.forEach(obs => {
+            this.obstacles.push({
+                x: obs.x,
+                y: obs.y,
+                width: obs.w,
+                height: obs.h,
+                type: obs.type
+            });
+        });
+    }
+    
     start() {
         document.getElementById('startScreen').classList.add('hidden');
         document.getElementById('touchControls').classList.remove('hidden');
@@ -563,6 +797,7 @@ class Game {
     restart() {
         document.getElementById('gameOverScreen').classList.add('hidden');
         document.getElementById('winScreen').classList.add('hidden');
+        this.currentLevel = 1; // Reset to level 1
         this.start();
     }
     
@@ -584,11 +819,47 @@ class Game {
     }
     
     win() {
-        this.state = 'win';
         this.score += 1000; // Bonus for winning
         this.sound.win();
-        document.getElementById('winScore').textContent = this.score;
-        document.getElementById('winScreen').classList.remove('hidden');
+        
+        // Check if there are more levels
+        if (this.currentLevel < this.maxLevels) {
+            // Progress to next level
+            this.currentLevel++;
+            this.state = 'win';
+            document.getElementById('winScore').textContent = this.score;
+            document.getElementById('winScreen').classList.remove('hidden');
+            
+            // Show next level button, hide it for final level
+            document.getElementById('nextLevelButton').classList.remove('hidden');
+            
+            // Update win screen message for level progression
+            const winTitle = document.querySelector('#winScreen .pixel-title');
+            if (winTitle) {
+                winTitle.textContent = `LEVEL ${this.currentLevel - 1} COMPLETE!`;
+            }
+        } else {
+            // Beat all levels!
+            this.state = 'win';
+            document.getElementById('winScore').textContent = this.score;
+            document.getElementById('winScreen').classList.remove('hidden');
+            
+            // Hide next level button on final win
+            document.getElementById('nextLevelButton').classList.add('hidden');
+            
+            const winTitle = document.querySelector('#winScreen .pixel-title');
+            if (winTitle) {
+                winTitle.textContent = 'YOU WIN! ALL LEVELS COMPLETE!';
+            }
+        }
+    }
+    
+    nextLevel() {
+        // Start the next level
+        document.getElementById('winScreen').classList.add('hidden');
+        this.state = 'playing';
+        this.initLevel();
+        this.updateUI();
     }
     
     playerDeath(x, y) {
@@ -1409,6 +1680,15 @@ class Game {
     }
     
     drawPlayer() {
+        // Draw different character based on level
+        if (this.currentLevel === 1) {
+            this.drawHeartPlayer();
+        } else if (this.currentLevel === 2) {
+            this.drawStarPlayer();
+        }
+    }
+    
+    drawHeartPlayer() {
         const p = this.player;
         const centerX = p.x + 24;
         const centerY = p.y + 24;
@@ -1545,6 +1825,149 @@ class Game {
             this.ctx.strokeStyle = '#ff69b4';
             this.ctx.lineWidth = 2;
             this.ctx.stroke();
+        }
+    }
+    
+    drawStarPlayer() {
+        const p = this.player;
+        const centerX = p.x + 24;
+        const centerY = p.y + 24;
+        
+        this.ctx.save();
+        
+        // Star body - bright golden yellow
+        const starSize = 22; // Slightly larger than heart
+        const spikes = 5;
+        const outerRadius = starSize;
+        const innerRadius = starSize * 0.4;
+        
+        // Draw star shape
+        this.ctx.fillStyle = '#ffdd00'; // Bright gold
+        this.ctx.beginPath();
+        
+        for (let i = 0; i < spikes * 2; i++) {
+            const radius = i % 2 === 0 ? outerRadius : innerRadius;
+            const angle = (Math.PI / spikes) * i - Math.PI / 2;
+            const x = centerX + radius * Math.cos(angle);
+            const y = centerY + radius * Math.sin(angle);
+            
+            if (i === 0) {
+                this.ctx.moveTo(x, y);
+            } else {
+                this.ctx.lineTo(x, y);
+            }
+        }
+        
+        this.ctx.closePath();
+        this.ctx.fill();
+        
+        // Star outline
+        this.ctx.strokeStyle = '#ff8800'; // Orange outline
+        this.ctx.lineWidth = 2;
+        this.ctx.stroke();
+        
+        // Add sparkle highlight
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        this.ctx.beginPath();
+        this.ctx.arc(centerX - 5, centerY - 5, 4, 0, Math.PI * 2);
+        this.ctx.fill();
+        
+        // Eyes on the star
+        this.ctx.fillStyle = '#000';
+        if (p.direction === 1) {
+            // Looking right
+            this.ctx.fillRect(centerX + 4, centerY - 3, 6, 6);
+            this.ctx.fillRect(centerX - 8, centerY - 3, 4, 6);
+        } else {
+            // Looking left
+            this.ctx.fillRect(centerX - 10, centerY - 3, 6, 6);
+            this.ctx.fillRect(centerX + 4, centerY - 3, 4, 6);
+        }
+        
+        // Determined smile
+        this.ctx.strokeStyle = '#000';
+        this.ctx.lineWidth = 2;
+        this.ctx.beginPath();
+        this.ctx.arc(centerX, centerY + 3, 6, 0, Math.PI);
+        this.ctx.stroke();
+        
+        this.ctx.restore();
+        
+        // Legs (animated when moving) - golden/orange legs
+        const legY = centerY + 22;
+        this.ctx.fillStyle = '#ffaa00';
+        
+        if (p.onGround && p.vx !== 0) {
+            // Walking animation
+            if (p.animFrame % 2 === 0) {
+                this.ctx.fillRect(centerX - 12, legY, 8, 16);
+                this.ctx.fillRect(centerX + 4, legY, 8, 16);
+            } else {
+                this.ctx.fillRect(centerX - 8, legY, 8, 16);
+                this.ctx.fillRect(centerX, legY, 8, 16);
+            }
+        } else {
+            // Standing still
+            this.ctx.fillRect(centerX - 8, legY, 8, 16);
+            this.ctx.fillRect(centerX, legY, 8, 16);
+        }
+        
+        // Feet
+        this.ctx.fillStyle = '#ff8800';
+        if (p.onGround && p.vx !== 0) {
+            if (p.animFrame % 2 === 0) {
+                this.ctx.fillRect(centerX - 12, legY + 16, 10, 6);
+                this.ctx.fillRect(centerX + 4, legY + 16, 10, 6);
+            } else {
+                this.ctx.fillRect(centerX - 8, legY + 16, 10, 6);
+                this.ctx.fillRect(centerX, legY + 16, 10, 6);
+            }
+        } else {
+            this.ctx.fillRect(centerX - 8, legY + 16, 10, 6);
+            this.ctx.fillRect(centerX, legY + 16, 10, 6);
+        }
+        
+        // Wings when flying! - sparkly star trail
+        if (this.isFlying) {
+            const wingFlap = Math.sin(this.frameCount * 0.3) * 8;
+            
+            // Star trail/sparkle wings
+            this.ctx.fillStyle = 'rgba(255, 221, 0, 0.7)';
+            
+            // Left sparkle wing
+            this.ctx.beginPath();
+            this.ctx.moveTo(centerX - 20, centerY);
+            this.ctx.lineTo(centerX - 38, centerY - 10 + wingFlap);
+            this.ctx.lineTo(centerX - 42, centerY + wingFlap);
+            this.ctx.lineTo(centerX - 38, centerY + 10 + wingFlap);
+            this.ctx.closePath();
+            this.ctx.fill();
+            this.ctx.strokeStyle = '#ffdd00';
+            this.ctx.lineWidth = 2;
+            this.ctx.stroke();
+            
+            // Right sparkle wing
+            this.ctx.fillStyle = 'rgba(255, 221, 0, 0.7)';
+            this.ctx.beginPath();
+            this.ctx.moveTo(centerX + 20, centerY);
+            this.ctx.lineTo(centerX + 38, centerY - 10 + wingFlap);
+            this.ctx.lineTo(centerX + 42, centerY + wingFlap);
+            this.ctx.lineTo(centerX + 38, centerY + 10 + wingFlap);
+            this.ctx.closePath();
+            this.ctx.fill();
+            this.ctx.strokeStyle = '#ffdd00';
+            this.ctx.lineWidth = 2;
+            this.ctx.stroke();
+            
+            // Add sparkle points
+            for (let i = 0; i < 3; i++) {
+                const sparkleX = centerX + (Math.random() - 0.5) * 40;
+                const sparkleY = centerY + (Math.random() - 0.5) * 40;
+                this.ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                this.ctx.beginPath();
+                this.ctx.arc(sparkleX, sparkleY, 2, 0, Math.PI * 2);
+                this.ctx.fill();
+            }
         }
     }
     

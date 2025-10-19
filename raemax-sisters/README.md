@@ -6,7 +6,8 @@ An 8-bit style platformer game inspired by the Commodore 64 classic "The Great G
 
 RaeMax Sisters is a retro-style jump and run platformer featuring:
 - Classic 8-bit pixel art aesthetic
-- **Adorable heart-shaped character with legs** ❤️
+- **Two playable characters**: Heart character (Level 1) ❤️ and Star character (Level 2) ⭐
+- **Multiple levels** with increasing difficulty
 - Side-scrolling level design
 - Collectible gems
 - Challenging enemies
@@ -30,7 +31,8 @@ RaeMax Sisters is a retro-style jump and run platformer featuring:
 - Touch controls automatically appear on mobile devices and tablets!
 
 ### Objective
-- Navigate through the level by jumping across platforms
+- **Beat both levels** to complete the game!
+- Navigate through each level by jumping across platforms
 - Collect golden gems to increase your score (+100 points each)
 - **Collect flying kitties** 🐱 for a 10-second flying power-up! (+500 points)
   - Hold Space/↑ to fly upward, release to glide down
@@ -55,6 +57,19 @@ RaeMax Sisters is a retro-style jump and run platformer featuring:
 - **Cheetah collected: 500 points each**
 - Level completion: 1000 bonus points
 - Lives: Start with 3 lives
+- **Complete a level**: 1000 bonus points
+
+### Levels
+- **Level 1**: Classic platforming with the adorable heart character ❤️
+  - Learn the basics with moderate difficulty
+  - Plenty of platforms and power-ups
+- **Level 2**: Advanced challenge with the star character ⭐
+  - Wider gaps between platforms
+  - Higher jumps required
+  - More enemies (12 vs 8) with faster movement
+  - Ground pits to avoid
+  - Fewer power-ups in harder-to-reach places
+  - Truly tests your platforming skills!
 
 ### Death & Respawn
 - When you die, you'll see an explosion animation
@@ -80,7 +95,10 @@ python -m http.server 8000
 ## 🎨 Features
 
 - **Retro 8-bit Graphics**: Pixelated characters and environments with bold, vibrant colors
-- **Heart Character**: Play as a large, adorable heart-shaped character (2x size!) with animated legs, eyes, and a cute smile!
+- **Two Unique Characters**: 
+  - **Heart Character** (Level 1): Large, adorable pink heart with animated legs, eyes, and a cute smile! ❤️
+  - **Star Character** (Level 2): Bright golden star with sparkle effects and determined expression! ⭐
+- **Multiple Levels**: Two complete levels with progressive difficulty
 - **8-bit Sound Effects**: Authentic chiptune sounds generated with Web Audio API
   - Jump sounds, gem collection chimes, flying power-up melody
   - Enemy defeat sounds, explosion effects, hit sounds
@@ -100,6 +118,7 @@ python -m http.server 8000
 
 ## 🎯 Tips
 
+### General Tips
 - Time your jumps carefully to land on platforms
 - Jump on enemies from above to defeat them safely
 - **Look for floating white kitties** 🐱 - they give you flying powers!
@@ -113,7 +132,14 @@ python -m http.server 8000
 - Jump over brick blocks or find alternate routes around them
 - Collect all gems for maximum score
 - Watch out for enemy patrol patterns
-- The level gets progressively more challenging as you advance
+- Each level gets progressively more challenging as you advance
+
+### Level 2 Specific Tips
+- **Mind the gaps!** Level 2 has pits in the ground - don't fall in!
+- The star character can jump the same height, but you'll need perfect timing
+- Enemies move faster (1.0x vs 0.75x) - use slow-motion cheetahs strategically
+- Platforms are smaller and farther apart - patience is key
+- Flying kitties are higher up and harder to reach, but worth the effort!
 
 ## 📝 Technical Details
 
