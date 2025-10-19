@@ -12,6 +12,7 @@ class SoundManager {
         this.musicPlaying = false;
         this.musicGainNode = null;
         this.currentMusicNotes = [];
+        this.musicLoopTimeout = null;
     }
     
     playTone(frequency, duration, type = 'square', volume = 0.3) {
@@ -174,6 +175,12 @@ class SoundManager {
     startMusic() {
         if (this.musicPlaying || this.muted) return;
         
+        // Clear any existing timeout first
+        if (this.musicLoopTimeout) {
+            clearTimeout(this.musicLoopTimeout);
+            this.musicLoopTimeout = null;
+        }
+        
         this.musicPlaying = true;
         this.playMusicLoop();
     }
@@ -181,10 +188,20 @@ class SoundManager {
     stopMusic() {
         this.musicPlaying = false;
         
+        // Clear the music loop timeout
+        if (this.musicLoopTimeout) {
+            clearTimeout(this.musicLoopTimeout);
+            this.musicLoopTimeout = null;
+        }
+        
         // Stop all current music notes
         this.currentMusicNotes.forEach(note => {
             if (note.oscillator) {
-                note.oscillator.stop();
+                try {
+                    note.oscillator.stop();
+                } catch (e) {
+                    // Oscillator may already be stopped
+                }
             }
         });
         this.currentMusicNotes = [];
@@ -199,6 +216,12 @@ class SoundManager {
     
     playMusicLoop() {
         if (!this.musicPlaying || this.muted) return;
+        
+        // Clear any existing timeout to prevent overlapping
+        if (this.musicLoopTimeout) {
+            clearTimeout(this.musicLoopTimeout);
+            this.musicLoopTimeout = null;
+        }
         
         // Astronomia-inspired melody (upbeat electronic dance)
         // Extended pattern - 32 beats (4 sections x 8 beats) for less repetition
@@ -361,7 +384,7 @@ class SoundManager {
         
         // Schedule next loop (32 beats instead of 8)
         const loopDuration = 32 * beatDuration * 1000; // Convert to milliseconds
-        setTimeout(() => this.playMusicLoop(), loopDuration);
+        this.musicLoopTimeout = setTimeout(() => this.playMusicLoop(), loopDuration);
     }
     
     playMusicNote(frequency, startTime, duration, type, volume) {
