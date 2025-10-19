@@ -1,0 +1,36 @@
+{
+  "env": {
+    "browser": true,
+    "es2021": true
+  },
+  "extends": "eslint:recommended",
+  "parserOptions": {
+    "ecmaVersion": 2021,
+    "sourceType": "module"
+  },
+  "rules": {
+    "indent": ["error", 4],
+    "no-trailing-spaces": "off",
+    "comma-dangle": "off",
+    "object-curly-newline": "off",
+    "object-property-newline": "off",
+    "arrow-parens": "off",
+    "no-plusplus": "off",
+    "no-unused-vars": "warn",
+    "no-console": "off",
+    "dot-notation": "off",
+    "max-len": ["error", { "code": 120 }],
+    "class-methods-use-this": "off",
+    "operator-linebreak": "off",
+    "object-shorthand": "off",
+    "no-mixed-operators": "off",
+    "prefer-destructuring": "off",
+    "eol-last": ["error", "always"],
+    "no-multiple-empty-lines": ["error", { "max": 1, "maxEOF": 0 }],
+    "max-classes-per-file": "off",
+    "object-curly-spacing": "off",
+    "no-multi-spaces": "off",
+    "function-call-argument-newline": "off",
+    "function-paren-newline": "off"
+  }
+}

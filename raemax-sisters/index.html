@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RaeMax Sisters - 8-bit Platformer</title>
+    <link rel="stylesheet" href="game.css">
+</head>
+<body>
+    <div class="game-container">
+        <div class="game-header">
+            <div class="title">RAEMAX SISTERS</div>
+            <div class="stats">
+                <div class="stat">SCORE: <span id="score">0</span></div>
+                <div class="stat">LIVES: <span id="lives">3</span></div>
+                <div class="stat">GEMS: <span id="gems">0</span></div>
+                <div class="stat">TIME: <span id="time">0</span></div>
+                <div class="stat flying-stat hidden" id="flyingStat">✨ FLYING: <span id="flyingTime">0</span>s</div>
+                <div class="stat slowmo-stat hidden" id="slowMoStat">🐆 SLOW-MO: <span id="slowMoTime">0</span>s</div>
+            </div>
+            <button id="muteButton" class="mute-button" onclick="game.toggleSound()">🔊 SOUND ON</button>
+        </div>
+        
+        <div class="game-screen">
+            <canvas id="gameCanvas"></canvas>
+            
+            <!-- Touch Controls for Mobile -->
+            <div id="touchControls" class="touch-controls hidden">
+                <div class="touch-left">
+                    <button id="btnLeft" class="touch-button arrow-left">◀</button>
+                </div>
+                <div class="touch-center">
+                    <button id="btnJump" class="touch-button jump-button">JUMP</button>
+                </div>
+                <div class="touch-right">
+                    <button id="btnRight" class="touch-button arrow-right">▶</button>
+                </div>
+            </div>
+            
+            <div id="startScreen" class="overlay">
+                <div class="overlay-content">
+                    <h1 class="pixel-title">RAEMAX SISTERS</h1>
+                    <p class="subtitle">A Retro Platformer Adventure</p>
+                    <div class="instructions">
+                        <h3>CONTROLS</h3>
+                        <p>← → ARROW KEYS: Move</p>
+                        <p>SPACE or ↑: Jump</p>
+                        <p>P: Pause</p>
+                        <p style="margin-top: 10px; color: #ffaa00;">📱 Touch controls available on mobile!</p>
+                    </div>
+                    <div class="start-button" onclick="game.start()">PRESS START</div>
+                </div>
+            </div>
+            
+            <div id="gameOverScreen" class="overlay hidden">
+                <div class="overlay-content">
+                    <h1 class="pixel-title">GAME OVER</h1>
+                    <p class="final-score">FINAL SCORE: <span id="finalScore">0</span></p>
+                    <div class="start-button" onclick="game.restart()">TRY AGAIN</div>
+                </div>
+            </div>
+            
+            <div id="winScreen" class="overlay hidden">
+                <div class="overlay-content">
+                    <h1 class="pixel-title">YOU WIN!</h1>
+                    <p class="final-score">FINAL SCORE: <span id="winScore">0</span></p>
+                    <p class="congratulations">CONGRATULATIONS!</p>
+                    <div class="start-button" onclick="game.restart()">PLAY AGAIN</div>
+                </div>
+            </div>
+            
+            <div id="pauseScreen" class="overlay hidden">
+                <div class="overlay-content">
+                    <h1 class="pixel-title">PAUSED</h1>
+                    <p>Press P to continue</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="game-footer">
+            <p>© 2025 RaeMax Sisters - Inspired by the C64 Classic</p>
+        </div>
+    </div>
+    
+    <script src="game.js"></script>
+</body>
+</html>
+
