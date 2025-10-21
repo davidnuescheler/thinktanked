@@ -452,6 +452,7 @@ class Game {
         this.kitties = [];
         this.cheetahs = [];
         this.particles = [];
+        this.fallingStars = [];
         
         // Flying power-up
         this.isFlying = false;
@@ -468,7 +469,7 @@ class Game {
         
         // Level settings
         this.currentLevel = 1;
-        this.maxLevels = 2;
+        this.maxLevels = 3;
         this.levelWidth = 4000;
         this.gravity = 0.1;
         
@@ -614,6 +615,8 @@ class Game {
             this.initLevel1();
         } else if (this.currentLevel === 2) {
             this.initLevel2();
+        } else if (this.currentLevel === 3) {
+            this.initLevel3();
         }
     }
     
@@ -1033,6 +1036,165 @@ class Game {
         });
     }
     
+    initLevel3() {
+        // Level 3 - NIGHT TIME with FALLING STARS!
+        // Dark sky, stars falling from above, spaced evenly
+        
+        // Create platforms (ground and floating platforms)
+        this.platforms = [];
+        
+        // Ground level (solid ground)
+        for (let i = 0; i < 100; i++) {
+            this.platforms.push({
+                x: i * 40,
+                y: 460,
+                width: 40,
+                height: 40,
+                type: 'ground'
+            });
+        }
+        
+        // Floating platforms - strategic placement for dodging falling stars
+        const platformData = [
+            // Starting area - safe zone
+            { x: 200, y: 380, w: 100, h: 20 },
+            { x: 360, y: 320, w: 90, h: 20 },
+            { x: 520, y: 260, w: 100, h: 20 },
+            { x: 680, y: 200, w: 80, h: 20 },
+            { x: 840, y: 280, w: 90, h: 20 },
+            
+            // Mid section - requires dodging
+            { x: 1000, y: 340, w: 100, h: 20 },
+            { x: 1180, y: 280, w: 80, h: 20 },
+            { x: 1340, y: 220, w: 90, h: 20 },
+            { x: 1500, y: 160, w: 100, h: 20 },
+            { x: 1680, y: 240, w: 80, h: 20 },
+            { x: 1840, y: 300, w: 100, h: 20 },
+            { x: 2020, y: 360, w: 90, h: 20 },
+            
+            // Upper section - heavy star activity
+            { x: 2200, y: 300, w: 80, h: 20 },
+            { x: 2360, y: 240, w: 90, h: 20 },
+            { x: 2540, y: 180, w: 100, h: 20 },
+            { x: 2720, y: 140, w: 80, h: 20 },
+            { x: 2880, y: 200, w: 90, h: 20 },
+            { x: 3040, y: 280, w: 100, h: 20 },
+            
+            // Final section - intense starfall
+            { x: 3220, y: 340, w: 90, h: 20 },
+            { x: 3380, y: 260, w: 80, h: 20 },
+            { x: 3540, y: 200, w: 100, h: 20 },
+            { x: 3700, y: 160, w: 90, h: 20 },
+            { x: 3860, y: 240, w: 100, h: 20 },
+        ];
+        
+        platformData.forEach(p => {
+            this.platforms.push({
+                x: p.x,
+                y: p.y,
+                width: p.w,
+                height: p.h,
+                type: 'platform'
+            });
+        });
+        
+        // Create gems - fewer but higher value
+        this.gems = [];
+        const gemPositions = [
+            { x: 240, y: 340 }, { x: 400, y: 280 }, { x: 560, y: 220 },
+            { x: 720, y: 160 }, { x: 880, y: 240 }, { x: 1040, y: 300 },
+            { x: 1220, y: 240 }, { x: 1380, y: 180 }, { x: 1540, y: 120 },
+            { x: 1720, y: 200 }, { x: 1880, y: 260 }, { x: 2060, y: 320 },
+            { x: 2240, y: 260 }, { x: 2400, y: 200 }, { x: 2580, y: 140 },
+            { x: 2760, y: 100 }, { x: 2920, y: 160 }, { x: 3080, y: 240 },
+            { x: 3260, y: 300 }, { x: 3420, y: 220 }, { x: 3580, y: 160 },
+            { x: 3740, y: 120 }, { x: 3900, y: 200 }
+        ];
+        
+        gemPositions.forEach(pos => {
+            this.gems.push({
+                x: pos.x,
+                y: pos.y,
+                width: 16,
+                height: 16,
+                collected: false,
+                animFrame: 0
+            });
+        });
+        
+        // Create enemies - fewer ground enemies
+        this.enemies = [];
+        const enemyPositions = [
+            { x: 400, y: 290, range: 70 },
+            { x: 1100, y: 310, range: 80 },
+            { x: 1700, y: 210, range: 60 },
+            { x: 2400, y: 210, range: 70 },
+            { x: 3100, y: 250, range: 80 },
+            { x: 3600, y: 170, range: 60 }
+        ];
+        
+        enemyPositions.forEach(pos => {
+            this.enemies.push({
+                x: pos.x,
+                y: pos.y,
+                width: 24,
+                height: 24,
+                vx: 0.9,
+                startX: pos.x,
+                range: pos.range,
+                animFrame: 0
+            });
+        });
+        
+        // Create kitties - fewer flying power-ups
+        this.kitties = [];
+        const kittyPositions = [
+            { x: 900, y: 120 },
+            { x: 1800, y: 150 },
+            { x: 2700, y: 100 },
+            { x: 3500, y: 140 }
+        ];
+        
+        kittyPositions.forEach(pos => {
+            this.kitties.push({
+                x: pos.x,
+                y: pos.y,
+                width: 20,
+                height: 20,
+                collected: false,
+                animFrame: 0
+            });
+        });
+        
+        // Create cheetahs - slow-motion is crucial for dodging stars!
+        this.cheetahs = [];
+        const cheetahPositions = [
+            { x: 600, y: 150 },
+            { x: 1400, y: 170 },
+            { x: 2200, y: 250 },
+            { x: 2900, y: 150 },
+            { x: 3700, y: 200 }
+        ];
+        
+        cheetahPositions.forEach(pos => {
+            this.cheetahs.push({
+                x: pos.x,
+                y: pos.y,
+                width: 24,
+                height: 20,
+                collected: false,
+                animFrame: 0
+            });
+        });
+        
+        // No ground obstacles - the falling stars are the main hazard!
+        this.obstacles = [];
+        
+        // Initialize falling stars - evenly spaced across the level
+        this.fallingStars = [];
+        // Stars will spawn dynamically during gameplay
+    }
+    
     start() {
         document.getElementById('startScreen').classList.add('hidden');
         document.getElementById('touchControls').classList.remove('hidden');
@@ -1078,6 +1240,8 @@ class Game {
     
     win() {
         this.score += 1000; // Bonus for winning
+        this.lives++; // Bonus life for completing level
+        this.updateUI();
         this.sound.stopMusic();
         this.sound.win();
         
@@ -1245,6 +1409,11 @@ class Game {
                 cheetah.animFrame = (this.frameCount % 30) / 30;
             }
         });
+        
+        // Update falling stars (Level 3)
+        if (this.currentLevel === 3) {
+            this.updateFallingStars();
+        }
         
         // Update flying timer
         if (this.isFlying) {
@@ -1472,6 +1641,56 @@ class Game {
         });
     }
     
+    updateFallingStars() {
+        const speedMultiplier = this.slowMotion ? 0.3 : 1.0;
+        
+        // Spawn new stars - randomly across the screen
+        const spawnChance = 0.0008; // 0.08% chance per frame to spawn a star (very rare)
+        
+        // Random spawn logic
+        if (Math.random() < spawnChance) {
+            // Spawn a single star at a random position
+            const spawnRange = this.canvas.width + 400; // Wider spawn range
+            const starX = this.camera.x - 100 + Math.random() * spawnRange;
+            
+            this.fallingStars.push({
+                x: starX,
+                y: -30, // Start above screen
+                width: 20,
+                height: 20,
+                vy: 2 + Math.random() * 1.5, // Varying fall speeds
+                animFrame: Math.random(), // Random animation start
+                rotation: Math.random() * Math.PI * 2
+            });
+        }
+        
+        // Update existing stars
+        this.fallingStars = this.fallingStars.filter(star => {
+            star.y += star.vy * speedMultiplier;
+            star.animFrame = (star.animFrame + 0.02) % 1;
+            star.rotation += 0.05 * speedMultiplier;
+            
+            // Check collision with player
+            if (this.checkCollision(this.player, star)) {
+                // Player hit by falling star - instant death!
+                this.playerDeath(this.player.x + this.player.width / 2, this.player.y + this.player.height / 2);
+                return false; // Remove the star
+            }
+            
+            // Remove stars that have fallen off screen
+            if (star.y > this.canvas.height + 50) {
+                return false;
+            }
+            
+            // Remove stars that are too far behind camera
+            if (star.x < this.camera.x - 200) {
+                return false;
+            }
+            
+            return true;
+        });
+    }
+    
     checkCollision(a, b) {
         return a.x < b.x + b.width &&
                a.x + a.width > b.x &&
@@ -1528,15 +1747,29 @@ class Game {
     }
     
     render() {
-        // Clear canvas with sky gradient
-        const gradient = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
-        gradient.addColorStop(0, '#5dade2');
-        gradient.addColorStop(1, '#85c1e9');
-        this.ctx.fillStyle = gradient;
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-        
-        // Draw clouds
-        this.drawClouds();
+        // Clear canvas with appropriate sky based on level
+        if (this.currentLevel === 3) {
+            // Night sky for Level 3
+            const gradient = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
+            gradient.addColorStop(0, '#0a0a1a');
+            gradient.addColorStop(0.5, '#1a1a3a');
+            gradient.addColorStop(1, '#2a2a4a');
+            this.ctx.fillStyle = gradient;
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            
+            // Draw background stars (twinkling)
+            this.drawBackgroundStars();
+        } else {
+            // Day sky for Levels 1 and 2
+            const gradient = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
+            gradient.addColorStop(0, '#5dade2');
+            gradient.addColorStop(1, '#85c1e9');
+            this.ctx.fillStyle = gradient;
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            
+            // Draw clouds
+            this.drawClouds();
+        }
         
         // Save context and apply camera
         this.ctx.save();
@@ -1590,6 +1823,13 @@ class Game {
             }
         });
         
+        // Draw falling stars (Level 3) - behind player
+        if (this.currentLevel === 3) {
+            this.fallingStars.forEach(star => {
+                this.drawFallingStar(star);
+            });
+        }
+        
         // Draw player (hide during death animation)
         if (this.state !== 'dying') {
             this.drawPlayer();
@@ -1609,6 +1849,43 @@ class Game {
         
         // Restore context
         this.ctx.restore();
+    }
+    
+    drawBackgroundStars() {
+        // Draw twinkling stars in the night sky
+        this.ctx.fillStyle = '#ffffff';
+        const starCount = 100;
+        
+        for (let i = 0; i < starCount; i++) {
+            // Use deterministic positions based on camera and index
+            const x = ((i * 73 + this.camera.x * 0.5) % this.canvas.width);
+            const y = ((i * 47) % this.canvas.height);
+            
+            // Twinkle effect
+            const twinkle = Math.sin(this.frameCount * 0.05 + i) * 0.5 + 0.5;
+            this.ctx.globalAlpha = twinkle * 0.8 + 0.2;
+            
+            // Different sized stars
+            const size = (i % 3) + 1;
+            this.ctx.fillRect(x, y, size, size);
+        }
+        
+        this.ctx.globalAlpha = 1.0;
+        
+        // Draw a moon
+        this.ctx.fillStyle = '#ffffaa';
+        this.ctx.beginPath();
+        this.ctx.arc(700, 80, 30, 0, Math.PI * 2);
+        this.ctx.fill();
+        
+        // Moon craters
+        this.ctx.fillStyle = 'rgba(200, 200, 150, 0.3)';
+        this.ctx.beginPath();
+        this.ctx.arc(690, 75, 8, 0, Math.PI * 2);
+        this.ctx.fill();
+        this.ctx.beginPath();
+        this.ctx.arc(710, 85, 6, 0, Math.PI * 2);
+        this.ctx.fill();
     }
     
     drawClouds() {
@@ -1855,6 +2132,8 @@ class Game {
             this.drawHeartPlayer();
         } else if (this.currentLevel === 2) {
             this.drawStarPlayer();
+        } else if (this.currentLevel === 3) {
+            this.drawMoonPlayer();
         }
     }
     
@@ -2139,6 +2418,209 @@ class Game {
                 this.ctx.fill();
             }
         }
+    }
+    
+    drawMoonPlayer() {
+        const p = this.player;
+        const centerX = p.x + 24;
+        const centerY = p.y + 24;
+        
+        this.ctx.save();
+        
+        // Moon body - pale yellow/cream crescent shape
+        const moonRadius = 22;
+        
+        // Full moon circle
+        this.ctx.fillStyle = '#ffffcc'; // Pale cream color
+        this.ctx.beginPath();
+        this.ctx.arc(centerX, centerY, moonRadius, 0, Math.PI * 2);
+        this.ctx.fill();
+        
+        // Moon outline
+        this.ctx.strokeStyle = '#ffffaa';
+        this.ctx.lineWidth = 2;
+        this.ctx.stroke();
+        
+        // Moon craters for texture
+        this.ctx.fillStyle = 'rgba(220, 220, 180, 0.4)';
+        this.ctx.beginPath();
+        this.ctx.arc(centerX - 8, centerY - 5, 5, 0, Math.PI * 2);
+        this.ctx.fill();
+        this.ctx.beginPath();
+        this.ctx.arc(centerX + 6, centerY + 3, 4, 0, Math.PI * 2);
+        this.ctx.fill();
+        this.ctx.beginPath();
+        this.ctx.arc(centerX + 3, centerY - 8, 3, 0, Math.PI * 2);
+        this.ctx.fill();
+        
+        // Add glow effect
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+        this.ctx.beginPath();
+        this.ctx.arc(centerX - 6, centerY - 6, 6, 0, Math.PI * 2);
+        this.ctx.fill();
+        
+        // Eyes on the moon
+        this.ctx.fillStyle = '#000';
+        if (p.direction === 1) {
+            // Looking right
+            this.ctx.fillRect(centerX + 4, centerY - 3, 6, 6);
+            this.ctx.fillRect(centerX - 8, centerY - 3, 4, 6);
+        } else {
+            // Looking left
+            this.ctx.fillRect(centerX - 10, centerY - 3, 6, 6);
+            this.ctx.fillRect(centerX + 4, centerY - 3, 4, 6);
+        }
+        
+        // Peaceful smile
+        this.ctx.strokeStyle = '#000';
+        this.ctx.lineWidth = 2;
+        this.ctx.beginPath();
+        this.ctx.arc(centerX, centerY + 3, 6, 0, Math.PI);
+        this.ctx.stroke();
+        
+        this.ctx.restore();
+        
+        // Legs (animated when moving) - pale cream legs
+        const legY = centerY + 22;
+        this.ctx.fillStyle = '#ffffaa';
+        
+        if (p.onGround && p.vx !== 0) {
+            // Walking animation
+            if (p.animFrame % 2 === 0) {
+                this.ctx.fillRect(centerX - 12, legY, 8, 16);
+                this.ctx.fillRect(centerX + 4, legY, 8, 16);
+            } else {
+                this.ctx.fillRect(centerX - 8, legY, 8, 16);
+                this.ctx.fillRect(centerX, legY, 8, 16);
+            }
+        } else {
+            // Standing still
+            this.ctx.fillRect(centerX - 8, legY, 8, 16);
+            this.ctx.fillRect(centerX, legY, 8, 16);
+        }
+        
+        // Feet
+        this.ctx.fillStyle = '#ffffcc';
+        if (p.onGround && p.vx !== 0) {
+            if (p.animFrame % 2 === 0) {
+                this.ctx.fillRect(centerX - 12, legY + 16, 10, 6);
+                this.ctx.fillRect(centerX + 4, legY + 16, 10, 6);
+            } else {
+                this.ctx.fillRect(centerX - 8, legY + 16, 10, 6);
+                this.ctx.fillRect(centerX, legY + 16, 10, 6);
+            }
+        } else {
+            this.ctx.fillRect(centerX - 8, legY + 16, 10, 6);
+            this.ctx.fillRect(centerX, legY + 16, 10, 6);
+        }
+        
+        // Wings when flying! - ethereal glow wings
+        if (this.isFlying) {
+            const wingFlap = Math.sin(this.frameCount * 0.3) * 8;
+            
+            // Glowing ethereal wings
+            this.ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+            
+            // Left wing
+            this.ctx.beginPath();
+            this.ctx.moveTo(centerX - 22, centerY);
+            this.ctx.lineTo(centerX - 40, centerY - 12 + wingFlap);
+            this.ctx.lineTo(centerX - 38, centerY + 12 + wingFlap);
+            this.ctx.closePath();
+            this.ctx.fill();
+            this.ctx.strokeStyle = '#ffffcc';
+            this.ctx.lineWidth = 2;
+            this.ctx.stroke();
+            
+            // Right wing
+            this.ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+            this.ctx.beginPath();
+            this.ctx.moveTo(centerX + 22, centerY);
+            this.ctx.lineTo(centerX + 40, centerY - 12 + wingFlap);
+            this.ctx.lineTo(centerX + 38, centerY + 12 + wingFlap);
+            this.ctx.closePath();
+            this.ctx.fill();
+            this.ctx.strokeStyle = '#ffffcc';
+            this.ctx.lineWidth = 2;
+            this.ctx.stroke();
+            
+            // Add glow sparkles
+            for (let i = 0; i < 2; i++) {
+                const sparkleX = centerX + (Math.random() - 0.5) * 60;
+                const sparkleY = centerY + (Math.random() - 0.5) * 40;
+                this.ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+                this.ctx.beginPath();
+                this.ctx.arc(sparkleX, sparkleY, 2, 0, Math.PI * 2);
+                this.ctx.fill();
+            }
+        }
+    }
+    
+    drawFallingStar(star) {
+        const centerX = star.x + star.width / 2;
+        const centerY = star.y + star.height / 2;
+        
+        this.ctx.save();
+        this.ctx.translate(centerX, centerY);
+        this.ctx.rotate(star.rotation);
+        
+        // Star body - bright and dangerous looking
+        const starSize = 10;
+        const spikes = 5;
+        const outerRadius = starSize;
+        const innerRadius = starSize * 0.4;
+        
+        // Glow effect
+        const glow = this.ctx.createRadialGradient(0, 0, 0, 0, 0, starSize * 2);
+        glow.addColorStop(0, 'rgba(255, 255, 0, 0.6)');
+        glow.addColorStop(0.5, 'rgba(255, 200, 0, 0.3)');
+        glow.addColorStop(1, 'rgba(255, 200, 0, 0)');
+        this.ctx.fillStyle = glow;
+        this.ctx.beginPath();
+        this.ctx.arc(0, 0, starSize * 2, 0, Math.PI * 2);
+        this.ctx.fill();
+        
+        // Draw star shape
+        this.ctx.fillStyle = '#ffff00'; // Bright yellow
+        this.ctx.beginPath();
+        
+        for (let i = 0; i < spikes * 2; i++) {
+            const radius = i % 2 === 0 ? outerRadius : innerRadius;
+            const angle = (Math.PI / spikes) * i - Math.PI / 2;
+            const x = radius * Math.cos(angle);
+            const y = radius * Math.sin(angle);
+            
+            if (i === 0) {
+                this.ctx.moveTo(x, y);
+            } else {
+                this.ctx.lineTo(x, y);
+            }
+        }
+        
+        this.ctx.closePath();
+        this.ctx.fill();
+        
+        // Star outline - reddish to show danger
+        this.ctx.strokeStyle = '#ff6600';
+        this.ctx.lineWidth = 2;
+        this.ctx.stroke();
+        
+        // Inner highlight
+        this.ctx.fillStyle = '#ffffff';
+        this.ctx.beginPath();
+        this.ctx.arc(0, 0, 3, 0, Math.PI * 2);
+        this.ctx.fill();
+        
+        // Trail effect
+        this.ctx.fillStyle = 'rgba(255, 255, 0, 0.4)';
+        this.ctx.beginPath();
+        this.ctx.moveTo(-3, -starSize * 2);
+        this.ctx.lineTo(0, 0);
+        this.ctx.lineTo(3, -starSize * 2);
+        this.ctx.closePath();
+        this.ctx.fill();
+        
+        this.ctx.restore();
     }
     
     drawEnemy(enemy) {
