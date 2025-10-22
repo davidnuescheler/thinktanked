@@ -43,7 +43,9 @@
             
             <div id="startScreen" class="overlay">
                 <div class="overlay-content">
-                    <h1 class="pixel-title">RAEMAX SISTERS</h1>
+                    <h1 class="pixel-title">
+                        <span>RAEMA</span><span id="secretX" style="cursor: pointer;">X</span><span> SISTERS</span>
+                    </h1>
                     <p class="subtitle">A Retro Platformer Adventure</p>
                     <div class="instructions">
                         <h3>CONTROLS</h3>
@@ -53,6 +55,32 @@
                         <p style="margin-top: 10px; color: #ffaa00;">📱 Touch controls available on mobile!</p>
                     </div>
                     <div class="start-button" onclick="game.start()">PRESS START</div>
+                </div>
+            </div>
+            
+            <div id="levelSelectScreen" class="overlay hidden">
+                <div class="overlay-content">
+                    <h1 class="pixel-title">SELECT LEVEL</h1>
+                    <p class="subtitle">🔓 Secret Cheat Unlocked!</p>
+                    <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; margin: 30px 0;">
+                        <div class="start-button" onclick="game.startLevel(1)" style="min-width: 120px;">
+                            LEVEL 1<br>
+                            <small style="font-size: 12px;">❤️ Heart</small>
+                        </div>
+                        <div class="start-button" onclick="game.startLevel(2)" style="min-width: 120px;">
+                            LEVEL 2<br>
+                            <small style="font-size: 12px;">⭐ Star</small>
+                        </div>
+                        <div class="start-button" onclick="game.startLevel(3)" style="min-width: 120px;">
+                            LEVEL 3<br>
+                            <small style="font-size: 12px;">🌙 Moon</small>
+                        </div>
+                        <div class="start-button" onclick="game.startLevel(4)" style="min-width: 120px;">
+                            LEVEL 4<br>
+                            <small style="font-size: 12px;">🐱 Cat</small>
+                        </div>
+                    </div>
+                    <div class="start-button" onclick="game.closeLevelSelect()">BACK</div>
                 </div>
             </div>
             

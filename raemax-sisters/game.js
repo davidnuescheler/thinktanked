@@ -439,6 +439,10 @@ class Game {
             y: 0
         };
         
+        // Cloud cheat code tracking
+        this.clouds = [];
+        this.cloudCheatActivated = false;
+        
         // Input handling
         this.keys = {};
         this.setupInput();
@@ -453,6 +457,11 @@ class Game {
         this.cheetahs = [];
         this.particles = [];
         this.fallingStars = [];
+        this.lavaParticles = [];
+        this.ghosts = [];
+        this.pumpkins = [];
+        this.skeletons = [];
+        this.arrows = [];
         
         // Flying power-up
         this.isFlying = false;
@@ -469,7 +478,7 @@ class Game {
         
         // Level settings
         this.currentLevel = 1;
-        this.maxLevels = 3;
+        this.maxLevels = 4;
         this.levelWidth = 4000;
         this.gravity = 0.1;
         
@@ -502,6 +511,9 @@ class Game {
         
         // Setup touch controls for mobile
         this.setupTouchControls();
+        
+        // Setup canvas click for cloud cheat
+        this.setupCanvasClick();
     }
     
     setupTouchControls() {
@@ -587,6 +599,69 @@ class Game {
         });
     }
     
+    setupCanvasClick() {
+        this.canvas.addEventListener('click', (e) => {
+            // Only works in Level 1 during gameplay
+            if (this.currentLevel !== 1 || this.state !== 'playing') return;
+            
+            const rect = this.canvas.getBoundingClientRect();
+            const scaleX = this.canvas.width / rect.width;
+            const scaleY = this.canvas.height / rect.height;
+            
+            const clickX = (e.clientX - rect.left) * scaleX;
+            const clickY = (e.clientY - rect.top) * scaleY;
+            
+            // Check if clicked on the third cloud
+            this.clouds.forEach((cloud, index) => {
+                if (index === 2) { // Third cloud (0-indexed)
+                    const cloudWorldX = cloud.x;
+                    const cloudScreenX = cloudWorldX - this.camera.x;
+                    
+                    // Check if click is within cloud bounds
+                    if (clickX >= cloudScreenX && clickX <= cloudScreenX + cloud.size * 2 &&
+                        clickY >= cloud.y && clickY <= cloud.y + cloud.size) {
+                        // Activate cheat!
+                        this.activateCloudCheat();
+                    }
+                }
+            });
+        });
+    }
+    
+    activateCloudCheat() {
+        if (this.cloudCheatActivated) return; // Only once per level
+        
+        this.cloudCheatActivated = true;
+        
+        // Play a special sound
+        this.sound.playTone(523.25, 0.1, 'sine', 0.3); // C
+        setTimeout(() => this.sound.playTone(659.25, 0.1, 'sine', 0.3), 100); // E
+        setTimeout(() => this.sound.playTone(783.99, 0.2, 'sine', 0.3), 200); // G
+        
+        // Teleport player near the end
+        this.player.x = this.levelWidth - 500;
+        this.player.y = 100;
+        this.player.vx = 0;
+        this.player.vy = 0;
+        
+        // Create sparkle effect at player
+        for (let i = 0; i < 30; i++) {
+            this.particles.push({
+                x: this.player.x + this.player.width / 2,
+                y: this.player.y + this.player.height / 2,
+                vx: (Math.random() - 0.5) * 4,
+                vy: (Math.random() - 0.5) * 4,
+                color: ['#00ffff', '#ff00ff', '#ffff00', '#00ff00'][Math.floor(Math.random() * 4)],
+                life: 60,
+                size: 6
+            });
+        }
+        
+        // Add 500 bonus points
+        this.score += 500;
+        this.updateUI();
+    }
+    
     initLevel() {
         // Clear power-ups when starting a new level
         this.isFlying = false;
@@ -617,10 +692,15 @@ class Game {
             this.initLevel2();
         } else if (this.currentLevel === 3) {
             this.initLevel3();
+        } else if (this.currentLevel === 4) {
+            this.initLevel4();
         }
     }
     
     initLevel1() {
+        // Reset cloud cheat
+        this.cloudCheatActivated = false;
+        
         // Create platforms (ground and floating platforms)
         this.platforms = [];
         
@@ -1187,16 +1267,287 @@ class Game {
             });
         });
         
-        // No ground obstacles - the falling stars are the main hazard!
+        // Add lava pits as ground obstacles - scattered throughout the level
         this.obstacles = [];
+        const lavaData = [
+            // Starting area - introduce lava
+            { x: 320, y: 420, w: 60, h: 40, type: 'lava' },
+            { x: 560, y: 420, w: 80, h: 40, type: 'lava' },
+            
+            // Mid section - more lava hazards
+            { x: 920, y: 420, w: 70, h: 40, type: 'lava' },
+            { x: 1120, y: 420, w: 60, h: 40, type: 'lava' },
+            { x: 1380, y: 420, w: 80, h: 40, type: 'lava' },
+            { x: 1620, y: 420, w: 70, h: 40, type: 'lava' },
+            { x: 1880, y: 420, w: 60, h: 40, type: 'lava' },
+            
+            // Upper section - intense lava activity
+            { x: 2140, y: 420, w: 80, h: 40, type: 'lava' },
+            { x: 2380, y: 420, w: 70, h: 40, type: 'lava' },
+            { x: 2620, y: 420, w: 60, h: 40, type: 'lava' },
+            { x: 2860, y: 420, w: 80, h: 40, type: 'lava' },
+            { x: 3100, y: 420, w: 70, h: 40, type: 'lava' },
+            
+            // Final section - most dangerous
+            { x: 3340, y: 420, w: 60, h: 40, type: 'lava' },
+            { x: 3580, y: 420, w: 80, h: 40, type: 'lava' },
+            { x: 3800, y: 420, w: 70, h: 40, type: 'lava' }
+        ];
         
-        // Initialize falling stars - evenly spaced across the level
+        lavaData.forEach(obs => {
+            this.obstacles.push({
+                x: obs.x,
+                y: obs.y,
+                width: obs.w,
+                height: obs.h,
+                type: obs.type
+            });
+        });
+        
+        // Initialize falling stars and lava particles
         this.fallingStars = [];
-        // Stars will spawn dynamically during gameplay
+        this.lavaParticles = [];
+        // Stars and lava will spawn dynamically during gameplay
+    }
+    
+    initLevel4() {
+        // Level 4 - HALLOWEEN THEME!
+        // Spooky night, ghosts, pumpkins, black cat character
+        
+        // Create platforms (ground and floating platforms)
+        this.platforms = [];
+        
+        // Ground level (spooky ground)
+        for (let i = 0; i < 100; i++) {
+            this.platforms.push({
+                x: i * 40,
+                y: 460,
+                width: 40,
+                height: 40,
+                type: 'ground'
+            });
+        }
+        
+        // Floating platforms - spooky arrangement
+        const platformData = [
+            // Starting haunted area
+            { x: 200, y: 360, w: 100, h: 20 },
+            { x: 360, y: 300, w: 90, h: 20 },
+            { x: 520, y: 240, w: 100, h: 20 },
+            { x: 680, y: 180, w: 80, h: 20 },
+            { x: 840, y: 260, w: 100, h: 20 },
+            
+            // Graveyard section
+            { x: 1020, y: 320, w: 90, h: 20 },
+            { x: 1180, y: 260, w: 100, h: 20 },
+            { x: 1360, y: 200, w: 80, h: 20 },
+            { x: 1520, y: 140, w: 90, h: 20 },
+            { x: 1700, y: 220, w: 100, h: 20 },
+            { x: 1880, y: 300, w: 90, h: 20 },
+            { x: 2060, y: 360, w: 80, h: 20 },
+            
+            // Haunted mansion area
+            { x: 2240, y: 280, w: 100, h: 20 },
+            { x: 2420, y: 220, w: 90, h: 20 },
+            { x: 2600, y: 160, w: 80, h: 20 },
+            { x: 2760, y: 120, w: 100, h: 20 },
+            { x: 2940, y: 180, w: 90, h: 20 },
+            { x: 3100, y: 260, w: 100, h: 20 },
+            
+            // Final spooky gauntlet
+            { x: 3280, y: 320, w: 90, h: 20 },
+            { x: 3440, y: 240, w: 80, h: 20 },
+            { x: 3600, y: 180, w: 100, h: 20 },
+            { x: 3780, y: 140, w: 90, h: 20 },
+        ];
+        
+        platformData.forEach(p => {
+            this.platforms.push({
+                x: p.x,
+                y: p.y,
+                width: p.w,
+                height: p.h,
+                type: 'platform'
+            });
+        });
+        
+        // Create gems (orange Halloween gems)
+        this.gems = [];
+        const gemPositions = [
+            { x: 250, y: 320 }, { x: 400, y: 260 }, { x: 560, y: 200 },
+            { x: 720, y: 140 }, { x: 880, y: 220 }, { x: 1060, y: 280 },
+            { x: 1220, y: 220 }, { x: 1400, y: 160 }, { x: 1560, y: 100 },
+            { x: 1740, y: 180 }, { x: 1920, y: 260 }, { x: 2100, y: 320 },
+            { x: 2280, y: 240 }, { x: 2460, y: 180 }, { x: 2640, y: 120 },
+            { x: 2800, y: 80 }, { x: 2980, y: 140 }, { x: 3140, y: 220 },
+            { x: 3320, y: 280 }, { x: 3480, y: 200 }, { x: 3640, y: 140 },
+            { x: 3820, y: 100 }, { x: 3920, y: 180 }
+        ];
+        
+        gemPositions.forEach(pos => {
+            this.gems.push({
+                x: pos.x,
+                y: pos.y,
+                width: 16,
+                height: 16,
+                collected: false,
+                animFrame: 0
+            });
+        });
+        
+        // Create ghosts - floating enemies that move in wave patterns
+        this.ghosts = [];
+        const ghostPositions = [
+            { x: 400, y: 250, range: 100 },
+            { x: 800, y: 200, range: 80 },
+            { x: 1200, y: 220, range: 90 },
+            { x: 1600, y: 180, range: 100 },
+            { x: 2000, y: 240, range: 80 },
+            { x: 2400, y: 180, range: 90 },
+            { x: 2800, y: 140, range: 100 },
+            { x: 3200, y: 220, range: 80 },
+            { x: 3600, y: 160, range: 90 }
+        ];
+        
+        ghostPositions.forEach(pos => {
+            this.ghosts.push({
+                x: pos.x,
+                y: pos.y,
+                width: 24,
+                height: 28,
+                vx: 0.8,
+                startX: pos.x,
+                startY: pos.y,
+                range: pos.range,
+                animFrame: 0,
+                floatOffset: Math.random() * Math.PI * 2
+            });
+        });
+        
+        // Regular ground enemies (less than ghosts)
+        this.enemies = [];
+        const enemyPositions = [
+            { x: 600, y: 430, range: 60 },
+            { x: 1400, y: 430, range: 70 },
+            { x: 2200, y: 430, range: 80 },
+            { x: 3000, y: 430, range: 60 }
+        ];
+        
+        enemyPositions.forEach(pos => {
+            this.enemies.push({
+                x: pos.x,
+                y: pos.y,
+                width: 24,
+                height: 24,
+                vx: 0.8,
+                startX: pos.x,
+                range: pos.range,
+                animFrame: 0
+            });
+        });
+        
+        // Pumpkins - jumping on them destroys them
+        this.pumpkins = [];
+        const pumpkinPositions = [
+            { x: 500, y: 428 },
+            { x: 900, y: 428 },
+            { x: 1300, y: 428 },
+            { x: 1700, y: 428 },
+            { x: 2100, y: 428 },
+            { x: 2500, y: 428 },
+            { x: 2900, y: 428 },
+            { x: 3300, y: 428 },
+            { x: 3700, y: 428 }
+        ];
+        
+        pumpkinPositions.forEach(pos => {
+            this.pumpkins.push({
+                x: pos.x,
+                y: pos.y,
+                width: 32,
+                height: 32,
+                destroyed: false,
+                animFrame: 0
+            });
+        });
+        
+        // Create kitties - fewer, more valuable
+        this.kitties = [];
+        const kittyPositions = [
+            { x: 1000, y: 100 },
+            { x: 2000, y: 120 },
+            { x: 3000, y: 100 }
+        ];
+        
+        kittyPositions.forEach(pos => {
+            this.kitties.push({
+                x: pos.x,
+                y: pos.y,
+                width: 20,
+                height: 20,
+                collected: false,
+                animFrame: 0
+            });
+        });
+        
+        // Create cheetahs - slow-motion power-ups
+        this.cheetahs = [];
+        const cheetahPositions = [
+            { x: 700, y: 130 },
+            { x: 1500, y: 100 },
+            { x: 2300, y: 140 },
+            { x: 3100, y: 210 }
+        ];
+        
+        cheetahPositions.forEach(pos => {
+            this.cheetahs.push({
+                x: pos.x,
+                y: pos.y,
+                width: 24,
+                height: 20,
+                collected: false,
+                animFrame: 0
+            });
+        });
+        
+        // Spooky obstacles - gravestones and spider webs
+        this.obstacles = [];
+        const obstacleData = [
+            // Gravestones
+            { x: 280, y: 420, w: 32, h: 40, type: 'gravestone' },
+            { x: 640, y: 420, w: 32, h: 40, type: 'gravestone' },
+            { x: 1040, y: 420, w: 32, h: 40, type: 'gravestone' },
+            { x: 1440, y: 420, w: 32, h: 40, type: 'gravestone' },
+            { x: 1840, y: 420, w: 32, h: 40, type: 'gravestone' },
+            { x: 2240, y: 420, w: 32, h: 40, type: 'gravestone' },
+            { x: 2640, y: 420, w: 32, h: 40, type: 'gravestone' },
+            { x: 3040, y: 420, w: 32, h: 40, type: 'gravestone' },
+            { x: 3440, y: 420, w: 32, h: 40, type: 'gravestone' },
+            { x: 3840, y: 420, w: 32, h: 40, type: 'gravestone' }
+        ];
+        
+        obstacleData.forEach(obs => {
+            this.obstacles.push({
+                x: obs.x,
+                y: obs.y,
+                width: obs.w,
+                height: obs.h,
+                type: obs.type
+            });
+        });
+        
+        // No lava particles or falling stars in Halloween level
+        this.fallingStars = [];
+        this.lavaParticles = [];
+        
+        // Skeletons spawn when player lands - initialize empty
+        this.skeletons = [];
+        this.arrows = [];
     }
     
     start() {
         document.getElementById('startScreen').classList.add('hidden');
+        document.getElementById('levelSelectScreen').classList.add('hidden');
         document.getElementById('touchControls').classList.remove('hidden');
         this.state = 'playing';
         this.score = 0;
@@ -1209,6 +1560,21 @@ class Game {
         
         // Start background music
         this.sound.startMusic();
+    }
+    
+    showLevelSelect() {
+        document.getElementById('startScreen').classList.add('hidden');
+        document.getElementById('levelSelectScreen').classList.remove('hidden');
+    }
+    
+    closeLevelSelect() {
+        document.getElementById('levelSelectScreen').classList.add('hidden');
+        document.getElementById('startScreen').classList.remove('hidden');
+    }
+    
+    startLevel(levelNumber) {
+        this.currentLevel = levelNumber;
+        this.start();
     }
     
     restart() {
@@ -1413,6 +1779,14 @@ class Game {
         // Update falling stars (Level 3)
         if (this.currentLevel === 3) {
             this.updateFallingStars();
+            this.updateLavaParticles();
+        }
+        
+        // Update ghosts (Level 4)
+        if (this.currentLevel === 4) {
+            this.updateGhosts();
+            this.updateSkeletons();
+            this.updateArrows();
         }
         
         // Update flying timer
@@ -1509,6 +1883,7 @@ class Game {
         }
         
         // Collision detection with platforms
+        const wasOnGround = this.player.onGround;
         this.player.onGround = false;
         
         this.platforms.forEach(platform => {
@@ -1518,6 +1893,11 @@ class Game {
                     this.player.y = platform.y - this.player.height;
                     this.player.vy = 0;
                     this.player.onGround = true;
+                    
+                    // Spawn skeleton on landing (Level 4 only)
+                    if (!wasOnGround && this.currentLevel === 4) {
+                        this.spawnSkeleton();
+                    }
                 } else if (this.player.vy < 0 && this.player.y > platform.y) {
                     this.player.y = platform.y + platform.height;
                     this.player.vy = 0;
@@ -1585,12 +1965,69 @@ class Game {
             }
         });
         
+        // Check ghost collision (Level 4)
+        if (this.currentLevel === 4) {
+            this.ghosts.forEach(ghost => {
+                if (this.checkCollision(this.player, ghost)) {
+                    // Ghosts are deadly - can't jump on them!
+                    this.playerDeath(this.player.x + this.player.width / 2, this.player.y + this.player.height / 2);
+                }
+            });
+            
+            // Check pumpkin collision
+            this.pumpkins.forEach(pumpkin => {
+                if (!pumpkin.destroyed && this.checkCollision(this.player, pumpkin)) {
+                    // Check if player is jumping on pumpkin
+                    if (this.player.vy > 0 && this.player.y < pumpkin.y - 10) {
+                        this.score += 150;
+                        this.updateUI();
+                        pumpkin.destroyed = true;
+                        this.player.vy = -4; // Bounce
+                        this.sound.enemyDefeat();
+                        this.createParticles(pumpkin.x + pumpkin.width / 2, pumpkin.y + pumpkin.height / 2, '#ff8800');
+                    } else if (this.player.x < pumpkin.x) {
+                        // Walking into pumpkin - solid obstacle
+                        this.player.x = pumpkin.x - this.player.width;
+                    } else {
+                        this.player.x = pumpkin.x + pumpkin.width;
+                    }
+                }
+            });
+            
+            // Check arrow collision
+            this.arrows.forEach((arrow, index) => {
+                if (this.checkCollision(this.player, arrow)) {
+                    // Player hit by arrow - instant death!
+                    this.playerDeath(this.player.x + this.player.width / 2, this.player.y + this.player.height / 2);
+                    this.arrows.splice(index, 1);
+                }
+            });
+        }
+        
         // Check obstacle collision
         this.obstacles.forEach(obstacle => {
             if (this.checkCollision(this.player, obstacle)) {
-                if (obstacle.type === 'spikes') {
-                    // Spikes instantly hurt the player
+                if (obstacle.type === 'spikes' || obstacle.type === 'lava') {
+                    // Spikes and lava instantly hurt the player
                     this.playerDeath(this.player.x + this.player.width / 2, this.player.y + this.player.height / 2);
+                } else if (obstacle.type === 'gravestone') {
+                    // Gravestones are solid obstacles
+                    // Vertical collision
+                    if (this.player.vy > 0 && this.player.y < obstacle.y) {
+                        this.player.y = obstacle.y - this.player.height;
+                        this.player.vy = 0;
+                        this.player.onGround = true;
+                    } else if (this.player.vy < 0 && this.player.y > obstacle.y) {
+                        this.player.y = obstacle.y + obstacle.height;
+                        this.player.vy = 0;
+                    }
+                    
+                    // Horizontal collision - push player back
+                    if (this.player.x < obstacle.x) {
+                        this.player.x = obstacle.x - this.player.width;
+                    } else {
+                        this.player.x = obstacle.x + obstacle.width;
+                    }
                 } else {
                     // Blocks and crates act as solid obstacles
                     // Vertical collision
@@ -1641,11 +2078,126 @@ class Game {
         });
     }
     
+    updateGhosts() {
+        const speedMultiplier = this.slowMotion ? 0.5 : 1.0;
+        
+        this.ghosts.forEach(ghost => {
+            ghost.x += ghost.vx * speedMultiplier;
+            
+            // Patrol back and forth
+            if (ghost.x > ghost.startX + ghost.range || ghost.x < ghost.startX - ghost.range) {
+                ghost.vx *= -1;
+            }
+            
+            // Float up and down
+            ghost.floatOffset += 0.05 * speedMultiplier;
+            ghost.y = ghost.startY + Math.sin(ghost.floatOffset) * 15;
+            
+            const animSpeed = this.slowMotion ? 40 : 20;
+            ghost.animFrame = (this.frameCount % animSpeed) / animSpeed;
+        });
+    }
+    
+    spawnSkeleton() {
+        // Random chance to spawn skeleton (30%)
+        if (Math.random() > 0.3) return;
+        
+        // Spawn skeleton near player but off-screen or at distance
+        const spawnLeft = Math.random() > 0.5;
+        const skeletonX = spawnLeft ? 
+            this.player.x - 150 - Math.random() * 50 : 
+            this.player.x + 150 + Math.random() * 50;
+        
+        // Make sure skeleton is on ground
+        const skeletonY = 428;
+        
+        this.skeletons.push({
+            x: skeletonX,
+            y: skeletonY,
+            width: 24,
+            height: 32,
+            animFrame: 0,
+            shootTimer: 120 + Math.random() * 60, // Shoot every 2-3 seconds
+            direction: spawnLeft ? 1 : -1 // Face the player
+        });
+    }
+    
+    updateSkeletons() {
+        const speedMultiplier = this.slowMotion ? 0.5 : 1.0;
+        
+        this.skeletons = this.skeletons.filter(skeleton => {
+            // Update animation
+            skeleton.animFrame = (this.frameCount % 30) / 30;
+            
+            // Update shoot timer
+            skeleton.shootTimer -= speedMultiplier;
+            
+            // Shoot arrow at player
+            if (skeleton.shootTimer <= 0) {
+                this.shootArrow(skeleton);
+                skeleton.shootTimer = 120 + Math.random() * 60; // Reset timer
+            }
+            
+            // Remove skeletons that are too far from camera
+            if (skeleton.x < this.camera.x - 300 || skeleton.x > this.camera.x + this.canvas.width + 300) {
+                return false;
+            }
+            
+            return true;
+        });
+    }
+    
+    shootArrow(skeleton) {
+        // Calculate direction to player
+        const dx = this.player.x - skeleton.x;
+        const dy = this.player.y - skeleton.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        // Normalize direction
+        const dirX = dx / distance;
+        const dirY = dy / distance;
+        
+        // Arrow speed
+        const speed = 4;
+        
+        this.arrows.push({
+            x: skeleton.x + skeleton.width / 2,
+            y: skeleton.y + skeleton.height / 2,
+            width: 16,
+            height: 4,
+            vx: dirX * speed,
+            vy: dirY * speed,
+            angle: Math.atan2(dy, dx)
+        });
+        
+        // Play sound effect
+        this.sound.playTone(300, 0.1, 'triangle', 0.2);
+    }
+    
+    updateArrows() {
+        const speedMultiplier = this.slowMotion ? 0.5 : 1.0;
+        
+        this.arrows = this.arrows.filter(arrow => {
+            arrow.x += arrow.vx * speedMultiplier;
+            arrow.y += arrow.vy * speedMultiplier;
+            
+            // Remove arrows that are off-screen
+            if (arrow.x < this.camera.x - 100 || 
+                arrow.x > this.camera.x + this.canvas.width + 100 ||
+                arrow.y < -50 || 
+                arrow.y > this.canvas.height + 50) {
+                return false;
+            }
+            
+            return true;
+        });
+    }
+    
     updateFallingStars() {
         const speedMultiplier = this.slowMotion ? 0.3 : 1.0;
         
         // Spawn new stars - randomly across the screen
-        const spawnChance = 0.0008; // 0.08% chance per frame to spawn a star (very rare)
+        const spawnChance = 0.01; // 1% chance per frame to spawn a star
         
         // Random spawn logic
         if (Math.random() < spawnChance) {
@@ -1684,6 +2236,55 @@ class Game {
             
             // Remove stars that are too far behind camera
             if (star.x < this.camera.x - 200) {
+                return false;
+            }
+            
+            return true;
+        });
+        
+        // Check lava particle collision (Level 3)
+        if (this.currentLevel === 3) {
+            this.lavaParticles.forEach(particle => {
+                if (this.checkCollision(this.player, particle)) {
+                    // Player hit by lava particle - instant death!
+                    this.playerDeath(this.player.x + this.player.width / 2, this.player.y + this.player.height / 2);
+                }
+            });
+        }
+    }
+    
+    updateLavaParticles() {
+        const speedMultiplier = this.slowMotion ? 0.5 : 1.0;
+        
+        // Spawn lava particles from lava pits
+        this.obstacles.forEach(obstacle => {
+            if (obstacle.type === 'lava') {
+                // Random chance to emit lava
+                if (Math.random() < 0.05) { // 5% chance per frame per lava pit
+                    const particleX = obstacle.x + Math.random() * obstacle.width;
+                    this.lavaParticles.push({
+                        x: particleX,
+                        y: obstacle.y,
+                        width: 8,
+                        height: 8,
+                        vx: (Math.random() - 0.5) * 1.5,
+                        vy: -4 - Math.random() * 2, // Shoot upward
+                        life: 100, // Frames to live
+                        gravity: 0.15
+                    });
+                }
+            }
+        });
+        
+        // Update existing lava particles
+        this.lavaParticles = this.lavaParticles.filter(particle => {
+            particle.x += particle.vx * speedMultiplier;
+            particle.y += particle.vy * speedMultiplier;
+            particle.vy += particle.gravity * speedMultiplier; // Apply gravity
+            particle.life--;
+            
+            // Remove particles that have expired or fallen below ground
+            if (particle.life <= 0 || particle.y > 460) {
                 return false;
             }
             
@@ -1759,6 +2360,17 @@ class Game {
             
             // Draw background stars (twinkling)
             this.drawBackgroundStars();
+        } else if (this.currentLevel === 4) {
+            // Halloween spooky sky
+            const gradient = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
+            gradient.addColorStop(0, '#1a0a2e');
+            gradient.addColorStop(0.5, '#2e1a3e');
+            gradient.addColorStop(1, '#3e2a4e');
+            this.ctx.fillStyle = gradient;
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            
+            // Draw Halloween background
+            this.drawHalloweenBackground();
         } else {
             // Day sky for Levels 1 and 2
             const gradient = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
@@ -1790,10 +2402,21 @@ class Game {
                 this.drawSpikes(obstacle);
             } else if (obstacle.type === 'crate') {
                 this.drawCrate(obstacle);
+            } else if (obstacle.type === 'lava') {
+                this.drawLava(obstacle);
+            } else if (obstacle.type === 'gravestone') {
+                this.drawGravestone(obstacle);
             } else {
                 this.drawBlock(obstacle);
             }
         });
+        
+        // Draw lava particles (Level 3)
+        if (this.currentLevel === 3) {
+            this.lavaParticles.forEach(particle => {
+                this.drawLavaParticle(particle);
+            });
+        }
         
         // Draw gems
         this.gems.forEach(gem => {
@@ -1822,6 +2445,30 @@ class Game {
                 this.drawEnemy(enemy);
             }
         });
+        
+        // Draw ghosts (Level 4)
+        if (this.currentLevel === 4) {
+            this.ghosts.forEach(ghost => {
+                this.drawGhost(ghost);
+            });
+            
+            // Draw pumpkins
+            this.pumpkins.forEach(pumpkin => {
+                if (!pumpkin.destroyed) {
+                    this.drawPumpkin(pumpkin);
+                }
+            });
+            
+            // Draw skeletons
+            this.skeletons.forEach(skeleton => {
+                this.drawSkeleton(skeleton);
+            });
+            
+            // Draw arrows
+            this.arrows.forEach(arrow => {
+                this.drawArrow(arrow);
+            });
+        }
         
         // Draw falling stars (Level 3) - behind player
         if (this.currentLevel === 3) {
@@ -1892,10 +2539,45 @@ class Game {
         this.ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
         const cloudOffset = (this.camera.x * 0.3) % 200;
         
+        // Clear and rebuild cloud positions for click detection
+        this.clouds = [];
+        
         for (let i = -1; i < 6; i++) {
             const x = i * 200 - cloudOffset;
-            this.drawCloud(x + 50, 50, 40);
-            this.drawCloud(x + 150, 100, 50);
+            
+            // Top row clouds
+            const cloud1X = x + 50;
+            const cloud1Y = 50;
+            const cloud1Size = 40;
+            this.clouds.push({ x: cloud1X + this.camera.x * 0.3, y: cloud1Y, size: cloud1Size });
+            this.drawCloud(cloud1X, cloud1Y, cloud1Size);
+            
+            // Bottom row clouds
+            const cloud2X = x + 150;
+            const cloud2Y = 100;
+            const cloud2Size = 50;
+            this.clouds.push({ x: cloud2X + this.camera.x * 0.3, y: cloud2Y, size: cloud2Size });
+            this.drawCloud(cloud2X, cloud2Y, cloud2Size);
+        }
+        
+        // Highlight the third cloud with a subtle glow if in Level 1
+        if (this.currentLevel === 1 && !this.cloudCheatActivated && this.clouds.length >= 3) {
+            const thirdCloud = this.clouds[2];
+            const cloudScreenX = thirdCloud.x - this.camera.x;
+            
+            // Draw a pulsing glow
+            const pulse = Math.sin(this.frameCount * 0.05) * 0.3 + 0.5;
+            this.ctx.strokeStyle = `rgba(255, 255, 0, ${pulse * 0.4})`;
+            this.ctx.lineWidth = 3;
+            this.ctx.beginPath();
+            this.ctx.arc(
+                cloudScreenX + thirdCloud.size,
+                thirdCloud.y + thirdCloud.size / 2,
+                thirdCloud.size * 1.2,
+                0,
+                Math.PI * 2
+            );
+            this.ctx.stroke();
         }
     }
     
@@ -2134,6 +2816,8 @@ class Game {
             this.drawStarPlayer();
         } else if (this.currentLevel === 3) {
             this.drawMoonPlayer();
+        } else if (this.currentLevel === 4) {
+            this.drawBlackCatPlayer();
         }
     }
     
@@ -2623,6 +3307,534 @@ class Game {
         this.ctx.restore();
     }
     
+    drawBlackCatPlayer() {
+        const p = this.player;
+        const centerX = p.x + 24;
+        const centerY = p.y + 24;
+        
+        this.ctx.save();
+        
+        // Black cat body
+        const bodyWidth = 28;
+        const bodyHeight = 20;
+        
+        // Main body - black with slight purple tint
+        this.ctx.fillStyle = '#1a1a2e';
+        this.ctx.fillRect(centerX - bodyWidth / 2, centerY - 2, bodyWidth, bodyHeight);
+        
+        // Body outline
+        this.ctx.strokeStyle = '#000';
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeRect(centerX - bodyWidth / 2, centerY - 2, bodyWidth, bodyHeight);
+        
+        // Head - round
+        this.ctx.fillStyle = '#1a1a2e';
+        this.ctx.beginPath();
+        this.ctx.arc(centerX, centerY - 8, 12, 0, Math.PI * 2);
+        this.ctx.fill();
+        this.ctx.stroke();
+        
+        // Ears - pointy triangles
+        this.ctx.fillStyle = '#1a1a2e';
+        // Left ear
+        this.ctx.beginPath();
+        this.ctx.moveTo(centerX - 10, centerY - 15);
+        this.ctx.lineTo(centerX - 6, centerY - 22);
+        this.ctx.lineTo(centerX - 4, centerY - 15);
+        this.ctx.closePath();
+        this.ctx.fill();
+        this.ctx.stroke();
+        
+        // Right ear
+        this.ctx.beginPath();
+        this.ctx.moveTo(centerX + 10, centerY - 15);
+        this.ctx.lineTo(centerX + 6, centerY - 22);
+        this.ctx.lineTo(centerX + 4, centerY - 15);
+        this.ctx.closePath();
+        this.ctx.fill();
+        this.ctx.stroke();
+        
+        // Glowing eyes - spooky green!
+        const glowEyes = Math.sin(this.frameCount * 0.1) * 0.3 + 0.7;
+        
+        // Eye glow
+        this.ctx.fillStyle = `rgba(0, 255, 0, ${glowEyes * 0.3})`;
+        this.ctx.beginPath();
+        this.ctx.arc(centerX - 5, centerY - 8, 4, 0, Math.PI * 2);
+        this.ctx.fill();
+        this.ctx.beginPath();
+        this.ctx.arc(centerX + 5, centerY - 8, 4, 0, Math.PI * 2);
+        this.ctx.fill();
+        
+        // Eye pupils
+        this.ctx.fillStyle = '#00ff00';
+        if (p.direction === 1) {
+            // Looking right
+            this.ctx.fillRect(centerX - 4, centerY - 9, 3, 3);
+            this.ctx.fillRect(centerX + 6, centerY - 9, 3, 3);
+        } else {
+            // Looking left
+            this.ctx.fillRect(centerX - 7, centerY - 9, 3, 3);
+            this.ctx.fillRect(centerX + 3, centerY - 9, 3, 3);
+        }
+        
+        // Nose - small pink triangle
+        this.ctx.fillStyle = '#ff69b4';
+        this.ctx.beginPath();
+        this.ctx.moveTo(centerX, centerY - 4);
+        this.ctx.lineTo(centerX - 2, centerY - 2);
+        this.ctx.lineTo(centerX + 2, centerY - 2);
+        this.ctx.closePath();
+        this.ctx.fill();
+        
+        // Whiskers
+        this.ctx.strokeStyle = '#888';
+        this.ctx.lineWidth = 1;
+        // Left whiskers
+        this.ctx.beginPath();
+        this.ctx.moveTo(centerX - 12, centerY - 5);
+        this.ctx.lineTo(centerX - 18, centerY - 6);
+        this.ctx.moveTo(centerX - 12, centerY - 3);
+        this.ctx.lineTo(centerX - 18, centerY - 3);
+        // Right whiskers
+        this.ctx.moveTo(centerX + 12, centerY - 5);
+        this.ctx.lineTo(centerX + 18, centerY - 6);
+        this.ctx.moveTo(centerX + 12, centerY - 3);
+        this.ctx.lineTo(centerX + 18, centerY - 3);
+        this.ctx.stroke();
+        
+        this.ctx.restore();
+        
+        // Legs (animated when moving)
+        const legY = centerY + 18;
+        this.ctx.fillStyle = '#1a1a2e';
+        
+        if (p.onGround && p.vx !== 0) {
+            // Walking animation
+            if (p.animFrame % 2 === 0) {
+                this.ctx.fillRect(centerX - 12, legY, 6, 12);
+                this.ctx.fillRect(centerX + 6, legY, 6, 12);
+            } else {
+                this.ctx.fillRect(centerX - 8, legY, 6, 12);
+                this.ctx.fillRect(centerX + 2, legY, 6, 12);
+            }
+        } else {
+            // Standing still
+            this.ctx.fillRect(centerX - 8, legY, 6, 12);
+            this.ctx.fillRect(centerX + 2, legY, 6, 12);
+        }
+        
+        // Paws
+        this.ctx.fillStyle = '#1a1a2e';
+        if (p.onGround && p.vx !== 0) {
+            if (p.animFrame % 2 === 0) {
+                this.ctx.fillRect(centerX - 12, legY + 12, 7, 4);
+                this.ctx.fillRect(centerX + 6, legY + 12, 7, 4);
+            } else {
+                this.ctx.fillRect(centerX - 8, legY + 12, 7, 4);
+                this.ctx.fillRect(centerX + 2, legY + 12, 7, 4);
+            }
+        } else {
+            this.ctx.fillRect(centerX - 8, legY + 12, 7, 4);
+            this.ctx.fillRect(centerX + 2, legY + 12, 7, 4);
+        }
+        
+        // Tail - curved and animated
+        const tailSwing = Math.sin(this.frameCount * 0.1) * 10;
+        this.ctx.strokeStyle = '#1a1a2e';
+        this.ctx.lineWidth = 4;
+        this.ctx.beginPath();
+        this.ctx.moveTo(centerX + 14, centerY + 8);
+        this.ctx.quadraticCurveTo(
+            centerX + 20 + tailSwing, 
+            centerY - 5, 
+            centerX + 18, 
+            centerY - 15 + tailSwing
+        );
+        this.ctx.stroke();
+        
+        // Tail tip
+        this.ctx.fillStyle = '#1a1a2e';
+        this.ctx.beginPath();
+        this.ctx.arc(centerX + 18, centerY - 15 + tailSwing, 3, 0, Math.PI * 2);
+        this.ctx.fill();
+        
+        // Wings when flying! - bat wings
+        if (this.isFlying) {
+            const wingFlap = Math.sin(this.frameCount * 0.3) * 8;
+            
+            // Bat wings - dark purple
+            this.ctx.fillStyle = 'rgba(60, 30, 80, 0.8)';
+            
+            // Left wing
+            this.ctx.beginPath();
+            this.ctx.moveTo(centerX - 14, centerY);
+            this.ctx.lineTo(centerX - 35, centerY - 10 + wingFlap);
+            this.ctx.lineTo(centerX - 32, centerY + 10 + wingFlap);
+            this.ctx.closePath();
+            this.ctx.fill();
+            this.ctx.strokeStyle = '#2e1a3e';
+            this.ctx.lineWidth = 2;
+            this.ctx.stroke();
+            
+            // Right wing
+            this.ctx.fillStyle = 'rgba(60, 30, 80, 0.8)';
+            this.ctx.beginPath();
+            this.ctx.moveTo(centerX + 14, centerY);
+            this.ctx.lineTo(centerX + 35, centerY - 10 + wingFlap);
+            this.ctx.lineTo(centerX + 32, centerY + 10 + wingFlap);
+            this.ctx.closePath();
+            this.ctx.fill();
+            this.ctx.strokeStyle = '#2e1a3e';
+            this.ctx.lineWidth = 2;
+            this.ctx.stroke();
+        }
+    }
+    
+    drawHalloweenBackground() {
+        // Draw spooky stars
+        this.ctx.fillStyle = '#ffffff';
+        const starCount = 50;
+        
+        for (let i = 0; i < starCount; i++) {
+            const x = ((i * 73 + this.camera.x * 0.5) % this.canvas.width);
+            const y = ((i * 47) % (this.canvas.height * 0.6));
+            
+            const twinkle = Math.sin(this.frameCount * 0.05 + i) * 0.5 + 0.5;
+            this.ctx.globalAlpha = twinkle * 0.6 + 0.2;
+            
+            const size = (i % 3) + 1;
+            this.ctx.fillRect(x, y, size, size);
+        }
+        
+        this.ctx.globalAlpha = 1.0;
+        
+        // Draw a large orange Halloween moon
+        this.ctx.fillStyle = '#ff8800';
+        this.ctx.beginPath();
+        this.ctx.arc(650, 90, 35, 0, Math.PI * 2);
+        this.ctx.fill();
+        
+        // Moon glow
+        this.ctx.fillStyle = 'rgba(255, 136, 0, 0.3)';
+        this.ctx.beginPath();
+        this.ctx.arc(650, 90, 45, 0, Math.PI * 2);
+        this.ctx.fill();
+        
+        // Bats flying across (silhouettes)
+        const batPositions = [
+            { x: (this.frameCount * 2) % (this.canvas.width + 200) - 100, y: 100 },
+            { x: (this.frameCount * 1.5 + 300) % (this.canvas.width + 200) - 100, y: 150 },
+            { x: (this.frameCount * 1.8 + 600) % (this.canvas.width + 200) - 100, y: 80 }
+        ];
+        
+        batPositions.forEach(bat => {
+            this.drawBatSilhouette(bat.x, bat.y);
+        });
+    }
+    
+    drawBatSilhouette(x, y) {
+        const wingFlap = Math.sin(this.frameCount * 0.2 + x) * 3;
+        
+        this.ctx.fillStyle = '#000';
+        
+        // Body
+        this.ctx.fillRect(x - 2, y - 1, 4, 3);
+        
+        // Left wing
+        this.ctx.beginPath();
+        this.ctx.moveTo(x - 2, y);
+        this.ctx.lineTo(x - 8, y - 4 + wingFlap);
+        this.ctx.lineTo(x - 6, y + 2 + wingFlap);
+        this.ctx.closePath();
+        this.ctx.fill();
+        
+        // Right wing
+        this.ctx.beginPath();
+        this.ctx.moveTo(x + 2, y);
+        this.ctx.lineTo(x + 8, y - 4 + wingFlap);
+        this.ctx.lineTo(x + 6, y + 2 + wingFlap);
+        this.ctx.closePath();
+        this.ctx.fill();
+    }
+    
+    drawGhost(ghost) {
+        const g = ghost;
+        const wobble = Math.sin(g.animFrame * Math.PI * 2) * 2;
+        
+        // Ghost glow
+        const glow = this.ctx.createRadialGradient(
+            g.x + g.width / 2,
+            g.y + g.height / 2,
+            0,
+            g.x + g.width / 2,
+            g.y + g.height / 2,
+            g.width
+        );
+        glow.addColorStop(0, 'rgba(255, 255, 255, 0.4)');
+        glow.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        this.ctx.fillStyle = glow;
+        this.ctx.beginPath();
+        this.ctx.arc(g.x + g.width / 2, g.y + g.height / 2, g.width, 0, Math.PI * 2);
+        this.ctx.fill();
+        
+        // Ghost body - rounded top
+        this.ctx.fillStyle = 'rgba(240, 240, 255, 0.9)';
+        this.ctx.beginPath();
+        this.ctx.arc(g.x + g.width / 2, g.y + 10, 12, Math.PI, 0);
+        this.ctx.lineTo(g.x + g.width, g.y + g.height);
+        
+        // Wavy bottom
+        for (let i = 0; i < 3; i++) {
+            const waveX = g.x + g.width - (i * 8);
+            const waveY = g.y + g.height + Math.sin(this.frameCount * 0.1 + i) * 3;
+            this.ctx.lineTo(waveX, waveY);
+        }
+        
+        this.ctx.lineTo(g.x, g.y + g.height);
+        this.ctx.closePath();
+        this.ctx.fill();
+        
+        // Ghost outline
+        this.ctx.strokeStyle = 'rgba(200, 200, 255, 0.5)';
+        this.ctx.lineWidth = 2;
+        this.ctx.stroke();
+        
+        // Eyes - spooky black holes
+        this.ctx.fillStyle = '#000';
+        this.ctx.beginPath();
+        this.ctx.arc(g.x + 8 + wobble, g.y + 12, 3, 0, Math.PI * 2);
+        this.ctx.fill();
+        this.ctx.beginPath();
+        this.ctx.arc(g.x + 16 + wobble, g.y + 12, 3, 0, Math.PI * 2);
+        this.ctx.fill();
+        
+        // Mouth - "O" shape
+        this.ctx.beginPath();
+        this.ctx.arc(g.x + g.width / 2, g.y + 18, 3, 0, Math.PI * 2);
+        this.ctx.fill();
+    }
+    
+    drawPumpkin(pumpkin) {
+        const p = pumpkin;
+        
+        // Pumpkin body - orange
+        this.ctx.fillStyle = '#ff8800';
+        this.ctx.beginPath();
+        this.ctx.arc(p.x + p.width / 2, p.y + p.height / 2, p.width / 2, 0, Math.PI * 2);
+        this.ctx.fill();
+        
+        // Pumpkin segments
+        this.ctx.strokeStyle = '#cc6600';
+        this.ctx.lineWidth = 2;
+        for (let i = -1; i <= 1; i++) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(p.x + p.width / 2 + i * 8, p.y + 4);
+            this.ctx.lineTo(p.x + p.width / 2 + i * 6, p.y + p.height - 4);
+            this.ctx.stroke();
+        }
+        
+        // Stem - green/brown
+        this.ctx.fillStyle = '#8b6914';
+        this.ctx.fillRect(p.x + p.width / 2 - 3, p.y, 6, 6);
+        
+        // Jack-o-lantern face
+        this.ctx.fillStyle = '#ffcc00';
+        
+        // Glowing eyes - triangles
+        this.ctx.beginPath();
+        this.ctx.moveTo(p.x + 10, p.y + 12);
+        this.ctx.lineTo(p.x + 8, p.y + 16);
+        this.ctx.lineTo(p.x + 12, p.y + 16);
+        this.ctx.closePath();
+        this.ctx.fill();
+        
+        this.ctx.beginPath();
+        this.ctx.moveTo(p.x + 22, p.y + 12);
+        this.ctx.lineTo(p.x + 20, p.y + 16);
+        this.ctx.lineTo(p.x + 24, p.y + 16);
+        this.ctx.closePath();
+        this.ctx.fill();
+        
+        // Scary mouth - zigzag
+        this.ctx.beginPath();
+        this.ctx.moveTo(p.x + 10, p.y + 22);
+        this.ctx.lineTo(p.x + 12, p.y + 24);
+        this.ctx.lineTo(p.x + 14, p.y + 22);
+        this.ctx.lineTo(p.x + 16, p.y + 24);
+        this.ctx.lineTo(p.x + 18, p.y + 22);
+        this.ctx.lineTo(p.x + 20, p.y + 24);
+        this.ctx.lineTo(p.x + 22, p.y + 22);
+        this.ctx.fill();
+        
+        // Glow effect
+        const glow = Math.sin(this.frameCount * 0.1 + p.x) * 0.3 + 0.5;
+        this.ctx.fillStyle = `rgba(255, 200, 0, ${glow * 0.3})`;
+        this.ctx.beginPath();
+        this.ctx.arc(p.x + p.width / 2, p.y + p.height / 2, p.width / 2 + 4, 0, Math.PI * 2);
+        this.ctx.fill();
+    }
+    
+    drawGravestone(obstacle) {
+        const g = obstacle;
+        
+        // Stone body - gray
+        this.ctx.fillStyle = '#666';
+        this.ctx.fillRect(g.x, g.y + 8, g.width, g.height - 8);
+        
+        // Rounded top
+        this.ctx.beginPath();
+        this.ctx.arc(g.x + g.width / 2, g.y + 8, g.width / 2, Math.PI, 0);
+        this.ctx.fill();
+        
+        // Stone texture
+        this.ctx.fillStyle = '#555';
+        this.ctx.fillRect(g.x + 4, g.y + 12, 4, 4);
+        this.ctx.fillRect(g.x + g.width - 8, g.y + 16, 4, 4);
+        this.ctx.fillRect(g.x + 8, g.y + 24, 4, 4);
+        
+        // Outline
+        this.ctx.strokeStyle = '#444';
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeRect(g.x, g.y + 8, g.width, g.height - 8);
+        this.ctx.beginPath();
+        this.ctx.arc(g.x + g.width / 2, g.y + 8, g.width / 2, Math.PI, 0);
+        this.ctx.stroke();
+        
+        // RIP text
+        this.ctx.fillStyle = '#888';
+        this.ctx.font = '8px monospace';
+        this.ctx.fillText('RIP', g.x + 8, g.y + 22);
+        
+        // Moss - green patches
+        this.ctx.fillStyle = '#2a4a2a';
+        this.ctx.fillRect(g.x + 2, g.y + g.height - 6, 8, 4);
+        this.ctx.fillRect(g.x + g.width - 10, g.y + 10, 6, 4);
+    }
+    
+    drawSkeleton(skeleton) {
+        const s = skeleton;
+        
+        // Skeleton body - white bones
+        this.ctx.fillStyle = '#f0f0f0';
+        
+        // Skull
+        this.ctx.fillRect(s.x + 6, s.y, 12, 12);
+        
+        // Eye sockets - black
+        this.ctx.fillStyle = '#000';
+        this.ctx.fillRect(s.x + 8, s.y + 3, 3, 3);
+        this.ctx.fillRect(s.x + 13, s.y + 3, 3, 3);
+        
+        // Nose hole - small triangle
+        this.ctx.beginPath();
+        this.ctx.moveTo(s.x + 12, s.y + 7);
+        this.ctx.lineTo(s.x + 11, s.y + 9);
+        this.ctx.lineTo(s.x + 13, s.y + 9);
+        this.ctx.closePath();
+        this.ctx.fill();
+        
+        // Ribcage
+        this.ctx.fillStyle = '#f0f0f0';
+        this.ctx.fillRect(s.x + 8, s.y + 12, 8, 10);
+        
+        // Ribs - horizontal lines
+        this.ctx.strokeStyle = '#000';
+        this.ctx.lineWidth = 1;
+        for (let i = 0; i < 3; i++) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(s.x + 8, s.y + 14 + i * 3);
+            this.ctx.lineTo(s.x + 16, s.y + 14 + i * 3);
+            this.ctx.stroke();
+        }
+        
+        // Spine
+        this.ctx.beginPath();
+        this.ctx.moveTo(s.x + 12, s.y + 12);
+        this.ctx.lineTo(s.x + 12, s.y + 22);
+        this.ctx.stroke();
+        
+        // Pelvis
+        this.ctx.fillStyle = '#f0f0f0';
+        this.ctx.fillRect(s.x + 7, s.y + 22, 10, 4);
+        
+        // Legs - bone style
+        const legOffset = Math.sin(s.animFrame * Math.PI * 2) * 2;
+        this.ctx.fillRect(s.x + 8, s.y + 26 + legOffset, 3, 6);
+        this.ctx.fillRect(s.x + 13, s.y + 26 - legOffset, 3, 6);
+        
+        // Arms - one holds bow
+        this.ctx.fillRect(s.x + 5, s.y + 14, 3, 8);
+        this.ctx.fillRect(s.x + 16, s.y + 14, 3, 8);
+        
+        // Bow (weapon)
+        this.ctx.strokeStyle = '#8b4513';
+        this.ctx.lineWidth = 2;
+        this.ctx.beginPath();
+        if (s.direction === 1) {
+            // Bow on right side
+            this.ctx.moveTo(s.x + 20, s.y + 14);
+            this.ctx.quadraticCurveTo(s.x + 24, s.y + 18, s.x + 20, s.y + 22);
+            this.ctx.stroke();
+            
+            // Bow string
+            this.ctx.strokeStyle = '#ddd';
+            this.ctx.lineWidth = 1;
+            this.ctx.beginPath();
+            this.ctx.moveTo(s.x + 20, s.y + 14);
+            this.ctx.lineTo(s.x + 20, s.y + 22);
+            this.ctx.stroke();
+        } else {
+            // Bow on left side
+            this.ctx.moveTo(s.x + 4, s.y + 14);
+            this.ctx.quadraticCurveTo(s.x, s.y + 18, s.x + 4, s.y + 22);
+            this.ctx.stroke();
+            
+            // Bow string
+            this.ctx.strokeStyle = '#ddd';
+            this.ctx.lineWidth = 1;
+            this.ctx.beginPath();
+            this.ctx.moveTo(s.x + 4, s.y + 14);
+            this.ctx.lineTo(s.x + 4, s.y + 22);
+            this.ctx.stroke();
+        }
+        
+        // Outline
+        this.ctx.strokeStyle = '#ccc';
+        this.ctx.lineWidth = 1;
+        this.ctx.strokeRect(s.x + 6, s.y, 12, 12); // Skull outline
+    }
+    
+    drawArrow(arrow) {
+        this.ctx.save();
+        this.ctx.translate(arrow.x, arrow.y);
+        this.ctx.rotate(arrow.angle);
+        
+        // Arrow shaft - brown
+        this.ctx.fillStyle = '#8b4513';
+        this.ctx.fillRect(-8, -1, 14, 2);
+        
+        // Arrow head - metal gray
+        this.ctx.fillStyle = '#888';
+        this.ctx.beginPath();
+        this.ctx.moveTo(6, 0);
+        this.ctx.lineTo(12, -3);
+        this.ctx.lineTo(12, 3);
+        this.ctx.closePath();
+        this.ctx.fill();
+        
+        // Arrow fletching - feathers
+        this.ctx.fillStyle = '#fff';
+        this.ctx.beginPath();
+        this.ctx.moveTo(-8, 0);
+        this.ctx.lineTo(-10, -2);
+        this.ctx.lineTo(-10, 2);
+        this.ctx.closePath();
+        this.ctx.fill();
+        
+        this.ctx.restore();
+    }
+    
     drawEnemy(enemy) {
         const e = enemy;
         const wobble = Math.sin(e.animFrame * Math.PI * 2) * 2;
@@ -2798,6 +4010,101 @@ class Game {
         this.ctx.strokeRect(o.x, o.y, o.width, o.height);
     }
     
+    drawLava(obstacle) {
+        const o = obstacle;
+        
+        // Animated lava surface
+        const waveOffset = Math.sin(this.frameCount * 0.1) * 2;
+        
+        // Dark base
+        this.ctx.fillStyle = '#4a0000';
+        this.ctx.fillRect(o.x, o.y + 10, o.width, o.height - 10);
+        
+        // Bright lava surface (animated)
+        const gradient = this.ctx.createLinearGradient(o.x, o.y, o.x, o.y + o.height);
+        gradient.addColorStop(0, '#ff6600');
+        gradient.addColorStop(0.4, '#ff3300');
+        gradient.addColorStop(1, '#cc0000');
+        this.ctx.fillStyle = gradient;
+        
+        // Draw wavy lava surface
+        this.ctx.beginPath();
+        this.ctx.moveTo(o.x, o.y + waveOffset);
+        
+        for (let x = o.x; x <= o.x + o.width; x += 10) {
+            const wave = Math.sin((x - o.x) * 0.2 + this.frameCount * 0.1) * 3;
+            this.ctx.lineTo(x, o.y + wave + waveOffset);
+        }
+        
+        this.ctx.lineTo(o.x + o.width, o.y + o.height);
+        this.ctx.lineTo(o.x, o.y + o.height);
+        this.ctx.closePath();
+        this.ctx.fill();
+        
+        // Hot spots (bubbles)
+        this.ctx.fillStyle = '#ffaa00';
+        const numBubbles = 3;
+        for (let i = 0; i < numBubbles; i++) {
+            const bubbleX = o.x + (i + 0.5) * (o.width / numBubbles);
+            const bubbleY = o.y + 15 + Math.sin(this.frameCount * 0.15 + i * 2) * 5;
+            const bubbleSize = 4 + Math.sin(this.frameCount * 0.2 + i) * 2;
+            
+            this.ctx.beginPath();
+            this.ctx.arc(bubbleX, bubbleY, bubbleSize, 0, Math.PI * 2);
+            this.ctx.fill();
+        }
+        
+        // Glow effect on top
+        this.ctx.fillStyle = 'rgba(255, 150, 0, 0.5)';
+        this.ctx.fillRect(o.x, o.y, o.width, 8);
+        
+        // Outer outline
+        this.ctx.strokeStyle = '#660000';
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeRect(o.x, o.y, o.width, o.height);
+    }
+    
+    drawLavaParticle(particle) {
+        // Calculate opacity based on remaining life
+        const opacity = Math.min(particle.life / 50, 1);
+        
+        // Lava particle body - bright and glowing
+        const gradient = this.ctx.createRadialGradient(
+            particle.x + particle.width / 2, 
+            particle.y + particle.height / 2, 
+            0,
+            particle.x + particle.width / 2, 
+            particle.y + particle.height / 2, 
+            particle.width
+        );
+        gradient.addColorStop(0, `rgba(255, 200, 0, ${opacity})`);
+        gradient.addColorStop(0.5, `rgba(255, 100, 0, ${opacity})`);
+        gradient.addColorStop(1, `rgba(255, 0, 0, ${opacity * 0.5})`);
+        
+        this.ctx.fillStyle = gradient;
+        this.ctx.beginPath();
+        this.ctx.arc(
+            particle.x + particle.width / 2, 
+            particle.y + particle.height / 2, 
+            particle.width / 2, 
+            0, 
+            Math.PI * 2
+        );
+        this.ctx.fill();
+        
+        // Bright core
+        this.ctx.fillStyle = `rgba(255, 255, 100, ${opacity})`;
+        this.ctx.beginPath();
+        this.ctx.arc(
+            particle.x + particle.width / 2, 
+            particle.y + particle.height / 2, 
+            particle.width / 4, 
+            0, 
+            Math.PI * 2
+        );
+        this.ctx.fill();
+    }
+    
     drawFinishLine() {
         const x = this.levelWidth - 100;
         
@@ -2840,4 +4147,24 @@ window.addEventListener('load', () => {
     const game = new Game();
     // Store on window for debugging if needed
     window.game = game;
+    
+    // Secret cheat code - click the X in RAEMAX to unlock level select
+    const secretX = document.getElementById('secretX');
+    if (secretX) {
+        secretX.addEventListener('click', (e) => {
+            e.stopPropagation();
+            game.showLevelSelect();
+        });
+        
+        // Add hover effect
+        secretX.addEventListener('mouseenter', () => {
+            secretX.style.color = '#ff00ff';
+            secretX.style.textShadow = '0 0 10px #ff00ff';
+        });
+        
+        secretX.addEventListener('mouseleave', () => {
+            secretX.style.color = '';
+            secretX.style.textShadow = '';
+        });
+    }
 });
