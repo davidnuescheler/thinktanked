@@ -417,11 +417,26 @@ class SoundManager {
 class Game {
     constructor() {
         this.canvas = document.getElementById('gameCanvas');
-        this.ctx = this.canvas.getContext('2d');
+        this.ctx = this.canvas.getContext('2d', { alpha: false });
         
-        // Set canvas size
-        this.canvas.width = 800;
-        this.canvas.height = 500;
+        // Detect mobile device
+        this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        
+        // Set canvas size (smaller on mobile for better performance)
+        if (this.isMobile) {
+            this.canvas.width = 640;
+            this.canvas.height = 400;
+        } else {
+            this.canvas.width = 800;
+            this.canvas.height = 500;
+        }
+        
+        // Performance optimizations
+        this.ctx.imageSmoothingEnabled = !this.isMobile; // Disable image smoothing on mobile
+        
+        // Frame rate limiting for mobile
+        this.lastFrameTime = 0;
+        this.targetFrameTime = this.isMobile ? 1000 / 30 : 1000 / 60; // 30fps on mobile, 60fps on desktop
         
         // Game state
         this.state = 'start'; // start, playing, paused, gameover, win, dying
@@ -2311,7 +2326,9 @@ class Game {
     }
     
     createParticles(x, y, color) {
-        for (let i = 0; i < 10; i++) {
+        // Reduce particles on mobile for better performance
+        const particleCount = this.isMobile ? 5 : 10;
+        for (let i = 0; i < particleCount; i++) {
             this.particles.push({
                 x: x,
                 y: y,
@@ -2327,7 +2344,8 @@ class Game {
     createExplosion(x, y) {
         // Create a large explosion with multiple colored particles
         const colors = ['#ff0000', '#ff6600', '#ffff00', '#ff9900', '#ff3300'];
-        const numParticles = 40;
+        // Reduce particles on mobile for better performance
+        const numParticles = this.isMobile ? 20 : 40;
         
         for (let i = 0; i < numParticles; i++) {
             const angle = (i / numParticles) * Math.PI * 2;
@@ -2512,7 +2530,8 @@ class Game {
     drawBackgroundStars() {
         // Draw twinkling stars in the night sky
         this.ctx.fillStyle = '#ffffff';
-        const starCount = 100;
+        // Reduce stars on mobile for better performance
+        const starCount = this.isMobile ? 50 : 100;
         
         for (let i = 0; i < starCount; i++) {
             // Use deterministic positions based on camera and index
@@ -3505,7 +3524,8 @@ class Game {
     drawHalloweenBackground() {
         // Draw spooky stars
         this.ctx.fillStyle = '#ffffff';
-        const starCount = 50;
+        // Reduce stars on mobile for better performance
+        const starCount = this.isMobile ? 25 : 50;
         
         for (let i = 0; i < starCount; i++) {
             const x = ((i * 73 + this.camera.x * 0.5) % this.canvas.width);
@@ -4146,10 +4166,18 @@ class Game {
         this.ctx.fillRect(x + 28, 405, 8, 8);
     }
     
-    gameLoop() {
-        this.update();
-        this.render();
-        requestAnimationFrame(() => this.gameLoop());
+    gameLoop(currentTime = 0) {
+        // Frame rate limiting
+        const deltaTime = currentTime - this.lastFrameTime;
+        
+        if (deltaTime >= this.targetFrameTime) {
+            this.lastFrameTime = currentTime - (deltaTime % this.targetFrameTime);
+            
+            this.update();
+            this.render();
+        }
+        
+        requestAnimationFrame((time) => this.gameLoop(time));
     }
 }
 
