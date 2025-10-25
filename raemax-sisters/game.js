@@ -1982,21 +1982,10 @@ class Game {
         
         // Check ghost collision (Level 4)
         if (this.currentLevel === 4) {
-            this.ghosts.forEach((ghost, index) => {
+            this.ghosts.forEach(ghost => {
                 if (this.checkCollision(this.player, ghost)) {
-                    // Check if player is jumping on ghost
-                    if (this.player.vy > 0 && this.player.y < ghost.y - 10) {
-                        this.score += 250;
-                        this.updateUI();
-                        // Remove ghost by moving it off-screen
-                        this.ghosts.splice(index, 1);
-                        this.player.vy = -4; // Bounce
-                        this.sound.enemyDefeat();
-                        this.createParticles(ghost.x + ghost.width / 2, ghost.y + ghost.height / 2, '#9999ff');
-                    } else {
-                        // Player hit by ghost
-                        this.playerDeath(this.player.x + this.player.width / 2, this.player.y + this.player.height / 2);
-                    }
+                    // Ghosts are deadly - can't jump on them!
+                    this.playerDeath(this.player.x + this.player.width / 2, this.player.y + this.player.height / 2);
                 }
             });
             
