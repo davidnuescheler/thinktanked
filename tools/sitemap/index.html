@@ -44,7 +44,7 @@
             async function loadSitemap(sitemapURL, sitemapURLs = []) {
                 try {
                     console.log('loading', sitemapURL);
-                    const resp = await fetch(`${sitemapURL}`);
+                    const resp = await fetch(`https://little-forest-58aa.david8603.workers.dev/?url=${sitemapURL}`);
                     const xml = await resp.text();
                     const sitemap = new DOMParser().parseFromString(xml, 'text/xml');
                     const subSitemaps = [...sitemap.querySelectorAll('sitemap loc')];
