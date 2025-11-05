@@ -279,6 +279,26 @@ button:active {
     color: white;
 }
 
+.share-btn {
+    background: var(--color-green);
+    color: white;
+    border-color: var(--color-green);
+}
+
+.share-btn:hover {
+    background: #0ab559;
+    border-color: #0ab559;
+}
+
+.share-btn.copied {
+    background: var(--color-dark);
+    border-color: var(--color-dark);
+}
+
+.share-btn svg {
+    stroke: currentColor;
+}
+
 .refresh-btn svg {
     animation: none;
 }

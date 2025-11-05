@@ -37,6 +37,7 @@ class ActivityScore {
     setupEventListeners() {
         const calculateBtn = document.getElementById('calculate-btn');
         const randomizeBtn = document.getElementById('randomize-btn');
+        const shareBtn = document.getElementById('share-btn');
         const resetBtn = document.getElementById('reset-btn');
 
         calculateBtn.addEventListener('click', () => {
@@ -45,6 +46,10 @@ class ActivityScore {
 
         randomizeBtn.addEventListener('click', () => {
             this.generateRandomData();
+        });
+
+        shareBtn.addEventListener('click', () => {
+            this.shareLink(shareBtn);
         });
 
         resetBtn.addEventListener('click', () => {
@@ -60,18 +65,105 @@ class ActivityScore {
         });
     }
 
-    loadData() {
-        // Load saved data from localStorage
-        const stored = localStorage.getItem('activityRawValues');
-        if (stored) {
-            this.rawValues = JSON.parse(stored);
+    loadFromQueryParams() {
+        // Load data from URL query parameters
+        const params = new URLSearchParams(window.location.search);
+        
+        const coding = params.get('coding');
+        const empathy = params.get('empathy');
+        const operations = params.get('operations');
+        const influence = params.get('influence');
+        
+        // If any query params exist, use them
+        if (coding !== null || empathy !== null || operations !== null || influence !== null) {
+            this.rawValues = {
+                coding: parseInt(coding) || 0,
+                empathy: parseInt(empathy) || 0,
+                operations: parseInt(operations) || 0,
+                influence: parseInt(influence) || 0
+            };
             this.updateInputFields();
             this.calculateScores();
+            return true;
+        }
+        return false;
+    }
+
+    loadData() {
+        // Try to load from URL query params first, then fall back to localStorage
+        const hasQueryParams = this.loadFromQueryParams();
+        
+        if (!hasQueryParams) {
+            const stored = localStorage.getItem('activityRawValues');
+            if (stored) {
+                this.rawValues = JSON.parse(stored);
+                this.updateInputFields();
+                this.calculateScores();
+                // Update URL with loaded values
+                this.updateQueryParams();
+            }
         }
     }
 
     saveData() {
         localStorage.setItem('activityRawValues', JSON.stringify(this.rawValues));
+        this.updateQueryParams();
+    }
+
+    updateQueryParams() {
+        // Update URL query parameters without reloading the page
+        const params = new URLSearchParams();
+        
+        if (this.rawValues.coding > 0) params.set('coding', this.rawValues.coding);
+        if (this.rawValues.empathy > 0) params.set('empathy', this.rawValues.empathy);
+        if (this.rawValues.operations > 0) params.set('operations', this.rawValues.operations);
+        if (this.rawValues.influence > 0) params.set('influence', this.rawValues.influence);
+        
+        const queryString = params.toString();
+        const newUrl = queryString ? `${window.location.pathname}?${queryString}` : window.location.pathname;
+        
+        // Use replaceState to update URL without adding to browser history
+        window.history.replaceState({}, '', newUrl);
+    }
+
+    async shareLink(button) {
+        // Get the current URL with query params
+        const url = window.location.href;
+        
+        // Check if we have any data to share
+        if (!this.hasAnyData()) {
+            alert('Please enter some metrics before sharing.');
+            return;
+        }
+        
+        try {
+            // Try to use the Web Share API if available
+            if (navigator.share) {
+                await navigator.share({
+                    title: 'Activity Score',
+                    text: `Activity Score: ${this.calculateOverallScore()}/100`,
+                    url: url
+                });
+            } else {
+                // Fallback to clipboard
+                await navigator.clipboard.writeText(url);
+                
+                // Update button text temporarily
+                const originalHTML = button.innerHTML;
+                button.innerHTML = '✓ Link Copied!';
+                button.classList.add('copied');
+                
+                setTimeout(() => {
+                    button.innerHTML = originalHTML;
+                    button.classList.remove('copied');
+                }, 2000);
+            }
+        } catch (err) {
+            // If share/copy fails, show the URL
+            if (err.name !== 'AbortError') {
+                prompt('Copy this link to share:', url);
+            }
+        }
     }
 
     calculateFromInputs() {
@@ -126,6 +218,9 @@ class ActivityScore {
         this.updateInputFields();
         this.saveData();
         this.animateScores();
+        
+        // Clear URL params
+        window.history.replaceState({}, '', window.location.pathname);
     }
 
     updateInputFields() {

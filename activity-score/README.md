@@ -39,11 +39,42 @@ Each metric is measured by absolute numbers over the last 12 months, with specif
 3. Scores calculate automatically as you type
 4. Click "Calculate Scores" to update all gauges
 5. Use "Generate Random Data" for testing
-6. Click "Reset" to clear all data
+6. Click "Share Link" to copy/share the URL with current scores
+7. Click "Reset" to clear all data
 
-## 💾 Data Persistence
+### Sharing Scores
+Click the green **"Share Link"** button to:
+- Copy the URL to clipboard (desktop)
+- Open native share dialog (mobile)
+- The URL includes all current metric values as query parameters
 
-All entered data is automatically saved to browser localStorage and will persist across page reloads.
+## 💾 Data Persistence & Sharing
+
+### Query Parameters
+All input values are automatically synced to URL query parameters, allowing you to:
+- **Bookmark** specific scores
+- **Share** scores via URL
+- **Deep link** directly to specific metrics
+
+Example URL:
+```
+index.html?coding=650&empathy=1500&operations=300&influence=150
+```
+
+The URL updates automatically as you type, using the following parameter names:
+- `coding` - Coding Activity contributions
+- `empathy` - Customer Empathy support messages  
+- `operations` - Operations Experience on-call hours
+- `influence` - Engineering Influence channel tags
+
+### localStorage
+Data is also saved to browser localStorage as a backup and will persist across page reloads.
+
+### Priority
+When loading data, the system checks in this order:
+1. **URL query parameters** (highest priority)
+2. **localStorage** (fallback)
+3. **Empty state** (if neither exists)
 
 ## 🔧 Integration
 
