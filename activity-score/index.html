@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Activity Score</title>
+    <link rel="stylesheet" href="activity-score.css">
+</head>
+<body>
+    <div class="container">
+        <header class="score-header">
+            <h1>Activity Score</h1>
+            <p class="subtitle">Engineering Performance Metrics</p>
+        </header>
+
+        <div class="overall-score">
+            <div class="gauge-container main-gauge">
+                <svg class="gauge-svg" viewBox="0 0 200 200">
+                    <circle class="gauge-bg" cx="100" cy="100" r="80" />
+                    <circle class="gauge-progress" id="overall-progress" cx="100" cy="100" r="80" />
+                </svg>
+                <div class="gauge-content">
+                    <div class="gauge-score" id="overall-score">0</div>
+                    <div class="gauge-label">Overall</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="gauge-container">
+                    <svg class="gauge-svg" viewBox="0 0 200 200">
+                        <circle class="gauge-bg" cx="100" cy="100" r="80" />
+                        <circle class="gauge-progress" id="coding-progress" cx="100" cy="100" r="80" />
+                    </svg>
+                    <div class="gauge-content">
+                        <div class="gauge-score" id="coding-score">0</div>
+                    </div>
+                </div>
+                <div class="metric-info">
+                    <h3>Coding Activity</h3>
+                    <p>Commits, PRs, and code contributions</p>
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <div class="gauge-container">
+                    <svg class="gauge-svg" viewBox="0 0 200 200">
+                        <circle class="gauge-bg" cx="100" cy="100" r="80" />
+                        <circle class="gauge-progress" id="empathy-progress" cx="100" cy="100" r="80" />
+                    </svg>
+                    <div class="gauge-content">
+                        <div class="gauge-score" id="empathy-score">0</div>
+                    </div>
+                </div>
+                <div class="metric-info">
+                    <h3>Customer Empathy</h3>
+                    <p>User feedback and support engagement</p>
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <div class="gauge-container">
+                    <svg class="gauge-svg" viewBox="0 0 200 200">
+                        <circle class="gauge-bg" cx="100" cy="100" r="80" />
+                        <circle class="gauge-progress" id="operations-progress" cx="100" cy="100" r="80" />
+                    </svg>
+                    <div class="gauge-content">
+                        <div class="gauge-score" id="operations-score">0</div>
+                    </div>
+                </div>
+                <div class="metric-info">
+                    <h3>Operations Experience</h3>
+                    <p>System reliability and incident response</p>
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <div class="gauge-container">
+                    <svg class="gauge-svg" viewBox="0 0 200 200">
+                        <circle class="gauge-bg" cx="100" cy="100" r="80" />
+                        <circle class="gauge-progress" id="influence-progress" cx="100" cy="100" r="80" />
+                    </svg>
+                    <div class="gauge-content">
+                        <div class="gauge-score" id="influence-score">0</div>
+                    </div>
+                </div>
+                <div class="metric-info">
+                    <h3>Engineering Influence</h3>
+                    <p>Mentorship, reviews, and collaboration</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="input-section">
+            <h2>Input Metrics</h2>
+            <p class="input-subtitle">Enter your raw metrics for the last 12 months</p>
+            
+            <div class="input-grid">
+                <div class="input-group">
+                    <label for="coding-input">
+                        <span class="input-label-main">Coding Activity</span>
+                        <span class="input-label-sub">Contributions (800 = 100 score)</span>
+                    </label>
+                    <input type="number" id="coding-input" min="0" max="2000" placeholder="0" />
+                </div>
+
+                <div class="input-group">
+                    <label for="empathy-input">
+                        <span class="input-label-main">Customer Empathy</span>
+                        <span class="input-label-sub">Support messages (2000 = 100 score)</span>
+                    </label>
+                    <input type="number" id="empathy-input" min="0" max="5000" placeholder="0" />
+                </div>
+
+                <div class="input-group">
+                    <label for="operations-input">
+                        <span class="input-label-main">Operations Experience</span>
+                        <span class="input-label-sub">On-call hours (360 = 100 score)</span>
+                    </label>
+                    <input type="number" id="operations-input" min="0" max="1000" placeholder="0" />
+                </div>
+
+                <div class="input-group">
+                    <label for="influence-input">
+                        <span class="input-label-main">Engineering Influence</span>
+                        <span class="input-label-sub">Channel tags (200 = 100 score)</span>
+                    </label>
+                    <input type="number" id="influence-input" min="0" max="500" placeholder="0" />
+                </div>
+            </div>
+
+            <div class="controls">
+                <button class="calculate-btn" id="calculate-btn">Calculate Scores</button>
+                <button class="randomize-btn" id="randomize-btn">Generate Random Data</button>
+                <button class="reset-btn" id="reset-btn">Reset</button>
+            </div>
+        </div>
+
+        <div class="score-details">
+            <h2>Score Breakdown</h2>
+            <div class="details-grid">
+                <div class="detail-item">
+                    <span class="detail-label">Coding Activity:</span>
+                    <span class="detail-value" id="coding-detail">Enter data to calculate</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Customer Empathy:</span>
+                    <span class="detail-value" id="empathy-detail">Enter data to calculate</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Operations Experience:</span>
+                    <span class="detail-value" id="operations-detail">Enter data to calculate</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Engineering Influence:</span>
+                    <span class="detail-value" id="influence-detail">Enter data to calculate</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="activity-score.js"></script>
+</body>
+</html>
+
