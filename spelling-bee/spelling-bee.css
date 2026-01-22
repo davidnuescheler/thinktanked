@@ -18,6 +18,7 @@
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   min-height: 100vh;
+  min-height: 100dvh;
   background: linear-gradient(135deg, var(--bg-gradient-1) 0%, var(--bg-gradient-2) 100%);
   color: var(--text-light);
   display: flex;
@@ -26,6 +27,7 @@ body {
   justify-content: center;
   overflow: hidden;
 }
+
 
 /* Score Panel - Top Right */
 .score-panel {
@@ -594,6 +596,25 @@ body {
     opacity: 0;
     transform: scale(1) translate(var(--tx), var(--ty));
   }
+}
+
+/* Keyboard-aware layout for mobile */
+body.keyboard-open {
+  justify-content: flex-start;
+  padding-top: 1rem;
+}
+
+body.keyboard-open .header {
+  display: none;
+}
+
+body.keyboard-open .score-panel {
+  position: static;
+  margin-bottom: 1rem;
+}
+
+body.keyboard-open .game-container {
+  padding: 0.5rem;
 }
 
 /* Responsive */

@@ -7,20 +7,21 @@ const wordLists = {
     'train', 'plane', 'house', 'mouse', 'clock', 'black', 'white', 'green', 'brown', 'light',
   ],
   medium: [
-    'garden', 'kitchen', 'bedroom', 'window', 'flower', 'purple', 'orange', 'yellow',
-    'friend', 'school', 'pencil', 'eraser', 'teacher', 'student', 'number', 'letter',
-    'animal', 'monkey', 'rabbit', 'turtle', 'dolphin', 'butterfly', 'rainbow', 'thunder',
-    'mountain', 'library', 'bicycle', 'airplane', 'computer', 'elephant', 'giraffe', 'penguin',
-    'sandwich', 'breakfast', 'dinosaur', 'adventure', 'treasure', 'princess', 'superhero', 'magician',
+    'unicorn', 'pirates', 'leaning', 'acrobat', 'forepaw', 'recipe', 'mermaid', 'incredible',
+    'nervous', 'raise', 'attacked', 'streetlights', 'shouting', 'dinosaur', 'gorgeous', 'avocado',
+    'formation', 'faraway', 'understand', 'breakfast', 'message', 'elephant', 'garbage', 'bombarded',
+    'leather', 'peppercorn', 'weather', 'turnout', 'journey', 'asleep', 'brilliant', 'monsoon',
+    'valentine', 'especially', 'heater', 'wooden', 'window', 'chocolate', 'hedgehog', 'surprise',
+    'disability', 'countess', 'cartwheel', 'zooming', 'eaten', 'courtyard', 'curious', 'vacuum',
+    'dangerous', 'february',
   ],
   hard: [
-    'beautiful', 'wonderful', 'excellent', 'fantastic', 'incredible', 'mysterious', 'magnificent',
-    'celebration', 'dictionary', 'encyclopedia', 'extraordinary', 'imagination', 'temperature',
-    'environment', 'congratulations', 'rhinoceros', 'hippopotamus', 'archaeological', 'phenomenon',
-    'consciousness', 'pronunciation', 'architecture', 'bibliography', 'choreography', 'metamorphosis',
-    'onomatopoeia', 'revolutionary', 'supercalifragilistic', 'antidisestablishmentarianism', 'pneumonia',
-    'psychology', 'philosophy', 'questionnaire', 'reconnaissance', 'surveillance', 'mischievous',
-    'lieutenant',
+    'hesitate', 'fragments', 'ration', 'frustration', 'aroma', 'perfume', 'discoveries', 'prognosis',
+    'gallop', 'fluently', 'sardines', 'rickety', 'porridge', 'beige', 'gaunt', 'nautical', 'foreign',
+    'scorcher', 'deflated', 'cosmetics', 'unruly', 'moustache', 'sinister', 'lurches', 'buffalo',
+    'fabulous', 'mysterious', 'anguish', 'lilt', 'democracy', 'ancestral', 'enormous', 'dubious',
+    'scavenger', 'unleash', 'crawdad', 'mascot', 'artifacts', 'tuxedo', 'language', 'sequins',
+    'lanky', 'brandished', 'conical', 'pediatric', 'rummage', 'grimace', 'geranium', 'ebony', 'paltry',
   ],
 };
 
@@ -57,6 +58,7 @@ let wordsCorrect = 0;
 let currentStreak = 0;
 let difficulty = 'medium';
 let mistakesMade = 0;
+let replaysLeft = 3;
 const usedWords = new Set();
 let gameStarted = false;
 
@@ -200,8 +202,21 @@ function createStars() {
   setTimeout(() => container.remove(), 1000);
 }
 
+// Update speak button appearance based on replays left
+function updateSpeakButton() {
+  if (replaysLeft <= 0) {
+    speakButton.style.opacity = '0.3';
+    speakButton.style.cursor = 'not-allowed';
+  } else {
+    speakButton.style.opacity = '1';
+    speakButton.style.cursor = 'pointer';
+  }
+}
+
 // Speak word using Web Speech API
 function speakWord() {
+  if (replaysLeft <= 0) return;
+
   if ('speechSynthesis' in window) {
     window.speechSynthesis.cancel();
 
@@ -213,6 +228,9 @@ function speakWord() {
     utterance.onend = () => speakButton.classList.remove('speaking');
 
     window.speechSynthesis.speak(utterance);
+
+    replaysLeft -= 1;
+    updateSpeakButton();
   }
 }
 
@@ -235,6 +253,8 @@ function nextWord() {
   usedWords.add(currentWord);
   currentIndex = 0;
   mistakesMade = 0;
+  replaysLeft = 3;
+  updateSpeakButton();
 
   // Create letter boxes
   letterBoxes.innerHTML = '';
@@ -304,6 +324,38 @@ function wordComplete() {
   setTimeout(() => nextWord(), 1500);
 }
 
+// Skip word
+function skipWord() {
+  currentStreak = 0;
+  streakDisplay.style.display = 'none';
+  showWordReveal(currentWord.toUpperCase());
+  setTimeout(() => nextWord(), 2000);
+}
+
+// Game over
+function gameOver() {
+  gameStarted = false;
+  showOverlay('💀');
+
+  setTimeout(() => {
+    wordDisplay.style.display = 'none';
+    inputArea.style.display = 'none';
+    startScreen.style.display = 'flex';
+
+    // Reset game state
+    score = 0;
+    wordsCorrect = 0;
+    currentStreak = 0;
+    usedWords.clear();
+
+    // Update displays
+    scoreEl.textContent = '0';
+    wordsCorrectEl.textContent = '0';
+    currentStreakEl.textContent = '0';
+    streakDisplay.style.display = 'none';
+  }, 1500);
+}
+
 // Check letter
 function checkLetter(letter) {
   const boxes = letterBoxes.querySelectorAll('.letter-box');
@@ -335,19 +387,32 @@ function checkLetter(letter) {
     box.classList.add('incorrect');
     mistakesMade += 1;
 
+    // Deduct points for wrong letter
+    const penalty = getDifficultyPoints(difficulty);
+    score = Math.max(0, score - penalty);
+    scoreEl.textContent = score;
+    animateScore(scoreEl);
+
+    // Game over if score hits zero
+    if (score === 0) {
+      setTimeout(() => gameOver(), 500);
+      return;
+    }
+
+    // Auto-skip after 4 wrong letters
+    if (mistakesMade >= 4) {
+      setTimeout(() => skipWord(), 500);
+      return;
+    }
+
+    // Only clear if still incorrect (prevents clearing correct letters typed quickly after)
     setTimeout(() => {
-      box.classList.remove('incorrect');
-      box.textContent = '';
+      if (box.classList.contains('incorrect')) {
+        box.classList.remove('incorrect');
+        box.textContent = '';
+      }
     }, 400);
   }
-}
-
-// Skip word
-function skipWord() {
-  currentStreak = 0;
-  streakDisplay.style.display = 'none';
-  showWordReveal(currentWord.toUpperCase());
-  setTimeout(() => nextWord(), 2000);
 }
 
 // Event listeners
@@ -416,3 +481,27 @@ document.addEventListener('keydown', (e) => {
     hiddenInput.focus();
   }
 });
+
+// Handle mobile keyboard visibility
+if (window.visualViewport) {
+  let initialHeight = window.visualViewport.height;
+
+  window.visualViewport.addEventListener('resize', () => {
+    const currentHeight = window.visualViewport.height;
+    const keyboardOpen = currentHeight < initialHeight * 0.75;
+
+    document.body.classList.toggle('keyboard-open', keyboardOpen);
+
+    if (keyboardOpen && gameStarted) {
+      // Scroll letter boxes into view
+      letterBoxes.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  });
+
+  // Update initial height on orientation change
+  window.addEventListener('orientationchange', () => {
+    setTimeout(() => {
+      initialHeight = window.visualViewport.height;
+    }, 100);
+  });
+}
