@@ -61,7 +61,11 @@ let mistakesMade = 0;
 let replaysLeft = 3;
 const usedWords = new Set();
 let gameStarted = false;
-let highScore = parseInt(localStorage.getItem('spellingBeeHighScore') || '0', 10);
+let startTime = 0;
+const targetScore = 2000;
+// Best time in seconds (null if no record yet)
+let bestTime = localStorage.getItem('spellingBeeBestTime');
+bestTime = bestTime ? parseFloat(bestTime) : null;
 
 // DOM elements
 const scoreEl = document.getElementById('score');
@@ -80,8 +84,15 @@ const overlayContainer = document.getElementById('overlay-container');
 const confettiContainer = document.getElementById('confetti-container');
 const highScoreValue = document.getElementById('high-score-value');
 
-// Initialize high score display
-highScoreValue.textContent = highScore;
+// Format time as MM:SS
+function formatTime(seconds) {
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
+// Initialize best time display
+highScoreValue.textContent = bestTime ? formatTime(bestTime) : '--:--';
 
 // Helper functions
 function getDifficultyPoints(diff) {
@@ -147,13 +158,6 @@ function animateScore(element) {
   setTimeout(() => element.classList.remove('animate'), 300);
 }
 
-// Update score
-function updateScore(points) {
-  score += points;
-  scoreEl.textContent = score;
-  animateScore(scoreEl);
-}
-
 // Create confetti
 function createConfetti() {
   const colors = ['#FFD700', '#FFA500', '#4CAF50', '#FF5252', '#9C27B0', '#2196F3'];
@@ -207,6 +211,94 @@ function createStars() {
   setTimeout(() => container.remove(), 1000);
 }
 
+// Game won - reached target score
+function gameWon() {
+  gameStarted = false;
+  const elapsedTime = (Date.now() - startTime) / 1000;
+  const isNewRecord = bestTime === null || elapsedTime < bestTime;
+
+  // Update best time if new record
+  if (isNewRecord) {
+    bestTime = elapsedTime;
+    localStorage.setItem('spellingBeeBestTime', bestTime.toString());
+    highScoreValue.textContent = formatTime(bestTime);
+  }
+
+  // Create win banner
+  const banner = document.createElement('div');
+  banner.className = 'win-banner';
+  banner.innerHTML = `
+    <div class="win-banner-emoji">🏆</div>
+    <div class="win-banner-text">YOU WON!</div>
+    <div class="win-banner-time">⏱️ ${formatTime(elapsedTime)}</div>
+    ${isNewRecord ? '<div class="win-banner-record">🌟 NEW RECORD! 🌟</div>' : ''}
+  `;
+  document.body.appendChild(banner);
+
+  createConfetti();
+  if (isNewRecord) {
+    createStars();
+  }
+
+  // Remove banner and return to start after 5 seconds
+  setTimeout(() => {
+    banner.remove();
+    wordDisplay.style.display = 'none';
+    inputArea.style.display = 'none';
+    startScreen.style.display = 'flex';
+
+    // Reset game state
+    score = 0;
+    wordsCorrect = 0;
+    currentStreak = 0;
+    usedWords.clear();
+
+    // Update displays
+    scoreEl.textContent = '0';
+    wordsCorrectEl.textContent = '0';
+    currentStreakEl.textContent = '0';
+    streakDisplay.style.display = 'none';
+  }, 5000);
+}
+
+// Game over - quit early
+function gameOver() {
+  gameStarted = false;
+  showOverlay('💨');
+
+  setTimeout(() => {
+    wordDisplay.style.display = 'none';
+    inputArea.style.display = 'none';
+    startScreen.style.display = 'flex';
+
+    // Reset game state
+    score = 0;
+    wordsCorrect = 0;
+    currentStreak = 0;
+    usedWords.clear();
+
+    // Update displays
+    scoreEl.textContent = '0';
+    wordsCorrectEl.textContent = '0';
+    currentStreakEl.textContent = '0';
+    streakDisplay.style.display = 'none';
+  }, 1500);
+}
+
+// Check for win and update score
+function addScore(points) {
+  if (!gameStarted) return;
+
+  score += points;
+  scoreEl.textContent = score;
+  animateScore(scoreEl);
+
+  // Check for win condition
+  if (score >= targetScore) {
+    gameWon();
+  }
+}
+
 // Update speak button appearance based on replays left
 function updateSpeakButton() {
   if (replaysLeft <= 0) {
@@ -220,6 +312,7 @@ function updateSpeakButton() {
 
 // Speak word using Web Speech API
 function speakWord() {
+  if (!gameStarted) return;
   if (replaysLeft <= 0) return;
 
   if ('speechSynthesis' in window) {
@@ -254,6 +347,8 @@ function getRandomWord() {
 
 // Next word
 function nextWord() {
+  if (!gameStarted) return;
+
   currentWord = getRandomWord();
   usedWords.add(currentWord);
   currentIndex = 0;
@@ -305,7 +400,7 @@ function wordComplete() {
     showOverlay(getRandomEmoji('word'), wordBonus);
   }
 
-  updateScore(wordBonus);
+  addScore(wordBonus);
 
   // Update streak
   currentStreak += 1;
@@ -315,7 +410,7 @@ function wordComplete() {
     streakDisplay.style.display = 'flex';
     if (currentStreak % 3 === 0) {
       const streakBonus = currentStreak * 25;
-      updateScore(streakBonus);
+      addScore(streakBonus);
       setTimeout(() => {
         showOverlay(`🔥${currentStreak}`, streakBonus, 'streak');
       }, 500);
@@ -337,39 +432,6 @@ function skipWord() {
   setTimeout(() => nextWord(), 2000);
 }
 
-// Game over
-function gameOver() {
-  gameStarted = false;
-
-  // Check for new high score
-  if (score > highScore) {
-    highScore = score;
-    localStorage.setItem('spellingBeeHighScore', highScore.toString());
-    highScoreValue.textContent = highScore;
-    showOverlay('🏆', score, 'perfect');
-  } else {
-    showOverlay('💀');
-  }
-
-  setTimeout(() => {
-    wordDisplay.style.display = 'none';
-    inputArea.style.display = 'none';
-    startScreen.style.display = 'flex';
-
-    // Reset game state
-    score = 0;
-    wordsCorrect = 0;
-    currentStreak = 0;
-    usedWords.clear();
-
-    // Update displays
-    scoreEl.textContent = '0';
-    wordsCorrectEl.textContent = '0';
-    currentStreakEl.textContent = '0';
-    streakDisplay.style.display = 'none';
-  }, 1500);
-}
-
 // Check letter
 function checkLetter(letter) {
   const boxes = letterBoxes.querySelectorAll('.letter-box');
@@ -383,7 +445,7 @@ function checkLetter(letter) {
     box.classList.add('correct');
 
     const basePoints = getDifficultyPoints(difficulty);
-    updateScore(basePoints);
+    addScore(basePoints);
 
     // Random encouragement for letters (less frequent)
     if (Math.random() < 0.2) {
@@ -406,12 +468,6 @@ function checkLetter(letter) {
     score = Math.max(0, score - penalty);
     scoreEl.textContent = score;
     animateScore(scoreEl);
-
-    // Game over if score hits zero
-    if (score === 0) {
-      setTimeout(() => gameOver(), 500);
-      return;
-    }
 
     // Auto-skip after 4 wrong letters
     if (mistakesMade >= 4) {
@@ -444,6 +500,7 @@ document.querySelectorAll('.difficulty-btn').forEach((btn) => {
 // Start game
 startButton.addEventListener('click', () => {
   gameStarted = true;
+  startTime = Date.now();
   startScreen.style.display = 'none';
   wordDisplay.style.display = 'block';
   inputArea.style.display = 'flex';
