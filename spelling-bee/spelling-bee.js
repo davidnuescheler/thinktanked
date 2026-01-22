@@ -38,7 +38,32 @@ function playLetterSound(letter) {
     audio.play().catch(() => {
       // Ignore autoplay errors
     });
+  } else if ('speechSynthesis' in window) {
+    // Fall back to speech synthesis for letters without mp3
+    const utterance = new SpeechSynthesisUtterance(lowerLetter);
+    utterance.rate = 1;
+    utterance.pitch = 1;
+    window.speechSynthesis.speak(utterance);
   }
+}
+
+// Play buzz sound for wrong letter
+function playBuzzSound() {
+  const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  const oscillator = audioContext.createOscillator();
+  const gainNode = audioContext.createGain();
+
+  oscillator.connect(gainNode);
+  gainNode.connect(audioContext.destination);
+
+  oscillator.type = 'square';
+  oscillator.frequency.setValueAtTime(150, audioContext.currentTime);
+
+  gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+  gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+
+  oscillator.start(audioContext.currentTime);
+  oscillator.stop(audioContext.currentTime + 0.2);
 }
 
 // Emoji feedback sets
@@ -443,6 +468,7 @@ function checkLetter(letter) {
   if (letter === correctLetter) {
     box.classList.remove('active', 'incorrect');
     box.classList.add('correct');
+    playLetterSound(letter);
 
     const basePoints = getDifficultyPoints(difficulty);
     addScore(basePoints);
@@ -462,6 +488,7 @@ function checkLetter(letter) {
   } else {
     box.classList.add('incorrect');
     mistakesMade += 1;
+    playBuzzSound();
 
     // Deduct points for wrong letter
     const penalty = getDifficultyPoints(difficulty);
@@ -528,7 +555,6 @@ document.getElementById('game-area').addEventListener('click', () => {
 hiddenInput.addEventListener('input', (e) => {
   const input = e.data?.toLowerCase();
   if (input && /^[a-z]$/.test(input)) {
-    playLetterSound(input);
     checkLetter(input);
   }
   hiddenInput.value = '';
