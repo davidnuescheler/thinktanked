@@ -379,7 +379,7 @@ function checkLetter(letter) {
   box.textContent = letter.toUpperCase();
 
   if (letter === correctLetter) {
-    box.classList.remove('active');
+    box.classList.remove('active', 'incorrect');
     box.classList.add('correct');
 
     const basePoints = getDifficultyPoints(difficulty);
