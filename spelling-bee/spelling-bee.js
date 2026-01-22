@@ -61,6 +61,7 @@ let mistakesMade = 0;
 let replaysLeft = 3;
 const usedWords = new Set();
 let gameStarted = false;
+let highScore = parseInt(localStorage.getItem('spellingBeeHighScore') || '0', 10);
 
 // DOM elements
 const scoreEl = document.getElementById('score');
@@ -77,6 +78,10 @@ const wordDisplay = document.getElementById('word-display');
 const inputArea = document.getElementById('input-area');
 const overlayContainer = document.getElementById('overlay-container');
 const confettiContainer = document.getElementById('confetti-container');
+const highScoreValue = document.getElementById('high-score-value');
+
+// Initialize high score display
+highScoreValue.textContent = highScore;
 
 // Helper functions
 function getDifficultyPoints(diff) {
@@ -335,7 +340,16 @@ function skipWord() {
 // Game over
 function gameOver() {
   gameStarted = false;
-  showOverlay('💀');
+
+  // Check for new high score
+  if (score > highScore) {
+    highScore = score;
+    localStorage.setItem('spellingBeeHighScore', highScore.toString());
+    highScoreValue.textContent = highScore;
+    showOverlay('🏆', score, 'perfect');
+  } else {
+    showOverlay('💀');
+  }
 
   setTimeout(() => {
     wordDisplay.style.display = 'none';
@@ -440,6 +454,13 @@ startButton.addEventListener('click', () => {
 // Speak button
 speakButton.addEventListener('click', () => speakWord());
 skipButton.addEventListener('click', () => skipWord());
+
+// Bee icon - end game
+document.getElementById('bee-icon').addEventListener('click', () => {
+  if (gameStarted) {
+    gameOver();
+  }
+});
 
 // Focus input on click anywhere in game area
 document.getElementById('game-area').addEventListener('click', () => {

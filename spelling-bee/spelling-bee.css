@@ -88,6 +88,12 @@ body {
   display: block;
   animation: float 2s ease-in-out infinite;
   filter: drop-shadow(0 0 30px rgb(255 215 0 / 50%));
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.bee-icon:hover {
+  transform: scale(1.1);
 }
 
 @keyframes float {
@@ -141,6 +147,27 @@ body {
   align-items: center;
   gap: 3rem;
   animation: fade-in 0.5s ease-out;
+}
+
+/* High Score Display */
+.high-score {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgb(255 215 0 / 15%);
+  padding: 0.8rem 1.5rem;
+  border-radius: 2rem;
+  border: 2px solid rgb(255 215 0 / 30%);
+}
+
+.high-score-icon {
+  font-size: 2rem;
+}
+
+.high-score-value {
+  font-size: 2rem;
+  font-weight: bold;
+  color: var(--primary);
 }
 
 /* Difficulty Selector */
