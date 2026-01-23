@@ -4,10 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>🐝 Spelling Bee</title>
-  <link rel="stylesheet" href="spelling-bee.css">
+  <link rel="stylesheet" href="spelling-bee.css?v=1">
 </head>
 <body>
-  <div class="score-panel" id="score-panel">
+  <div class="top-bar">
+    <div class="progress-bar-container" id="progress-container">
+      <div class="progress-bar" id="progress-bar"></div>
+    </div>
+    <div class="score-panel" id="score-panel">
     <div class="score-item">
       <span class="score-emoji">⭐</span>
       <span class="score-value" id="score">0</span>
@@ -19,6 +23,7 @@
     <div class="score-item" id="streak-display" style="display: none;">
       <span class="score-emoji">🔥</span>
       <span class="score-value" id="current-streak">0</span>
+    </div>
     </div>
   </div>
 
@@ -64,6 +69,6 @@
   <div class="overlay-container" id="overlay-container"></div>
   <div class="confetti-container" id="confetti-container"></div>
 
-  <script src="spelling-bee.js"></script>
+  <script src="spelling-bee.js?v=1"></script>
 </body>
 </html>

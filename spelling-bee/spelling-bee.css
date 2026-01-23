@@ -29,15 +29,24 @@ body {
 }
 
 
-/* Score Panel - Top Right */
-.score-panel {
+/* Top Bar - Progress and Scores */
+.top-bar {
   position: fixed;
   top: 1rem;
+  left: 1rem;
   right: 1rem;
   display: flex;
+  align-items: center;
   gap: 1rem;
   z-index: 100;
   animation: fade-in 0.5s ease-out;
+}
+
+/* Score Panel - Top Right */
+.score-panel {
+  display: flex;
+  gap: 1rem;
+  margin-left: auto;
 }
 
 .score-item {
@@ -239,6 +248,47 @@ body {
   }
 }
 
+/* Progress Bar */
+.progress-bar-container {
+  flex: 1;
+  max-width: 300px;
+  height: 12px;
+  background: rgb(255 255 255 / 10%);
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 20%);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.progress-bar-container.visible {
+  opacity: 1;
+}
+
+.progress-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+  border-radius: 6px;
+  transition: width 0.3s ease-out;
+  box-shadow: 0 0 10px rgb(255 215 0 / 50%);
+}
+
+.progress-bar.full {
+  animation: progress-pulse 0.5s ease-in-out infinite;
+}
+
+@keyframes progress-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 10px rgb(255 215 0 / 50%);
+  }
+
+  50% {
+    box-shadow: 0 0 20px rgb(255 215 0 / 80%);
+  }
+}
+
 /* Word Display */
 .word-display {
   margin-bottom: 2rem;
@@ -369,6 +419,12 @@ body {
   background: rgb(255 82 82 / 40%);
   border-color: var(--error);
   animation: shake 0.4s ease-out;
+}
+
+.letter-box.revealed {
+  background: rgb(255 82 82 / 20%);
+  border-color: var(--error);
+  color: var(--error);
 }
 
 @keyframes correct-pop {
@@ -575,6 +631,43 @@ body {
   color: var(--success);
   margin-top: 1rem;
   animation: pulse 1s ease-in-out infinite;
+}
+
+.win-banner-buttons {
+  display: flex;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.win-banner-btn {
+  padding: 1rem 2rem;
+  font-size: 1.2rem;
+  font-weight: bold;
+  border: none;
+  border-radius: 50px;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.win-banner-btn.continue {
+  background: linear-gradient(45deg, var(--primary), var(--secondary));
+  color: #1a1a2e;
+  box-shadow: 0 4px 20px rgb(255 215 0 / 40%);
+}
+
+.win-banner-btn.continue:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 30px rgb(255 215 0 / 60%);
+}
+
+.win-banner-btn.finish {
+  background: rgb(255 255 255 / 20%);
+  color: var(--text-light);
+  border: 2px solid rgb(255 255 255 / 30%);
+}
+
+.win-banner-btn.finish:hover {
+  background: rgb(255 255 255 / 30%);
 }
 
 @keyframes win-bounce {

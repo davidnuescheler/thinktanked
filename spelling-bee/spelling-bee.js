@@ -83,11 +83,12 @@ let wordsCorrect = 0;
 let currentStreak = 0;
 let difficulty = 'medium';
 let mistakesMade = 0;
+let wrongAttemptsOnLetter = 0;
 let replaysLeft = 3;
 const usedWords = new Set();
 let gameStarted = false;
 let startTime = 0;
-const targetScore = 2000;
+let targetScore = 2000;
 // Best time in seconds (null if no record yet)
 let bestTime = localStorage.getItem('spellingBeeBestTime');
 bestTime = bestTime ? parseFloat(bestTime) : null;
@@ -107,6 +108,8 @@ const wordDisplay = document.getElementById('word-display');
 const inputArea = document.getElementById('input-area');
 const overlayContainer = document.getElementById('overlay-container');
 const confettiContainer = document.getElementById('confetti-container');
+const progressContainer = document.getElementById('progress-container');
+const progressBar = document.getElementById('progress-bar');
 const highScoreValue = document.getElementById('high-score-value');
 
 // Format time as MM:SS
@@ -236,62 +239,14 @@ function createStars() {
   setTimeout(() => container.remove(), 1000);
 }
 
-// Game won - reached target score
-function gameWon() {
-  gameStarted = false;
-  const elapsedTime = (Date.now() - startTime) / 1000;
-  const isNewRecord = bestTime === null || elapsedTime < bestTime;
-
-  // Update best time if new record
-  if (isNewRecord) {
-    bestTime = elapsedTime;
-    localStorage.setItem('spellingBeeBestTime', bestTime.toString());
-    highScoreValue.textContent = formatTime(bestTime);
-  }
-
-  // Create win banner
-  const banner = document.createElement('div');
-  banner.className = 'win-banner';
-  banner.innerHTML = `
-    <div class="win-banner-emoji">🏆</div>
-    <div class="win-banner-text">YOU WON!</div>
-    <div class="win-banner-time">⏱️ ${formatTime(elapsedTime)}</div>
-    ${isNewRecord ? '<div class="win-banner-record">🌟 NEW RECORD! 🌟</div>' : ''}
-  `;
-  document.body.appendChild(banner);
-
-  createConfetti();
-  if (isNewRecord) {
-    createStars();
-  }
-
-  // Remove banner and return to start after 5 seconds
-  setTimeout(() => {
-    banner.remove();
-    wordDisplay.style.display = 'none';
-    inputArea.style.display = 'none';
-    startScreen.style.display = 'flex';
-
-    // Reset game state
-    score = 0;
-    wordsCorrect = 0;
-    currentStreak = 0;
-    usedWords.clear();
-
-    // Update displays
-    scoreEl.textContent = '0';
-    wordsCorrectEl.textContent = '0';
-    currentStreakEl.textContent = '0';
-    streakDisplay.style.display = 'none';
-  }, 5000);
-}
-
 // Game over - quit early
 function gameOver() {
   gameStarted = false;
   showOverlay('💨');
 
   setTimeout(() => {
+    progressContainer.classList.remove('visible');
+    progressBar.style.width = '0%';
     wordDisplay.style.display = 'none';
     inputArea.style.display = 'none';
     startScreen.style.display = 'flex';
@@ -300,6 +255,7 @@ function gameOver() {
     score = 0;
     wordsCorrect = 0;
     currentStreak = 0;
+    targetScore = 2000;
     usedWords.clear();
 
     // Update displays
@@ -310,18 +266,11 @@ function gameOver() {
   }, 1500);
 }
 
-// Check for win and update score
-function addScore(points) {
-  if (!gameStarted) return;
-
-  score += points;
-  scoreEl.textContent = score;
-  animateScore(scoreEl);
-
-  // Check for win condition
-  if (score >= targetScore) {
-    gameWon();
-  }
+// Update progress bar
+function updateProgressBar() {
+  const progress = Math.min((score / targetScore) * 100, 100);
+  progressBar.style.width = `${progress}%`;
+  progressBar.classList.toggle('full', progress >= 100);
 }
 
 // Update speak button appearance based on replays left
@@ -378,6 +327,7 @@ function nextWord() {
   usedWords.add(currentWord);
   currentIndex = 0;
   mistakesMade = 0;
+  wrongAttemptsOnLetter = 0;
   replaysLeft = 3;
   updateSpeakButton();
 
@@ -405,26 +355,140 @@ function updateActiveBox() {
   });
 }
 
+// Continue playing with higher target
+function continueGame(banner) {
+  banner.remove();
+  gameStarted = true;
+  targetScore += 2000;
+  updateProgressBar();
+  nextWord();
+}
+
+// Finish game and return to start
+function finishGame(banner) {
+  banner.remove();
+  progressContainer.classList.remove('visible');
+  progressBar.style.width = '0%';
+  wordDisplay.style.display = 'none';
+  inputArea.style.display = 'none';
+  startScreen.style.display = 'flex';
+
+  // Reset game state
+  score = 0;
+  wordsCorrect = 0;
+  currentStreak = 0;
+  targetScore = 2000;
+  usedWords.clear();
+
+  // Update displays
+  scoreEl.textContent = '0';
+  wordsCorrectEl.textContent = '0';
+  currentStreakEl.textContent = '0';
+  streakDisplay.style.display = 'none';
+}
+
+// Game won - reached target score
+function gameWon() {
+  gameStarted = false;
+  const elapsedTime = (Date.now() - startTime) / 1000;
+  const isNewRecord = bestTime === null || elapsedTime < bestTime;
+
+  // Update best time if new record (only for first 2000)
+  if (isNewRecord && targetScore === 2000) {
+    bestTime = elapsedTime;
+    localStorage.setItem('spellingBeeBestTime', bestTime.toString());
+    highScoreValue.textContent = formatTime(bestTime);
+  }
+
+  // Create win banner
+  const banner = document.createElement('div');
+  banner.className = 'win-banner';
+
+  const nextTarget = targetScore + 2000;
+  banner.innerHTML = `
+    <div class="win-banner-emoji">🏆</div>
+    <div class="win-banner-text">YOU WON!</div>
+    <div class="win-banner-time">⏱️ ${formatTime(elapsedTime)}</div>
+    ${isNewRecord && targetScore === 2000 ? '<div class="win-banner-record">🌟 NEW RECORD! 🌟</div>' : ''}
+    <div class="win-banner-buttons">
+      <button class="win-banner-btn continue">🎯 Go for ${nextTarget}!</button>
+      <button class="win-banner-btn finish">🏠 Finish</button>
+    </div>
+  `;
+  document.body.appendChild(banner);
+
+  // Button handlers
+  banner.querySelector('.continue').addEventListener('click', () => continueGame(banner));
+  banner.querySelector('.finish').addEventListener('click', () => finishGame(banner));
+
+  createConfetti();
+  if (isNewRecord && targetScore === 2000) {
+    createStars();
+  }
+}
+
+// Check for win and update score
+function addScore(points) {
+  if (!gameStarted) return;
+
+  score += points;
+  scoreEl.textContent = score;
+  animateScore(scoreEl);
+  updateProgressBar();
+
+  // Check for win condition
+  if (score >= targetScore) {
+    gameWon();
+  }
+}
+
+// Replay current word (reset boxes, same word)
+function replayCurrentWord() {
+  if (!gameStarted) return;
+
+  currentIndex = 0;
+  mistakesMade = 0;
+  wrongAttemptsOnLetter = 0;
+  replaysLeft = 3;
+  updateSpeakButton();
+
+  // Reset letter boxes
+  letterBoxes.innerHTML = '';
+  for (let i = 0; i < currentWord.length; i += 1) {
+    const box = document.createElement('div');
+    box.className = 'letter-box';
+    if (i === 0) box.classList.add('active');
+    letterBoxes.appendChild(box);
+  }
+
+  // Auto-speak the word
+  setTimeout(() => speakWord(), 500);
+
+  // Focus input
+  hiddenInput.focus();
+}
+
 // Word complete
 function wordComplete() {
+  // If mistakes were made, replay the same word (no bonus)
+  if (mistakesMade > 0) {
+    showOverlay('🔄');
+    setTimeout(() => replayCurrentWord(), 1000);
+    return;
+  }
+
+  // Perfect word - no mistakes!
   wordsCorrect += 1;
   wordsCorrectEl.textContent = wordsCorrect;
   animateScore(wordsCorrectEl);
 
-  // Calculate word bonus
+  // Calculate word bonus (only for perfect words)
   const wordLength = currentWord.length;
   const difficultyMultiplier = getDifficultyMultiplier(difficulty);
-  let wordBonus = wordLength * 10 * difficultyMultiplier;
+  const wordBonus = wordLength * 10 * difficultyMultiplier * 2;
 
-  // Perfect bonus (no mistakes)
-  if (mistakesMade === 0) {
-    wordBonus *= 2;
-    showOverlay(getRandomEmoji('perfect'), wordBonus, 'perfect');
-    createStars();
-  } else {
-    showOverlay(getRandomEmoji('word'), wordBonus);
-  }
-
+  showOverlay(getRandomEmoji('perfect'), wordBonus, 'perfect');
+  createStars();
   addScore(wordBonus);
 
   // Update streak
@@ -469,6 +533,7 @@ function checkLetter(letter) {
     box.classList.remove('active', 'incorrect');
     box.classList.add('correct');
     playLetterSound(letter);
+    wrongAttemptsOnLetter = 0;
 
     const basePoints = getDifficultyPoints(difficulty);
     addScore(basePoints);
@@ -488,6 +553,7 @@ function checkLetter(letter) {
   } else {
     box.classList.add('incorrect');
     mistakesMade += 1;
+    wrongAttemptsOnLetter += 1;
     playBuzzSound();
 
     // Deduct points for wrong letter
@@ -495,10 +561,28 @@ function checkLetter(letter) {
     score = Math.max(0, score - penalty);
     scoreEl.textContent = score;
     animateScore(scoreEl);
+    updateProgressBar();
 
-    // Auto-skip after 4 wrong letters
-    if (mistakesMade >= 4) {
-      setTimeout(() => skipWord(), 500);
+    // Game over if score hits zero
+    if (score === 0) {
+      setTimeout(() => gameOver(), 500);
+      return;
+    }
+
+    // After 3 wrong attempts, reveal the letter and move on
+    if (wrongAttemptsOnLetter >= 3) {
+      box.classList.remove('incorrect', 'active');
+      box.classList.add('revealed');
+      box.textContent = correctLetter.toUpperCase();
+      wrongAttemptsOnLetter = 0;
+
+      currentIndex += 1;
+
+      if (currentIndex >= currentWord.length) {
+        setTimeout(() => wordComplete(), 500);
+      } else {
+        setTimeout(() => updateActiveBox(), 500);
+      }
       return;
     }
 
@@ -529,8 +613,10 @@ startButton.addEventListener('click', () => {
   gameStarted = true;
   startTime = Date.now();
   startScreen.style.display = 'none';
+  progressContainer.classList.add('visible');
   wordDisplay.style.display = 'block';
   inputArea.style.display = 'flex';
+  updateProgressBar();
   showOverlay('🐝');
   nextWord();
 });
