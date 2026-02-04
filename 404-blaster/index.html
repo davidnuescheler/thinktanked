@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 Blaster - URL Testing Tool</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+
+        .controls {
+            padding: 30px;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        input[type="text"],
+        input[type="number"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #dee2e6;
+            border-radius: 6px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus,
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 14px 32px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .stats {
+            padding: 20px 30px;
+            background: #f8f9fa;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            color: #6c757d;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #495057;
+        }
+
+        .results {
+            padding: 30px;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .results-header h2 {
+            color: #495057;
+        }
+
+        .clear-btn {
+            background: #dc3545;
+            padding: 10px 20px;
+            font-size: 14px;
+        }
+
+        .result-item {
+            background: #f8f9fa;
+            border-left: 4px solid #6c757d;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .result-item.status-200 { border-left-color: #28a745; }
+        .result-item.status-404 { border-left-color: #ffc107; }
+        .result-item.status-500 { border-left-color: #dc3545; }
+        .result-item.status-error { border-left-color: #6c757d; }
+
+        .result-url {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 8px;
+            word-break: break-all;
+        }
+
+        .result-meta {
+            display: flex;
+            gap: 20px;
+            font-size: 0.9em;
+            color: #6c757d;
+            flex-wrap: wrap;
+        }
+
+        .result-status {
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 4px;
+            background: #e9ecef;
+        }
+
+        .result-status.success { background: #d4edda; color: #155724; }
+        .result-status.warning { background: #fff3cd; color: #856404; }
+        .result-status.error { background: #f8d7da; color: #721c24; }
+
+        .result-timing {
+            display: flex;
+            gap: 15px;
+        }
+
+        .timing-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .timing-label {
+            font-size: 0.85em;
+            color: #adb5bd;
+        }
+
+        .timing-value {
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #6c757d;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6c757d;
+        }
+
+        .empty-state-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+            opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎯 404 Blaster</h1>
+            <p class="subtitle">Test server responses with parallel random URL requests</p>
+        </header>
+
+        <div class="controls">
+            <div class="form-group">
+                <div class="form-row">
+                    <div>
+                        <label for="baseUrl">Base URL</label>
+                        <input type="text" id="baseUrl" placeholder="https://example.com" value="">
+                    </div>
+                    <div>
+                        <label for="concurrency">Concurrency</label>
+                        <input type="number" id="concurrency" min="1" max="100" value="10">
+                    </div>
+                </div>
+            </div>
+            <button id="startBtn" onclick="startBlasting()">🚀 Start Blasting</button>
+        </div>
+
+        <div class="stats" id="stats">
+            <div class="stat-card">
+                <div class="stat-label">Total Requests</div>
+                <div class="stat-value" id="totalRequests">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">In Progress</div>
+                <div class="stat-value" id="inProgress">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Average Time</div>
+                <div class="stat-value" id="avgTime">0ms</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Success Rate</div>
+                <div class="stat-value" id="successRate">0%</div>
+            </div>
+        </div>
+
+        <div class="results">
+            <div class="results-header">
+                <h2>Results</h2>
+                <button class="clear-btn" onclick="clearResults()">Clear</button>
+            </div>
+            <div id="resultsContainer">
+                <div class="empty-state">
+                    <div class="empty-state-icon">📊</div>
+                    <p>No results yet. Enter a URL and start blasting!</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let activeRequests = 0;
+        let completedRequests = 0;
+        let totalTime = 0;
+        let successfulRequests = 0;
+
+        function generateRandomString(length = 8) {
+            const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+            let result = '';
+            for (let i = 0; i < length; i++) {
+                result += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return result;
+        }
+
+        function formatTime(ms) {
+            if (ms < 1000) {
+                return `${ms.toFixed(0)}ms`;
+            }
+            return `${(ms / 1000).toFixed(2)}s`;
+        }
+
+        function formatTimestamp(date) {
+            return date.toLocaleTimeString('en-US', { 
+                hour12: false, 
+                hour: '2-digit', 
+                minute: '2-digit', 
+                second: '2-digit',
+                fractionalSecondDigits: 3
+            });
+        }
+
+        function getStatusClass(status) {
+            if (status >= 200 && status < 300) return 'success';
+            if (status >= 400 && status < 500) return 'warning';
+            return 'error';
+        }
+
+        function updateStats() {
+            document.getElementById('totalRequests').textContent = completedRequests;
+            document.getElementById('inProgress').textContent = activeRequests;
+            
+            const avgTime = completedRequests > 0 ? totalTime / completedRequests : 0;
+            document.getElementById('avgTime').textContent = formatTime(avgTime);
+            
+            const successRate = completedRequests > 0 ? (successfulRequests / completedRequests * 100) : 0;
+            document.getElementById('successRate').textContent = `${successRate.toFixed(1)}%`;
+        }
+
+        function addResult(url, status, jsStartTime, networkStartTime, endTime, duration, perfEntry, error = null) {
+            const container = document.getElementById('resultsContainer');
+            
+            // Remove empty state if it exists
+            const emptyState = container.querySelector('.empty-state');
+            if (emptyState) {
+                emptyState.remove();
+            }
+
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `result-item status-${error ? 'error' : status}`;
+            
+            const statusClass = error ? 'error' : getStatusClass(status);
+            const statusText = error ? 'ERROR' : status;
+            
+            const queueTime = perfEntry ? perfEntry.requestStart - perfEntry.fetchStart : 0;
+            const networkTime = perfEntry ? perfEntry.responseStart - perfEntry.requestStart : 0;
+            const downloadTime = perfEntry ? perfEntry.responseEnd - perfEntry.responseStart : 0;
+            
+            resultDiv.innerHTML = `
+                <div class="result-url">${url}</div>
+                <div class="result-meta">
+                    <span class="result-status ${statusClass}">${statusText}</span>
+                    <div class="result-timing">
+                        <div class="timing-item">
+                            <span class="timing-label">JS Start</span>
+                            <span class="timing-value">${formatTimestamp(jsStartTime)}</span>
+                        </div>
+                        <div class="timing-item">
+                            <span class="timing-label">Network Start</span>
+                            <span class="timing-value">${formatTimestamp(networkStartTime)}</span>
+                        </div>
+                        <div class="timing-item">
+                            <span class="timing-label">Ended</span>
+                            <span class="timing-value">${formatTimestamp(endTime)}</span>
+                        </div>
+                        <div class="timing-item">
+                            <span class="timing-label">Total Duration</span>
+                            <span class="timing-value">${formatTime(duration)}</span>
+                        </div>
+                    </div>
+                    ${perfEntry ? `
+                    <div class="result-timing" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #dee2e6;">
+                        <div class="timing-item">
+                            <span class="timing-label">Queue Time</span>
+                            <span class="timing-value">${formatTime(queueTime)}</span>
+                        </div>
+                        <div class="timing-item">
+                            <span class="timing-label">Network Time</span>
+                            <span class="timing-value">${formatTime(networkTime)}</span>
+                        </div>
+                        <div class="timing-item">
+                            <span class="timing-label">Download Time</span>
+                            <span class="timing-value">${formatTime(downloadTime)}</span>
+                        </div>
+                    </div>
+                    <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #dee2e6; font-size: 0.85em; color: #6c757d;">
+                        ${!perfEntry.hasDetailedTiming ? `
+                            <div style="background: #fff3cd; color: #856404; padding: 8px; border-radius: 4px; margin-bottom: 8px;">
+                                ⚠️ Limited timing info - Server needs 'Timing-Allow-Origin: *' header for accurate parallelism
+                            </div>
+                        ` : ''}
+                        <details>
+                            <summary style="cursor: pointer; user-select: none;">Raw Performance API Data</summary>
+                            <div style="margin-top: 8px; font-family: monospace; font-size: 0.9em;">
+                                <div>fetchStart: ${perfEntry.fetchStart.toFixed(2)}ms</div>
+                                <div>domainLookupStart: ${perfEntry.domainLookupStart.toFixed(2)}ms</div>
+                                <div>domainLookupEnd: ${perfEntry.domainLookupEnd.toFixed(2)}ms</div>
+                                <div>connectStart: ${perfEntry.connectStart.toFixed(2)}ms</div>
+                                <div style="font-weight: bold; color: #667eea;">connectEnd: ${perfEntry.connectEnd.toFixed(2)}ms</div>
+                                <div style="font-weight: bold; color: #667eea;">requestStart: ${perfEntry.requestStart.toFixed(2)}ms ${perfEntry.requestStart === 0 ? '⚠️ (blocked)' : ''}</div>
+                                <div>responseStart: ${perfEntry.responseStart.toFixed(2)}ms</div>
+                                <div>responseEnd: ${perfEntry.responseEnd.toFixed(2)}ms</div>
+                                <div>duration: ${perfEntry.duration.toFixed(2)}ms</div>
+                            </div>
+                        </details>
+                    </div>
+                    ` : ''}
+                    ${error ? `<span style="color: #dc3545;">Error: ${error}</span>` : ''}
+                </div>
+            `;
+            
+            container.insertBefore(resultDiv, container.firstChild);
+        }
+
+        async function makeRequest(baseUrl, requestData) {
+            const randomString = generateRandomString();
+            const url = `${baseUrl}/${randomString}`;
+            
+            activeRequests++;
+            updateStats();
+            
+            const jsStartTime = new Date();
+            let endTime, status, error;
+            
+            try {
+                // Clear any existing performance entries for this URL
+                if (performance.clearResourceTimings) {
+                    performance.clearResourceTimings();
+                }
+                
+                const response = await fetch(url, { 
+                    method: 'GET',
+                    mode: 'no-cors' // Use no-cors to avoid CORS errors, timing data still available
+                });
+                
+                endTime = new Date();
+                
+                // With no-cors, we can't read the status, but timing data is still available
+                status = response.status || 'opaque';
+                
+                // Consider opaque responses as successful for this tool's purposes
+                successfulRequests++;
+                
+            } catch (err) {
+                endTime = new Date();
+                error = err.message;
+                status = 'N/A';
+            }
+            
+            completedRequests++;
+            activeRequests--;
+            
+            // Get actual network timing from Performance API
+            const perfEntries = performance.getEntriesByType('resource');
+            const perfEntry = perfEntries.find(entry => entry.name === url);
+            
+            let networkStartTime, networkEndTime, networkDuration;
+            
+            if (perfEntry) {
+                // Use actual network timing from Performance API
+                const baseTime = performance.timeOrigin;
+                
+                // Check if we have detailed timing (requires Timing-Allow-Origin header for cross-origin)
+                const hasDetailedTiming = perfEntry.requestStart > 0;
+                
+                // Use requestStart if available, otherwise fall back to fetchStart
+                let actualStart;
+                if (perfEntry.requestStart > 0) {
+                    actualStart = perfEntry.requestStart;
+                } else {
+                    actualStart = perfEntry.fetchStart;
+                }
+                
+                networkStartTime = new Date(baseTime + actualStart);
+                networkEndTime = new Date(baseTime + perfEntry.responseEnd);
+                networkDuration = perfEntry.responseEnd - actualStart;
+                
+                requestData.perfEntry = {
+                    fetchStart: perfEntry.fetchStart,
+                    domainLookupStart: perfEntry.domainLookupStart,
+                    domainLookupEnd: perfEntry.domainLookupEnd,
+                    connectStart: perfEntry.connectStart,
+                    connectEnd: perfEntry.connectEnd,
+                    requestStart: perfEntry.requestStart,
+                    responseStart: perfEntry.responseStart,
+                    responseEnd: perfEntry.responseEnd,
+                    duration: perfEntry.duration,
+                    hasDetailedTiming: hasDetailedTiming
+                };
+            } else {
+                // Fallback to JS timing if performance entry not available
+                networkStartTime = jsStartTime;
+                networkEndTime = endTime;
+                networkDuration = endTime - jsStartTime;
+            }
+            
+            totalTime += networkDuration;
+            
+            // Store this request's timing data
+            requestData.url = url;
+            requestData.status = status;
+            requestData.jsStartTime = jsStartTime;
+            requestData.startTime = networkStartTime;
+            requestData.endTime = networkEndTime;
+            requestData.duration = networkDuration;
+            requestData.error = error;
+            
+            updateStats();
+        }
+
+        async function startBlasting() {
+            const baseUrl = document.getElementById('baseUrl').value.trim();
+            const concurrency = parseInt(document.getElementById('concurrency').value);
+            
+            if (!baseUrl) {
+                alert('Please enter a base URL');
+                return;
+            }
+            
+            // Remove trailing slash if present
+            const cleanUrl = baseUrl.replace(/\/$/, '');
+            
+            // Disable controls during blast
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('baseUrl').disabled = true;
+            document.getElementById('concurrency').disabled = true;
+            
+            // Reset request tracking for this blast
+            const batchRequests = [];
+            
+            // Create exactly N concurrent requests where N = concurrency
+            const promises = [];
+            for (let i = 0; i < concurrency; i++) {
+                const requestData = {};
+                batchRequests.push(requestData);
+                promises.push(makeRequest(cleanUrl, requestData));
+            }
+            
+            // Wait for all requests to complete
+            await Promise.all(promises);
+            
+            // Display results
+            for (const req of batchRequests) {
+                addResult(req.url, req.status, req.jsStartTime, req.startTime, req.endTime, req.duration, req.perfEntry, req.error);
+            }
+            
+            // Re-enable controls
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('baseUrl').disabled = false;
+            document.getElementById('concurrency').disabled = false;
+        }
+
+        function clearResults() {
+            const container = document.getElementById('resultsContainer');
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">📊</div>
+                    <p>No results yet. Enter a URL and start blasting!</p>
+                </div>
+            `;
+            
+            completedRequests = 0;
+            totalTime = 0;
+            successfulRequests = 0;
+            updateStats();
+        }
+    </script>
+</body>
+</html>

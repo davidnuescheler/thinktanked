@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Slide Viewer</title>
+    <link rel="stylesheet" href="slideviewer.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Slide Viewer</h1>
+            <div class="mode-toggle">
+                <button id="editModeBtn" class="mode-btn active">Edit Mode</button>
+                <button id="presentModeBtn" class="mode-btn">Present Mode</button>
+            </div>
+        </header>
+
+        <main>
+            <div class="video-container">
+                <video id="videoPlayer" controls>
+                    <source src="e-team-coding-offsite.m4v" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+            <div id="presentControls" class="present-controls hidden">
+                <p>Press <kbd>Space</kbd> to advance, <kbd>←</kbd> / <kbd>→</kbd> to navigate</p>
+            </div>
+            <div id="debugOverlay" class="debug-overlay hidden">
+                <div class="debug-info">
+                    <div>Current: <span id="debugCurrentTime">00:00.00</span></div>
+                    <div>Next Stop: <span id="debugNextStop">00:00.00</span></div>
+                </div>
+            </div>
+            </div>
+
+            <div class="controls-panel">
+                <!-- Edit Mode Controls -->
+                <div id="editControls" class="edit-controls">
+                    <h2>Stopping Points</h2>
+                    <div class="add-stop">
+                        <button id="addCurrentTime" class="btn btn-primary">
+                            Add Current Time as Stop Point
+                        </button>
+                    </div>
+                    <div id="stopPointsList" class="stop-points-list"></div>
+                </div>
+
+                <!-- Present Mode Info -->
+                <div id="presentInfo" class="present-info hidden">
+                    <h2>Presentation Mode</h2>
+                    <div class="current-slide-info">
+                        <p>Current Slide: <span id="currentSlideNum">1</span> / <span id="totalSlides">0</span></p>
+                        <p>Next Stop: <span id="nextStopTime">--:--</span></p>
+                    </div>
+                    <div class="keyboard-shortcuts">
+                        <h3>Keyboard Shortcuts</h3>
+                        <ul>
+                            <li><kbd>Space</kbd> - Advance to next slide</li>
+                            <li><kbd>→</kbd> - Next slide</li>
+                            <li><kbd>←</kbd> - Previous slide</li>
+                            <li><kbd>Esc</kbd> - Return to edit mode</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="slideviewer.js"></script>
+</body>
+</html>
