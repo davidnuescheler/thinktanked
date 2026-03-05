@@ -1,0 +1,224 @@
+/* Run Cheetah Run - top-down runner */
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: "Segoe UI", system-ui, sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.game-container {
+    text-align: center;
+    padding: 12px;
+}
+
+.game-header {
+    margin-bottom: 8px;
+}
+
+.game-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0 0 8px;
+    letter-spacing: 0.05em;
+}
+
+.hud {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    font-size: 0.9rem;
+    opacity: 0.9;
+}
+
+.hud-item span {
+    font-weight: 700;
+}
+
+.game-main {
+    position: relative;
+    display: inline-block;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgb(0 0 0 / 40%);
+}
+
+#game-canvas {
+    display: block;
+    background: #16213e;
+    width: 100%;
+    max-width: 480px;
+    height: auto;
+    max-height: 85vh;
+    object-fit: contain;
+}
+
+.sprite-layer {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 480px;
+    height: 640px;
+    max-width: 100%;
+    max-height: 100%;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.sprite {
+    position: absolute;
+    left: 0;
+    top: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform-origin: center center;
+}
+
+.sprite-inner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1em;
+    line-height: 1;
+    white-space: nowrap;
+    font-family: "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
+}
+
+/* Player: running jump cycle */
+.sprite-player .sprite-inner {
+    animation: sprite-jump 0.5s ease-in-out infinite;
+}
+
+@keyframes sprite-jump {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-12px); }
+}
+
+/* Obstacles: characteristic motion */
+.sprite-obstacle-sofa .sprite-inner {
+    animation: sprite-sway 2s ease-in-out infinite;
+}
+
+@keyframes sprite-sway {
+    0%, 100% { transform: rotate(-2deg); }
+    50% { transform: rotate(2deg); }
+}
+
+.sprite-obstacle-couch .sprite-inner {
+    animation: sprite-bob 1.8s ease-in-out infinite;
+}
+
+@keyframes sprite-bob {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+}
+
+.sprite-obstacle-dog .sprite-inner {
+    animation: sprite-move-lr 0.6s ease-in-out infinite;
+}
+
+@keyframes sprite-move-lr {
+    0%, 100% { transform: translateX(-6px); }
+    50% { transform: translateX(6px); }
+}
+
+/* Bonuses */
+.sprite-bonus-yarn .sprite-inner {
+    animation: sprite-spin 1.2s linear infinite;
+}
+
+@keyframes sprite-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.sprite-bonus-treat .sprite-inner {
+    animation: sprite-bounce 0.4s ease-in-out infinite;
+}
+
+@keyframes sprite-bounce {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+}
+
+.overlay {
+    position: absolute;
+    inset: 0;
+    background: rgb(0 0 0 / 75%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+
+.overlay.hidden {
+    display: none;
+}
+
+.overlay-box {
+    background: #1a1a2e;
+    border: 2px solid #e94560;
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 320px;
+}
+
+.overlay-box h2 {
+    margin: 0 0 12px;
+    font-size: 1.25rem;
+}
+
+.overlay-box .subtitle {
+    margin: 0 0 16px;
+    font-size: 0.9rem;
+    opacity: 0.9;
+}
+
+.controls-hint {
+    margin-bottom: 20px;
+    font-size: 0.85rem;
+    opacity: 0.85;
+}
+
+.controls-hint p {
+    margin: 4px 0;
+}
+
+.btn-primary,
+.btn-secondary {
+    display: block;
+    width: 100%;
+    padding: 12px 20px;
+    font-size: 1rem;
+    font-weight: 600;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-top: 8px;
+}
+
+.btn-primary {
+    background: #e94560;
+    color: #fff;
+}
+
+.btn-primary:hover {
+    background: #ff6b6b;
+}
+
+.btn-secondary {
+    background: #333;
+    color: #eee;
+}
+
+.btn-secondary:hover {
+    background: #444;
+}

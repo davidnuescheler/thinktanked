@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Run Cheetah Run - Level 1: Kitten in the House</title>
+    <link rel="stylesheet" href="game.css">
+</head>
+<body>
+    <div class="game-container">
+        <header class="game-header">
+            <h1 class="game-title">Run Cheetah Run</h1>
+            <div class="hud">
+                <span class="hud-item">LEVEL <span id="levelNum">1</span></span>
+                <span class="hud-item">SCORE <span id="score">0</span></span>
+                <span class="hud-item">LIVES <span id="lives">3</span></span>
+            </div>
+        </header>
+
+        <main class="game-main">
+            <canvas id="game-canvas" width="480" height="640"></canvas>
+            <div id="sprite-layer" class="sprite-layer" aria-hidden="true"></div>
+
+            <div id="startScreen" class="overlay">
+                <div class="overlay-box">
+                    <h2>Level 1: Kitten in the House</h2>
+                    <p class="subtitle">Run through the house! Avoid sofas, couches, and dogs. Collect yarn and treats.</p>
+                    <div class="controls-hint">
+                        <p>← → or A / D to move</p>
+                        <p>Don't get caught!</p>
+                    </div>
+                    <button id="startBtn" class="btn-primary">Start</button>
+                </div>
+            </div>
+
+            <div id="gameOverScreen" class="overlay hidden">
+                <div class="overlay-box">
+                    <h2>Game Over</h2>
+                    <p>Score: <span id="finalScore">0</span></p>
+                    <button id="retryBtn" class="btn-primary">Try Again</button>
+                </div>
+            </div>
+
+            <div id="winScreen" class="overlay hidden">
+                <div class="overlay-box">
+                    <h2>Level Complete!</h2>
+                    <p>Score: <span id="winScore">0</span></p>
+                    <button id="nextLevelBtn" class="btn-primary">Next Level (coming soon)</button>
+                    <button id="replayBtn" class="btn-secondary">Replay</button>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="game.js"></script>
+</body>
+</html>
