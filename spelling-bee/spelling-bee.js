@@ -9,7 +9,7 @@ const wordLists = {
   medium: [
     'unicorn', 'pirates', 'leaning', 'acrobat', 'forepaw', 'recipe', 'mermaid', 'incredible',
     'nervous', 'raise', 'attacked', 'streetlights', 'shouting', 'dinosaur', 'gorgeous', 'avocado',
-    'formation', 'faraway', 'understand', 'breakfast', 'message', 'elephant', 'garbage', 'bombarded',
+    'formation', 'faraway', 'understand', 'breakfast', 'message', 'elephant', 'garbage',
     'leather', 'peppercorn', 'weather', 'turnout', 'journey', 'asleep', 'brilliant', 'monsoon',
     'valentine', 'especially', 'heater', 'wooden', 'window', 'chocolate', 'hedgehog', 'surprise',
     'disability', 'countess', 'cartwheel', 'zooming', 'eaten', 'courtyard', 'curious', 'vacuum',
