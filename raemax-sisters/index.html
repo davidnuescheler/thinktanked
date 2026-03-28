@@ -21,6 +21,8 @@
                 <div class="stat">TIME: <span id="time">0</span></div>
                 <div class="stat flying-stat hidden" id="flyingStat">✨ FLYING: <span id="flyingTime">0</span>s</div>
                 <div class="stat slowmo-stat hidden" id="slowMoStat">🐆 SLOW-MO: <span id="slowMoTime">0</span>s</div>
+                <div class="stat nugget-stat hidden" id="nuggetStat">🍗 JUMP+: <span id="nuggetStrength">0</span></div>
+                <div class="stat honeysuckle-stat hidden" id="honeysuckleStat">🌸 HONEY: <span id="honeysuckleTime">0</span>s</div>
             </div>
             <button id="muteButton" class="mute-button" onclick="game.toggleSound()">🔊 SOUND ON</button>
         </div>
@@ -78,6 +80,10 @@
                         <div class="start-button" onclick="game.startLevel(4)" style="min-width: 120px;">
                             LEVEL 4<br>
                             <small style="font-size: 12px;">🐱 Cat</small>
+                        </div>
+                        <div class="start-button" onclick="game.startLevel(5)" style="min-width: 120px;">
+                            LEVEL 5<br>
+                            <small style="font-size: 12px;">🌼 Daisy</small>
                         </div>
                     </div>
                     <div class="start-button" onclick="game.closeLevelSelect()">BACK</div>

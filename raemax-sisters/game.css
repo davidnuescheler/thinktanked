@@ -88,6 +88,18 @@ body {
     animation: pulse-glow-orange 1s infinite;
 }
 
+.nugget-stat {
+    color: #e6b422;
+    border-color: #e6b422;
+    animation: pulse-glow-gold 1s infinite;
+}
+
+.honeysuckle-stat {
+    color: #f48fb1;
+    border-color: #f48fb1;
+    animation: pulse-glow-pink 1s infinite;
+}
+
 @keyframes pulse-glow-pink {
     0%, 100% {
         box-shadow: 0 0 5px #ff69b4;
@@ -103,6 +115,15 @@ body {
     }
     50% {
         box-shadow: 0 0 15px #ffaa00;
+    }
+}
+
+@keyframes pulse-glow-gold {
+    0%, 100% {
+        box-shadow: 0 0 5px #e6b422;
+    }
+    50% {
+        box-shadow: 0 0 15px #f1c40f;
     }
 }
 

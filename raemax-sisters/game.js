@@ -478,7 +478,14 @@ class Game {
         
         // Level settings
         this.currentLevel = 1;
-        this.maxLevels = 4;
+        this.maxLevels = 5;
+        
+        // Level 5: chicken nuggets increase jump height (stacks, capped)
+        this.nuggetJumpBonus = 0;
+        this.chickenNuggets = [];
+        this.honeysuckles = [];
+        this.honeysuckleJumpTimer = 0;
+        this.honeysuckleJumpBonus = 2.4;
         this.levelWidth = 4000;
         this.gravity = 0.1;
         
@@ -668,6 +675,10 @@ class Game {
         this.flyingTimer = 0;
         this.slowMotion = false;
         this.slowMotionTimer = 0;
+        this.nuggetJumpBonus = 0;
+        this.chickenNuggets = [];
+        this.honeysuckles = [];
+        this.honeysuckleJumpTimer = 0;
         
         // Create player (2x size)
         this.player = {
@@ -694,6 +705,8 @@ class Game {
             this.initLevel3();
         } else if (this.currentLevel === 4) {
             this.initLevel4();
+        } else if (this.currentLevel === 5) {
+            this.initLevel5();
         }
     }
     
@@ -1545,6 +1558,187 @@ class Game {
         this.arrows = [];
     }
     
+    initLevel5() {
+        // Level 5 — Daisy, sunrise farm, chickens in the background, chicken nuggets boost jump
+        this.platforms = [];
+        
+        for (let i = 0; i < 100; i++) {
+            this.platforms.push({
+                x: i * 40,
+                y: 460,
+                width: 40,
+                height: 40,
+                type: 'ground'
+            });
+        }
+        
+        const platformData = [
+            { x: 180, y: 380, w: 110, h: 20 },
+            { x: 340, y: 320, w: 100, h: 20 },
+            { x: 500, y: 260, w: 100, h: 20 },
+            { x: 660, y: 200, w: 90, h: 20 },
+            { x: 820, y: 280, w: 100, h: 20 },
+            { x: 1000, y: 340, w: 100, h: 20 },
+            { x: 1180, y: 280, w: 90, h: 20 },
+            { x: 1360, y: 220, w: 100, h: 20 },
+            { x: 1540, y: 160, w: 80, h: 20 },
+            { x: 1720, y: 120, w: 100, h: 20 },
+            { x: 1900, y: 200, w: 100, h: 20 },
+            { x: 2080, y: 300, w: 90, h: 20 },
+            { x: 2260, y: 360, w: 100, h: 20 },
+            { x: 2440, y: 280, w: 90, h: 20 },
+            { x: 2620, y: 200, w: 100, h: 20 },
+            { x: 2800, y: 140, w: 90, h: 20 },
+            { x: 2980, y: 100, w: 80, h: 20 },
+            { x: 3140, y: 180, w: 100, h: 20 },
+            { x: 3320, y: 260, w: 100, h: 20 },
+            { x: 3500, y: 320, w: 90, h: 20 },
+            { x: 3680, y: 240, w: 100, h: 20 },
+            { x: 3840, y: 180, w: 120, h: 20 },
+        ];
+        
+        platformData.forEach(p => {
+            this.platforms.push({
+                x: p.x,
+                y: p.y,
+                width: p.w,
+                height: p.h,
+                type: 'platform'
+            });
+        });
+        
+        this.gems = [];
+        const gemPositions = [
+            { x: 220, y: 340 }, { x: 400, y: 280 }, { x: 560, y: 220 },
+            { x: 720, y: 160 }, { x: 900, y: 240 }, { x: 1080, y: 300 },
+            { x: 1240, y: 240 }, { x: 1420, y: 180 }, { x: 1600, y: 120 },
+            { x: 1780, y: 160 }, { x: 1960, y: 260 }, { x: 2140, y: 320 },
+            { x: 2320, y: 260 }, { x: 2500, y: 180 }, { x: 2680, y: 120 },
+            { x: 2860, y: 80 }, { x: 3040, y: 140 }, { x: 3200, y: 220 },
+            { x: 3380, y: 280 }, { x: 3560, y: 200 }, { x: 3740, y: 140 },
+            { x: 3900, y: 200 }, { x: 3920, y: 140 }
+        ];
+        
+        gemPositions.forEach(pos => {
+            this.gems.push({
+                x: pos.x,
+                y: pos.y,
+                width: 16,
+                height: 16,
+                collected: false,
+                animFrame: 0
+            });
+        });
+        
+        this.enemies = [];
+        const enemyPositions = [
+            { x: 450, y: 430, range: 70 },
+            { x: 1200, y: 250, range: 80 },
+            { x: 2100, y: 270, range: 75 },
+            { x: 3000, y: 210, range: 70 },
+            { x: 3600, y: 430, range: 85 }
+        ];
+        
+        enemyPositions.forEach(pos => {
+            this.enemies.push({
+                x: pos.x,
+                y: pos.y,
+                width: 24,
+                height: 24,
+                vx: 0.85,
+                startX: pos.x,
+                range: pos.range,
+                animFrame: 0
+            });
+        });
+        
+        this.kitties = [
+            { x: 700, y: 140, width: 20, height: 20, collected: false, animFrame: 0 },
+            { x: 1800, y: 120, width: 20, height: 20, collected: false, animFrame: 0 },
+            { x: 2900, y: 100, width: 20, height: 20, collected: false, animFrame: 0 }
+        ];
+        
+        this.cheetahs = [
+            { x: 1100, y: 200, width: 24, height: 20, collected: false, animFrame: 0 },
+            { x: 2500, y: 160, width: 24, height: 20, collected: false, animFrame: 0 },
+            { x: 3400, y: 180, width: 24, height: 20, collected: false, animFrame: 0 }
+        ];
+        
+        const nuggetPositions = [
+            { x: 260, y: 400 },
+            { x: 520, y: 220 },
+            { x: 880, y: 240 },
+            { x: 1280, y: 240 },
+            { x: 1580, y: 120 },
+            { x: 1980, y: 160 },
+            { x: 2420, y: 240 },
+            { x: 2760, y: 100 },
+            { x: 3120, y: 140 },
+            { x: 3520, y: 200 }
+        ];
+        
+        this.chickenNuggets = [];
+        nuggetPositions.forEach(pos => {
+            this.chickenNuggets.push({
+                x: pos.x,
+                y: pos.y,
+                width: 22,
+                height: 18,
+                collected: false,
+                animFrame: 0
+            });
+        });
+        
+        const obstacleRows = [
+            { x: 360, y: 428, w: 40, h: 32, type: 'spikes' },
+            { x: 980, y: 420, w: 40, h: 40, type: 'crate' },
+            { x: 1680, y: 428, w: 32, h: 32, type: 'block' },
+            { x: 2280, y: 428, w: 48, h: 32, type: 'spikes' },
+            { x: 3180, y: 420, w: 40, h: 40, type: 'crate' },
+            // Poisonous flowers — touch and lose a life (ground hazards)
+            { x: 300, y: 430, w: 36, h: 30, type: 'poisonFlower' },
+            { x: 520, y: 430, w: 36, h: 30, type: 'poisonFlower' },
+            { x: 760, y: 430, w: 36, h: 30, type: 'poisonFlower' },
+            { x: 1120, y: 430, w: 36, h: 30, type: 'poisonFlower' },
+            { x: 1320, y: 430, w: 36, h: 30, type: 'poisonFlower' },
+            { x: 1520, y: 430, w: 36, h: 30, type: 'poisonFlower' },
+            { x: 1820, y: 430, w: 36, h: 30, type: 'poisonFlower' },
+            { x: 2020, y: 430, w: 36, h: 30, type: 'poisonFlower' },
+            { x: 2420, y: 430, w: 36, h: 30, type: 'poisonFlower' },
+            { x: 2620, y: 430, w: 36, h: 30, type: 'poisonFlower' },
+            { x: 2920, y: 430, w: 36, h: 30, type: 'poisonFlower' },
+            { x: 3080, y: 430, w: 36, h: 30, type: 'poisonFlower' },
+            { x: 3380, y: 430, w: 36, h: 30, type: 'poisonFlower' },
+            { x: 3580, y: 430, w: 36, h: 30, type: 'poisonFlower' },
+            { x: 3780, y: 430, w: 36, h: 30, type: 'poisonFlower' }
+        ];
+        
+        this.obstacles = obstacleRows.map(o => ({
+            x: o.x,
+            y: o.y,
+            width: o.w,
+            height: o.h,
+            type: o.type
+        }));
+        
+        this.honeysuckles = [
+            { x: 400, y: 400, width: 26, height: 32, collected: false, animFrame: 0 },
+            { x: 900, y: 360, width: 26, height: 32, collected: false, animFrame: 0 },
+            { x: 1450, y: 320, width: 26, height: 32, collected: false, animFrame: 0 },
+            { x: 2000, y: 380, width: 26, height: 32, collected: false, animFrame: 0 },
+            { x: 2550, y: 300, width: 26, height: 32, collected: false, animFrame: 0 },
+            { x: 3100, y: 340, width: 26, height: 32, collected: false, animFrame: 0 },
+            { x: 3650, y: 360, width: 26, height: 32, collected: false, animFrame: 0 }
+        ];
+        
+        this.ghosts = [];
+        this.pumpkins = [];
+        this.skeletons = [];
+        this.arrows = [];
+        this.fallingStars = [];
+        this.lavaParticles = [];
+    }
+    
     start() {
         document.getElementById('startScreen').classList.add('hidden');
         document.getElementById('levelSelectScreen').classList.add('hidden');
@@ -1702,6 +1896,26 @@ class Game {
         } else {
             slowMoStat.classList.add('hidden');
         }
+        
+        const nuggetStat = document.getElementById('nuggetStat');
+        if (nuggetStat) {
+            if (this.currentLevel === 5 && this.nuggetJumpBonus > 0) {
+                nuggetStat.classList.remove('hidden');
+                document.getElementById('nuggetStrength').textContent = this.nuggetJumpBonus.toFixed(1);
+            } else {
+                nuggetStat.classList.add('hidden');
+            }
+        }
+        
+        const honeysuckleStat = document.getElementById('honeysuckleStat');
+        if (honeysuckleStat) {
+            if (this.currentLevel === 5 && this.honeysuckleJumpTimer > 0) {
+                honeysuckleStat.classList.remove('hidden');
+                document.getElementById('honeysuckleTime').textContent = Math.ceil(this.honeysuckleJumpTimer / 60);
+            } else {
+                honeysuckleStat.classList.add('hidden');
+            }
+        }
     }
     
     toggleSound() {
@@ -1776,6 +1990,23 @@ class Game {
             }
         });
         
+        // Chicken nuggets animation (Level 5)
+        if (this.currentLevel === 5 && this.chickenNuggets) {
+            this.chickenNuggets.forEach(nugget => {
+                if (!nugget.collected) {
+                    nugget.animFrame = (this.frameCount % 36) / 36;
+                }
+            });
+        }
+        
+        if (this.currentLevel === 5 && this.honeysuckles) {
+            this.honeysuckles.forEach(h => {
+                if (!h.collected) {
+                    h.animFrame = (this.frameCount % 48) / 48;
+                }
+            });
+        }
+        
         // Update falling stars (Level 3)
         if (this.currentLevel === 3) {
             this.updateFallingStars();
@@ -1809,6 +2040,14 @@ class Game {
             }
             // Update UI every frame when in slow-motion to show countdown
             if (this.slowMotionTimer % 60 === 0 || this.slowMotionTimer <= 60) {
+                this.updateUI();
+            }
+        }
+        
+        // Honeysuckle jump boost timer (Level 5) — 3 seconds at 60fps
+        if (this.currentLevel === 5 && this.honeysuckleJumpTimer > 0) {
+            this.honeysuckleJumpTimer--;
+            if (this.honeysuckleJumpTimer % 60 === 0 || this.honeysuckleJumpTimer <= 60) {
                 this.updateUI();
             }
         }
@@ -1857,9 +2096,16 @@ class Game {
             }
             // No ground check when flying
         } else {
-            // Normal jumping
+            // Normal jumping (Level 5: chicken nuggets add jump height)
             if ((this.keys['ArrowUp'] || this.keys['Space']) && this.player.onGround) {
-                this.player.vy = -this.player.jumpPower;
+                let jp = this.player.jumpPower;
+                if (this.currentLevel === 5) {
+                    jp += this.nuggetJumpBonus;
+                    if (this.honeysuckleJumpTimer > 0) {
+                        jp += this.honeysuckleJumpBonus;
+                    }
+                }
+                this.player.vy = -jp;
                 this.player.onGround = false;
                 this.sound.jump();
             }
@@ -1931,6 +2177,37 @@ class Game {
                 this.createParticles(kitty.x + kitty.width / 2, kitty.y + kitty.height / 2, '#ffb6c1');
             }
         });
+        
+        // Check chicken nuggets (Level 5) — strength: higher jumps
+        if (this.currentLevel === 5 && this.chickenNuggets) {
+            this.chickenNuggets.forEach(nugget => {
+                if (!nugget.collected && this.checkCollision(this.player, nugget)) {
+                    nugget.collected = true;
+                    this.nuggetJumpBonus = Math.min(5.5, this.nuggetJumpBonus + 1.1);
+                    this.score += 150;
+                    this.updateUI();
+                    this.sound.collectGem();
+                    this.createParticles(nugget.x + nugget.width / 2, nugget.y + nugget.height / 2, '#d4a017');
+                    this.createParticles(nugget.x + nugget.width / 2, nugget.y + nugget.height / 2, '#fff8dc');
+                }
+            });
+        }
+        
+        // Honeysuckles (Level 5) — extra jump power for 3 seconds
+        if (this.currentLevel === 5 && this.honeysuckles) {
+            this.honeysuckles.forEach(h => {
+                if (!h.collected && this.checkCollision(this.player, h)) {
+                    h.collected = true;
+                    this.honeysuckleJumpTimer = 180;
+                    this.score += 200;
+                    this.updateUI();
+                    this.sound.collectKitty();
+                    this.createParticles(h.x + h.width / 2, h.y + h.height / 2, '#ffeb3b');
+                    this.createParticles(h.x + h.width / 2, h.y + h.height / 2, '#e91e8c');
+                    this.createParticles(h.x + h.width / 2, h.y + h.height / 2, '#fff');
+                }
+            });
+        }
         
         // Check cheetah collection - slow-motion power-up!
         this.cheetahs.forEach(cheetah => {
@@ -2018,8 +2295,8 @@ class Game {
         // Check obstacle collision
         this.obstacles.forEach(obstacle => {
             if (this.checkCollision(this.player, obstacle)) {
-                if (obstacle.type === 'spikes' || obstacle.type === 'lava') {
-                    // Spikes and lava instantly hurt the player
+                if (obstacle.type === 'spikes' || obstacle.type === 'lava' || obstacle.type === 'poisonFlower') {
+                    // Spikes, lava, and poison flowers instantly hurt the player
                     this.playerDeath(this.player.x + this.player.width / 2, this.player.y + this.player.height / 2);
                 } else if (obstacle.type === 'gravestone') {
                     // Gravestones are solid obstacles
@@ -2382,6 +2659,17 @@ class Game {
             
             // Draw Halloween background
             this.drawHalloweenBackground();
+        } else if (this.currentLevel === 5) {
+            // Sunrise farm sky
+            const gradient = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
+            gradient.addColorStop(0, '#2d1b4e');
+            gradient.addColorStop(0.25, '#c45c6a');
+            gradient.addColorStop(0.5, '#ff9a6b');
+            gradient.addColorStop(0.72, '#ffd59e');
+            gradient.addColorStop(1, '#ffe8c8');
+            this.ctx.fillStyle = gradient;
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            this.drawSunriseBackground();
         } else {
             // Day sky for Levels 1 and 2
             const gradient = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
@@ -2417,6 +2705,8 @@ class Game {
                 this.drawLava(obstacle);
             } else if (obstacle.type === 'gravestone') {
                 this.drawGravestone(obstacle);
+            } else if (obstacle.type === 'poisonFlower') {
+                this.drawPoisonFlower(obstacle);
             } else {
                 this.drawBlock(obstacle);
             }
@@ -2449,6 +2739,23 @@ class Game {
                 this.drawCheetah(cheetah);
             }
         });
+        
+        // Draw chicken nuggets (Level 5)
+        if (this.currentLevel === 5 && this.chickenNuggets) {
+            this.chickenNuggets.forEach(nugget => {
+                if (!nugget.collected) {
+                    this.drawChickenNugget(nugget);
+                }
+            });
+        }
+        
+        if (this.currentLevel === 5 && this.honeysuckles) {
+            this.honeysuckles.forEach(h => {
+                if (!h.collected) {
+                    this.drawHoneysuckle(h);
+                }
+            });
+        }
         
         // Draw enemies
         this.enemies.forEach(enemy => {
@@ -2829,6 +3136,8 @@ class Game {
             this.drawMoonPlayer();
         } else if (this.currentLevel === 4) {
             this.drawBlackCatPlayer();
+        } else if (this.currentLevel === 5) {
+            this.drawDaisyPlayer();
         }
     }
     
@@ -3502,6 +3811,256 @@ class Game {
         }
     }
     
+    drawDaisyPlayer() {
+        const p = this.player;
+        const centerX = p.x + 24;
+        const centerY = p.y + 24;
+        
+        this.ctx.save();
+        
+        // Green dress
+        this.ctx.fillStyle = '#2ecc71';
+        this.ctx.fillRect(centerX - 14, centerY + 2, 28, 26);
+        this.ctx.strokeStyle = '#1e8449';
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeRect(centerX - 14, centerY + 2, 28, 26);
+        
+        // White collar
+        this.ctx.fillStyle = '#fdfefe';
+        this.ctx.fillRect(centerX - 12, centerY + 2, 24, 6);
+        
+        // Arms
+        this.ctx.fillStyle = '#f5cba7';
+        this.ctx.fillRect(centerX - 18, centerY + 6, 6, 14);
+        this.ctx.fillRect(centerX + 12, centerY + 6, 6, 14);
+        
+        // Blonde hair
+        this.ctx.fillStyle = '#f4d03f';
+        this.ctx.beginPath();
+        this.ctx.arc(centerX, centerY - 6, 16, 0, Math.PI * 2);
+        this.ctx.fill();
+        this.ctx.strokeStyle = '#d4ac0d';
+        this.ctx.lineWidth = 2;
+        this.ctx.stroke();
+        
+        // Hair bangs
+        this.ctx.fillStyle = '#f7dc6f';
+        this.ctx.fillRect(centerX - 14, centerY - 14, 28, 8);
+        
+        // Daisy in hair (white petals + yellow center)
+        const fx = centerX + 10;
+        const fy = centerY - 14;
+        this.ctx.fillStyle = '#ffffff';
+        for (let i = 0; i < 8; i++) {
+            const ang = (i / 8) * Math.PI * 2;
+            this.ctx.beginPath();
+            this.ctx.ellipse(fx + Math.cos(ang) * 6, fy + Math.sin(ang) * 6, 4, 7, ang, 0, Math.PI * 2);
+            this.ctx.fill();
+        }
+        this.ctx.fillStyle = '#f1c40f';
+        this.ctx.beginPath();
+        this.ctx.arc(fx, fy, 4, 0, Math.PI * 2);
+        this.ctx.fill();
+        
+        // Face
+        this.ctx.fillStyle = '#f5cba7';
+        this.ctx.beginPath();
+        this.ctx.arc(centerX, centerY - 2, 12, 0, Math.PI * 2);
+        this.ctx.fill();
+        this.ctx.strokeStyle = '#e59866';
+        this.ctx.lineWidth = 1;
+        this.ctx.stroke();
+        
+        // Eyes
+        this.ctx.fillStyle = '#2c3e50';
+        if (p.direction === 1) {
+            this.ctx.fillRect(centerX + 2, centerY - 4, 5, 5);
+            this.ctx.fillRect(centerX - 6, centerY - 4, 4, 5);
+        } else {
+            this.ctx.fillRect(centerX - 7, centerY - 4, 5, 5);
+            this.ctx.fillRect(centerX + 3, centerY - 4, 4, 5);
+        }
+        
+        // Smile
+        this.ctx.strokeStyle = '#c0392b';
+        this.ctx.lineWidth = 2;
+        this.ctx.beginPath();
+        this.ctx.arc(centerX, centerY + 2, 6, 0, Math.PI);
+        this.ctx.stroke();
+        
+        this.ctx.restore();
+        
+        // Legs
+        const legY = centerY + 26;
+        this.ctx.fillStyle = '#5d4037';
+        if (p.onGround && p.vx !== 0) {
+            if (p.animFrame % 2 === 0) {
+                this.ctx.fillRect(centerX - 10, legY, 6, 14);
+                this.ctx.fillRect(centerX + 4, legY, 6, 14);
+            } else {
+                this.ctx.fillRect(centerX - 6, legY, 6, 14);
+                this.ctx.fillRect(centerX + 2, legY, 6, 14);
+            }
+        } else {
+            this.ctx.fillRect(centerX - 6, legY, 6, 14);
+            this.ctx.fillRect(centerX + 2, legY, 6, 14);
+        }
+        
+        // Shoes
+        this.ctx.fillStyle = '#e74c3c';
+        this.ctx.fillRect(centerX - 8, legY + 14, 8, 5);
+        this.ctx.fillRect(centerX, legY + 14, 8, 5);
+        
+        // Strength sparkles when powered by nuggets
+        if (this.nuggetJumpBonus > 0 || this.honeysuckleJumpTimer > 0) {
+            const t = this.frameCount * 0.12;
+            this.ctx.fillStyle = '#f1c40f';
+            this.ctx.fillRect(centerX - 22 + Math.sin(t) * 4, centerY - 8 + Math.cos(t * 1.3) * 3, 3, 3);
+            this.ctx.fillStyle = this.honeysuckleJumpTimer > 0 ? '#f8bbd0' : '#fff9c4';
+            this.ctx.fillRect(centerX + 18 + Math.cos(t * 1.1) * 3, centerY + Math.sin(t) * 4, 3, 3);
+        }
+        
+        if (this.isFlying) {
+            const wingFlap = Math.sin(this.frameCount * 0.3) * 8;
+            this.ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+            this.ctx.beginPath();
+            this.ctx.moveTo(centerX - 18, centerY);
+            this.ctx.lineTo(centerX - 36, centerY - 8 + wingFlap);
+            this.ctx.lineTo(centerX - 34, centerY + 10 + wingFlap);
+            this.ctx.closePath();
+            this.ctx.fill();
+            this.ctx.strokeStyle = '#aed581';
+            this.ctx.lineWidth = 2;
+            this.ctx.stroke();
+            this.ctx.beginPath();
+            this.ctx.moveTo(centerX + 18, centerY);
+            this.ctx.lineTo(centerX + 36, centerY - 8 + wingFlap);
+            this.ctx.lineTo(centerX + 34, centerY + 10 + wingFlap);
+            this.ctx.closePath();
+            this.ctx.fill();
+            this.ctx.stroke();
+        }
+    }
+    
+    drawChickenNugget(nugget) {
+        const bob = Math.sin(nugget.animFrame * Math.PI * 2) * 2;
+        
+        // Golden nugget cluster
+        this.ctx.fillStyle = '#c87f0a';
+        this.ctx.fillRect(nugget.x + 2, nugget.y + 4 + bob, 8, 10);
+        this.ctx.fillRect(nugget.x + 10, nugget.y + 6 + bob, 10, 8);
+        this.ctx.fillStyle = '#e6b422';
+        this.ctx.fillRect(nugget.x + 4, nugget.y + 6 + bob, 5, 5);
+        this.ctx.fillRect(nugget.x + 12, nugget.y + 7 + bob, 6, 5);
+        this.ctx.strokeStyle = '#8b4513';
+        this.ctx.lineWidth = 1;
+        this.ctx.strokeRect(nugget.x + 2, nugget.y + 4 + bob, 8, 10);
+        this.ctx.strokeRect(nugget.x + 10, nugget.y + 6 + bob, 10, 8);
+        // Crumb shine
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+        this.ctx.fillRect(nugget.x + 4, nugget.y + 7 + bob, 2, 2);
+    }
+    
+    drawPoisonFlower(o) {
+        const x = o.x;
+        const y = o.y;
+        const w = o.width;
+        const h = o.height;
+        const sway = Math.sin(this.frameCount * 0.08 + x * 0.01) * 2;
+        
+        // Toxic petals — purple / magenta
+        this.ctx.fillStyle = '#7b1fa2';
+        this.ctx.beginPath();
+        this.ctx.ellipse(x + w * 0.35 + sway, y + h * 0.35, w * 0.22, h * 0.28, -0.3, 0, Math.PI * 2);
+        this.ctx.fill();
+        this.ctx.beginPath();
+        this.ctx.ellipse(x + w * 0.65 + sway, y + h * 0.35, w * 0.22, h * 0.28, 0.3, 0, Math.PI * 2);
+        this.ctx.fill();
+        this.ctx.fillStyle = '#4a148c';
+        this.ctx.beginPath();
+        this.ctx.ellipse(x + w * 0.5 + sway, y + h * 0.25, w * 0.2, h * 0.25, 0, 0, Math.PI * 2);
+        this.ctx.fill();
+        
+        // Sickly green center
+        this.ctx.fillStyle = '#c6ff00';
+        this.ctx.beginPath();
+        this.ctx.arc(x + w * 0.5 + sway, y + h * 0.42, w * 0.12, 0, Math.PI * 2);
+        this.ctx.fill();
+        this.ctx.strokeStyle = '#33691e';
+        this.ctx.lineWidth = 2;
+        this.ctx.stroke();
+        
+        // Skull mark
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+        this.ctx.fillRect(x + w * 0.42 + sway, y + h * 0.36, 6, 7);
+        this.ctx.fillRect(x + w * 0.46 + sway, y + h * 0.4, 2, 2);
+        this.ctx.fillRect(x + w * 0.52 + sway, y + h * 0.4, 2, 2);
+        
+        // Stem & leaves (dark, dripping)
+        this.ctx.fillStyle = '#1b5e20';
+        this.ctx.fillRect(x + w * 0.46, y + h * 0.55, 6, h * 0.45);
+        this.ctx.fillStyle = '#2e7d32';
+        this.ctx.fillRect(x + w * 0.2, y + h * 0.72, 10, 5);
+        this.ctx.fillRect(x + w * 0.65, y + h * 0.68, 10, 5);
+        
+        // Toxic drip
+        this.ctx.fillStyle = 'rgba(0, 255, 100, 0.45)';
+        this.ctx.fillRect(x + w * 0.48, y + h - 4, 3, 4);
+    }
+    
+    drawHoneysuckle(h) {
+        const cx = h.x + h.width / 2;
+        const cy = h.y + h.height / 2;
+        const bob = Math.sin(h.animFrame * Math.PI * 2) * 3;
+        const sway = Math.sin(this.frameCount * 0.06) * 2;
+        
+        // Vine
+        this.ctx.strokeStyle = '#558b2f';
+        this.ctx.lineWidth = 3;
+        this.ctx.beginPath();
+        this.ctx.moveTo(cx, cy + 14 + bob);
+        this.ctx.quadraticCurveTo(cx - 4 + sway, cy + 4, cx - 2 + sway, cy - 8 + bob);
+        this.ctx.stroke();
+        
+        // Leaves
+        this.ctx.fillStyle = '#7cb342';
+        this.ctx.beginPath();
+        this.ctx.ellipse(cx - 10 + sway, cy + 2 + bob, 8, 4, -0.5, 0, Math.PI * 2);
+        this.ctx.fill();
+        this.ctx.beginPath();
+        this.ctx.ellipse(cx + 8 + sway, cy + 6 + bob, 7, 4, 0.6, 0, Math.PI * 2);
+        this.ctx.fill();
+        
+        // Tubular flowers (cream + pink)
+        const tubes = [
+            { ox: -6, ang: -0.4 },
+            { ox: 0, ang: 0 },
+            { ox: 6, ang: 0.35 }
+        ];
+        tubes.forEach((t, i) => {
+            const tx = cx + t.ox + sway;
+            const ty = cy - 10 + bob + i * 0.5;
+            this.ctx.fillStyle = '#fff9c4';
+            this.ctx.beginPath();
+            this.ctx.ellipse(tx, ty, 5, 9, t.ang, 0, Math.PI * 2);
+            this.ctx.fill();
+            this.ctx.fillStyle = '#f8bbd0';
+            this.ctx.beginPath();
+            this.ctx.ellipse(tx + Math.cos(t.ang) * 3, ty + Math.sin(t.ang) * 2, 3, 7, t.ang, 0, Math.PI * 2);
+            this.ctx.fill();
+            this.ctx.strokeStyle = '#ec407a';
+            this.ctx.lineWidth = 1;
+            this.ctx.stroke();
+        });
+        
+        // Sparkle
+        if (Math.floor(this.frameCount / 12) % 2 === 0) {
+            this.ctx.fillStyle = '#fffde7';
+            this.ctx.fillRect(cx - 12 + sway, cy - 14 + bob, 2, 2);
+            this.ctx.fillRect(cx + 10 + sway, cy - 12 + bob, 2, 2);
+        }
+    }
+    
     drawHalloweenBackground() {
         // Draw spooky stars
         this.ctx.fillStyle = '#ffffff';
@@ -3567,6 +4126,67 @@ class Game {
         this.ctx.lineTo(x + 6, y + 2 + wingFlap);
         this.ctx.closePath();
         this.ctx.fill();
+    }
+    
+    drawSunriseBackground() {
+        const cx = this.canvas.width * 0.72;
+        const cy = this.canvas.height + 20;
+        const r = 140;
+        const sunGrad = this.ctx.createRadialGradient(cx, cy, 20, cx, cy, r);
+        sunGrad.addColorStop(0, 'rgba(255, 248, 180, 0.95)');
+        sunGrad.addColorStop(0.4, 'rgba(255, 200, 100, 0.7)');
+        sunGrad.addColorStop(1, 'rgba(255, 160, 80, 0)');
+        this.ctx.fillStyle = sunGrad;
+        this.ctx.beginPath();
+        this.ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        this.ctx.fill();
+        
+        // Distant hill silhouette
+        this.ctx.fillStyle = 'rgba(120, 80, 60, 0.35)';
+        this.ctx.beginPath();
+        this.ctx.moveTo(0, 340);
+        for (let x = 0; x <= this.canvas.width + 40; x += 40) {
+            const h = 12 + Math.sin(x * 0.02 + this.camera.x * 0.001) * 8;
+            this.ctx.lineTo(x, 340 - h);
+        }
+        this.ctx.lineTo(this.canvas.width, 400);
+        this.ctx.lineTo(0, 400);
+        this.ctx.closePath();
+        this.ctx.fill();
+        
+        // Many chickens — parallax across the farm
+        const count = 42;
+        for (let i = 0; i < count; i++) {
+            const px = ((i * 97 - this.camera.x * 0.16 + this.frameCount * 0.15) % (this.canvas.width + 120)) - 60;
+            const py = 285 + (i % 7) * 10 + Math.sin(i * 1.7 + this.frameCount * 0.02) * 4;
+            const scale = 0.65 + (i % 4) * 0.12;
+            this.drawChickenSilhouette(px, py, scale, i);
+        }
+    }
+    
+    drawChickenSilhouette(x, y, scale, seed) {
+        const s = scale;
+        const peck = Math.sin(this.frameCount * 0.08 + seed) * 3;
+        this.ctx.fillStyle = 'rgba(60, 40, 30, 0.85)';
+        // Body
+        this.ctx.fillRect(x, y + peck * 0.3, 22 * s, 14 * s);
+        // Head
+        this.ctx.beginPath();
+        this.ctx.arc(x + 18 * s, y - 4 * s + peck * 0.2, 9 * s, 0, Math.PI * 2);
+        this.ctx.fill();
+        // Comb
+        this.ctx.fillStyle = 'rgba(40, 25, 20, 0.9)';
+        this.ctx.beginPath();
+        this.ctx.moveTo(x + 14 * s, y - 8 * s + peck);
+        this.ctx.lineTo(x + 16 * s, y - 16 * s + peck);
+        this.ctx.lineTo(x + 20 * s, y - 6 * s + peck);
+        this.ctx.fill();
+        this.ctx.fillStyle = 'rgba(60, 40, 30, 0.85)';
+        // Beak
+        this.ctx.fillRect(x + 24 * s, y + peck * 0.1, 5 * s, 3 * s);
+        // Legs
+        this.ctx.fillRect(x + 6 * s, y + 14 * s, 2 * s, 8 * s);
+        this.ctx.fillRect(x + 14 * s, y + 14 * s, 2 * s, 8 * s);
     }
     
     drawGhost(ghost) {
