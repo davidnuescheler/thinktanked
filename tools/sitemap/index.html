@@ -1,46 +1,538 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
     <head>
-        <title>Sitemap to Table</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Sitemap Explorer</title>
         <style>
+            :root {
+                --bg: #f5f5f7;
+                --surface: #ffffff;
+                --border: #d2d2d7;
+                --border-subtle: #e8e8ed;
+                --text: #1d1d1f;
+                --text-secondary: #6e6e73;
+                --accent: #0071e3;
+                --accent-hover: #0077ed;
+                --row-hover: #f5f5f7;
+                --count-bg: #e8e8ed;
+                --radius: 10px;
+                --shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+            }
+
+            * {
+                box-sizing: border-box;
+            }
+
+            html,
             body {
-                font-family: 'Courier New', Courier, monospace;
+                height: 100%;
+                margin: 0;
             }
-            .inputbar {
+
+            body {
                 display: flex;
-                margin-bottom: 32px;
+                flex-direction: column;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+                background: var(--bg);
+                color: var(--text);
+                -webkit-font-smoothing: antialiased;
             }
 
-            .inputbar input {
-                width: 100%;
+            .app-header {
+                flex-shrink: 0;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 24px;
+                padding: 16px 24px;
+                background: var(--surface);
+                border-bottom: 1px solid var(--border-subtle);
+                box-shadow: var(--shadow);
             }
 
-            textarea {
-                height: 60vh;
+            .brand h1 {
+                margin: 0;
+                font-size: 1.25rem;
+                font-weight: 600;
+                letter-spacing: -0.02em;
+            }
+
+            .brand p {
+                margin: 2px 0 0;
+                font-size: 0.8125rem;
+                color: var(--text-secondary);
+            }
+
+            .url-form {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                flex: 1;
+                max-width: 640px;
+            }
+
+            .url-form input {
+                flex: 1;
+                padding: 8px 12px;
+                font-size: 0.875rem;
+                border: 1px solid var(--border);
+                border-radius: 8px;
+                background: var(--bg);
+                color: var(--text);
+                outline: none;
+                transition: border-color 0.15s, box-shadow 0.15s;
+            }
+
+            .url-form input:focus {
+                border-color: var(--accent);
+                box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2);
+                background: var(--surface);
+            }
+
+            .url-form input::placeholder {
+                color: var(--text-secondary);
+            }
+
+            .url-form button {
+                flex-shrink: 0;
+                padding: 8px 18px;
+                font-size: 0.875rem;
+                font-weight: 500;
+                color: #fff;
+                background: var(--accent);
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+                transition: background 0.15s;
+            }
+
+            .url-form button:hover {
+                background: var(--accent-hover);
+            }
+
+            .app-main {
+                flex: 1;
+                min-height: 0;
+                overflow: auto;
+                padding: 20px 24px;
+            }
+
+            .explorer-panel {
+                background: var(--surface);
+                border: 1px solid var(--border-subtle);
+                border-radius: var(--radius);
+                box-shadow: var(--shadow);
+                overflow: hidden;
+            }
+
+            .explorer-header {
+                padding: 12px 16px;
+                border-bottom: 1px solid var(--border-subtle);
+                background: #fafafa;
+                font-size: 0.875rem;
+                color: var(--text-secondary);
+            }
+
+            .explorer-header .count-pill {
+                display: inline-block;
+                min-width: 2rem;
+                margin-right: 6px;
+                padding: 2px 10px;
+                font-size: 0.8125rem;
+                font-weight: 600;
+                font-variant-numeric: tabular-nums;
+                text-align: center;
+                color: var(--text);
+                background: var(--count-bg);
+                border-radius: 10px;
+            }
+
+            .explorer-grid {
+                display: grid;
+                grid-template-columns: 88px 1fr;
+                padding-bottom: 8px;
+            }
+
+            .tree-root,
+            .tree-node,
+            .tree-children:not([hidden]),
+            .tree-line {
+                display: contents;
+            }
+
+            .tree-children[hidden] {
+                display: none;
+            }
+
+            .tree-row {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                grid-column: 2;
+                padding: 4px 16px 4px 12px;
+                line-height: 1.5;
+                font-size: 0.875rem;
+                border-radius: 6px;
+                margin-right: 8px;
+            }
+
+            .tree-row.folder:hover,
+            .tree-row.pages:hover {
+                background: var(--row-hover);
+            }
+
+            .tree-row.file,
+            .tree-row.page {
+                color: var(--text-secondary);
+            }
+
+            .tree-link {
+                color: inherit;
+                text-decoration: none;
+            }
+
+            .tree-link:hover {
+                color: var(--accent);
+                text-decoration: underline;
+            }
+
+            .disclosure {
+                width: 18px;
+                height: 18px;
+                flex-shrink: 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border: none;
+                background: none;
+                cursor: pointer;
+                padding: 0;
+                font-size: 9px;
+                color: var(--text-secondary);
+                border-radius: 4px;
+                transition: background 0.1s, color 0.1s;
+            }
+
+            .disclosure:hover {
+                background: var(--border-subtle);
+                color: var(--text);
+            }
+
+            .disclosure-spacer {
+                width: 18px;
+                flex-shrink: 0;
+            }
+
+            .tree-icon {
+                flex-shrink: 0;
+                font-size: 1rem;
+                line-height: 1;
+            }
+
+            .tree-name {
+                flex: 1;
+                min-width: 0;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+            .tree-row.folder .tree-name {
+                font-weight: 500;
+            }
+
+            .tree-row.pages .tree-name {
+                font-weight: 500;
+            }
+
+            .tree-count {
+                grid-column: 1;
+                padding: 4px 12px 4px 16px;
+                text-align: right;
+                align-self: center;
+            }
+
+            .tree-count-pill {
+                display: inline-block;
+                min-width: 2rem;
+                padding: 1px 8px;
+                font-size: 0.75rem;
+                font-weight: 500;
+                font-variant-numeric: tabular-nums;
+                text-align: center;
+                color: var(--text-secondary);
+                background: var(--count-bg);
+                border-radius: 10px;
+            }
+
+            .output-panel {
+                flex-shrink: 0;
+                display: flex;
+                flex-direction: column;
+                background: var(--surface);
+                border-top: 1px solid var(--border);
+            }
+
+            .output-panel.collapsed {
+                content-visibility: auto;
+                contain-intrinsic-size: auto 44px;
+            }
+
+            .output-panel:not(.collapsed) {
+                height: 32vh;
+                min-height: 140px;
+            }
+
+            .panel-header-toggle {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
                 width: 100%;
+                padding: 0;
+                border: none;
+                background: none;
+                font: inherit;
+                color: inherit;
+                cursor: pointer;
+                text-align: left;
+            }
+
+            .panel-header-toggle .toggle-icon {
+                font-size: 0.75rem;
+                color: var(--text-secondary);
+                transition: transform 0.15s;
+            }
+
+            .output-panel:not(.collapsed) .toggle-icon {
+                transform: rotate(90deg);
+            }
+
+            .output-body {
+                flex: 1;
+                min-height: 0;
+                display: none;
+            }
+
+            .output-panel:not(.collapsed) .output-body {
+                display: flex;
+                flex-direction: column;
+            }
+
+            .output-panel textarea {
+                flex: 1;
+                width: 100%;
+                margin: 0;
+                padding: 12px 16px;
+                border: none;
+                resize: none;
+                font-family: 'SF Mono', SFMono-Regular, ui-monospace, Menlo, Consolas, monospace;
+                font-size: 12px;
+                line-height: 1.5;
+                color: var(--text);
+                background: #fafafa;
+                outline: none;
+                white-space: pre;
+                overflow-wrap: normal;
+                word-break: normal;
+                contain: strict;
+            }
+
+            .tree-empty {
+                grid-column: 1 / -1;
+                padding: 32px 16px;
+                text-align: center;
+                font-size: 0.875rem;
+                color: var(--text-secondary);
+            }
+
+            .panel-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 12px 16px;
+                border-bottom: 1px solid var(--border-subtle);
+                background: #fafafa;
+            }
+
+            .panel-header h2 {
+                margin: 0;
+                font-size: 0.8125rem;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.04em;
+                color: var(--text-secondary);
+            }
+
+            .panel-hint {
+                font-size: 0.75rem;
+                color: var(--text-secondary);
             }
         </style>
     </head>
     <body>
-        <h1>Convert sitemap.xml to a Table</h1>
-        <form id="input-form">
-            <div class="inputbar">
-                Sitemap URL: <input id="url"> <button type="submit" id="convert">convert</button>
-        </div>
-        </form>
-        <textarea id="output" rows="100"></textarea>
-        <div class="stats">
-            <div>
-                <span>Total URLs:</span>
-                <span id="total-urls">0</span>
+        <header class="app-header">
+            <div class="brand">
+                <h1>Sitemap Explorer</h1>
+                <p>Browse URL structure from any sitemap.xml</p>
             </div>
-            <div>
-                <pre id="top-folders">
+            <form id="input-form" class="url-form">
+                <input id="url" type="url" placeholder="https://example.com/sitemap.xml" required>
+                <button type="submit">Fetch</button>
+            </form>
+        </header>
 
-                </pre>
+        <main class="app-main">
+            <section class="explorer-panel">
+                <div class="explorer-header">
+                    <span id="total-urls" class="count-pill">0</span> Total URLs
+                </div>
+                <div class="explorer-grid">
+                    <div id="top-folders" class="tree-root">
+                        <div class="tree-empty">Enter a sitemap URL above to get started</div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <section class="output-panel collapsed" id="output-panel">
+            <div class="panel-header">
+                <button type="button" class="panel-header-toggle" id="output-toggle" aria-expanded="false">
+                    <h2>Raw Output</h2>
+                    <span class="toggle-icon" aria-hidden="true">▶</span>
+                </button>
+                <span class="panel-hint">Tab-separated URL and lastmod</span>
             </div>
-        </div>
+            <div class="output-body">
+                <textarea id="output" spellcheck="false" readonly aria-label="Sitemap URL output"></textarea>
+            </div>
+        </section>
+
         <script>
+            const LEAF_PAGES = '__leaf_pages__';
+            const LEAF_PAGES_LABEL = 'Pages';
+
+            const sitemapData = {
+                lines: [],
+                index: null,
+                rawOutputDirty: false,
+            };
+
+            function createIndexNode() {
+                return { leafCount: 0, urlCount: 0, folders: new Map() };
+            }
+
+            function parseUrlPath(urlLine) {
+                const loc = urlLine.split('\t')[0];
+                if (!loc) return null;
+                try {
+                    const { pathname } = new URL(loc);
+                    const isDirectory = pathname.length > 1 && pathname.endsWith('/');
+                    const segments = pathname.split('/').filter(Boolean);
+                    return { loc, segments, isDirectory };
+                } catch {
+                    return null;
+                }
+            }
+
+            function getLeafParentPath(parsed) {
+                const { segments, isDirectory } = parsed;
+                if (segments.length === 0) return [];
+                if (isDirectory) return segments;
+                if (segments.length === 1) return [];
+                return segments.slice(0, -1);
+            }
+
+            function addUrlToIndex(index, parsed) {
+                const { segments, isDirectory } = parsed;
+                if (segments.length === 0) return;
+
+                if (isDirectory) {
+                    let node = index;
+                    for (let i = 0; i < segments.length; i += 1) {
+                        const folder = segments[i];
+                        if (!node.folders.has(folder)) {
+                            node.folders.set(folder, createIndexNode());
+                        }
+                        const child = node.folders.get(folder);
+                        child.urlCount += 1;
+                        node = child;
+                    }
+                    node.leafCount += 1;
+                    return;
+                }
+
+                if (segments.length === 1) {
+                    index.leafCount += 1;
+                    return;
+                }
+
+                let node = index;
+                for (let i = 0; i < segments.length - 1; i += 1) {
+                    const folder = segments[i];
+                    if (!node.folders.has(folder)) {
+                        node.folders.set(folder, createIndexNode());
+                    }
+                    const child = node.folders.get(folder);
+                    child.urlCount += 1;
+                    node = child;
+                }
+                node.leafCount += 1;
+            }
+
+            function getBuckets(index) {
+                if (!index) return [];
+                const entries = [];
+                index.folders.forEach((child, name) => {
+                    entries.push([name, child.urlCount]);
+                });
+                if (index.leafCount > 0) {
+                    entries.push([LEAF_PAGES, index.leafCount]);
+                }
+                return entries.sort((a, b) => b[1] - a[1]);
+            }
+
+            function getIndexAtPath(pathSegments) {
+                let node = sitemapData.index;
+                for (let i = 0; i < pathSegments.length; i += 1) {
+                    if (!node?.folders.has(pathSegments[i])) return null;
+                    node = node.folders.get(pathSegments[i]);
+                }
+                return node;
+            }
+
+            function setTotalUrls(count) {
+                document.getElementById('total-urls').textContent = count.toLocaleString();
+            }
+
+            function appendSitemapLines(lines) {
+                if (!lines?.length) return;
+                sitemapData.lines.push(...lines);
+                sitemapData.rawOutputDirty = true;
+                lines.forEach((line) => {
+                    const parsed = parseUrlPath(line);
+                    if (parsed) addUrlToIndex(sitemapData.index, parsed);
+                });
+                setTotalUrls(sitemapData.lines.length);
+                scheduleRenderTree();
+            }
+
+            let renderTreeScheduled = false;
+            function scheduleRenderTree() {
+                if (renderTreeScheduled) return;
+                renderTreeScheduled = true;
+                requestAnimationFrame(() => {
+                    renderTreeScheduled = false;
+                    renderTree();
+                });
+            }
+
+            function syncRawOutput() {
+                if (!sitemapData.rawOutputDirty) return;
+                document.getElementById('output').value = sitemapData.lines.join('\n');
+                sitemapData.rawOutputDirty = false;
+            }
+
             async function loadSitemap(sitemapURL, sitemapURLs = []) {
                 try {
                     console.log('loading', sitemapURL);
@@ -64,7 +556,7 @@
                     });
                     return sitemapURLs.sort();
                 } catch (e) {
-                    console.log (e);
+                    console.log(e);
                 }
             }
 
@@ -72,7 +564,7 @@
                 console.log(url);
                 const resp = await fetch(`https://little-forest-58aa.david8603.workers.dev/?url=${url}robots.txt`);
                 const txt = await resp.text();
-                const lines = txt.split(`\n`);
+                const lines = txt.split('\n');
                 console.log(txt);
                 const sitemapURLs = [];
                 lines.forEach((line) => {
@@ -80,23 +572,26 @@
                     if (name.trim().toLowerCase() === 'sitemap') {
                         sitemapURLs.push(value.trim());
                     }
-                })
+                });
                 console.log(sitemapURLs);
                 return sitemapURLs;
             }
-
 
             document.getElementById('input-form').addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const url = new URL(document.getElementById('url').value);
                 history.pushState({}, '', `${window.location.pathname}?url=${encodeURIComponent(url.href)}`);
-                const output = document.getElementById('output');
-                output.value = '';
-                const fetchAndAppend = async (url) => {
-                    const urls = await loadSitemap(url);
-                    output.value += urls.join(`\r\n`);
-                    updateStats();
-                }
+                sitemapData.lines = [];
+                sitemapData.index = createIndexNode();
+                sitemapData.rawOutputDirty = true;
+                document.getElementById('output').value = '';
+                setTotalUrls(0);
+                renderTree();
+
+                const fetchAndAppend = async (sitemapUrl) => {
+                    const urls = await loadSitemap(sitemapUrl);
+                    appendSitemapLines(urls);
+                };
                 console.log(url);
                 if (url.pathname === '/') {
                     console.log('root');
@@ -107,30 +602,222 @@
                 } else {
                     await fetchAndAppend(url.href);
                 }
-            })
+            });
 
-            function updateStats() {
-                const output = document.getElementById('output');
-                const urls = output.value.split('\n');
-                const totalUrls = urls.length;
-                document.getElementById('total-urls').textContent = totalUrls;
-                const topFolders = urls.map((url) => {
-                    const parts = url.split('\t');
-                    const loc = parts[0];
-                    const folder = new URL(loc).pathname.split('/').filter(Boolean);
-                    return folder[0];
-                })
-                const folderCounts = topFolders.reduce((acc, folder) => {
-                    acc[folder] = (acc[folder] || 0) + 1;
-                    return acc;
-                }, {});
-                const sortedFolders = Object.entries(folderCounts).sort((a, b) => b[1] - a[1]);
-                const topFoldersList = document.getElementById('top-folders');
-                topFoldersList.innerHTML = sortedFolders.map(([folder, count]) => `${folder}\t${count}\r\n`).join('');
+            function getLeafPages(pathSegments) {
+                const node = getIndexAtPath(pathSegments);
+                if (!node?.leafCount) return [];
+
+                return sitemapData.lines.filter((line) => {
+                    const parsed = parseUrlPath(line);
+                    if (!parsed) return false;
+                    const parent = getLeafParentPath(parsed);
+                    if (parent.length !== pathSegments.length) return false;
+                    return pathSegments.every((seg, i) => parent[i] === seg);
+                });
             }
 
-            const output = document.getElementById('output');
-            output.addEventListener('input', updateStats);
+            function getPageLabel(parsed) {
+                const { segments, isDirectory } = parsed;
+                if (!segments.length) return parsed.loc;
+                const name = segments[segments.length - 1];
+                return isDirectory ? `${name}/` : name;
+            }
+
+            function populateChildren(container, pathSegments) {
+                container.replaceChildren();
+                const index = getIndexAtPath(pathSegments);
+                const entries = getBuckets(index);
+                if (entries.length === 0) {
+                    const empty = document.createElement('div');
+                    empty.className = 'tree-empty';
+                    empty.textContent = 'No URLs here';
+                    container.appendChild(empty);
+                    return;
+                }
+                entries.forEach(([name, count]) => {
+                    if (name === LEAF_PAGES) {
+                        container.appendChild(createPagesNode(pathSegments, count));
+                    } else {
+                        container.appendChild(createFolderNode([...pathSegments, name], count));
+                    }
+                });
+            }
+
+            function createTreeLine(count, row) {
+                const line = document.createElement('div');
+                line.className = 'tree-line';
+                const cell = document.createElement('div');
+                cell.className = 'tree-count';
+                if (count !== null) {
+                    const pill = document.createElement('span');
+                    pill.className = 'tree-count-pill';
+                    pill.textContent = count.toLocaleString();
+                    cell.appendChild(pill);
+                }
+                line.append(cell, row);
+                return line;
+            }
+
+            function renderTree() {
+                const container = document.getElementById('top-folders');
+                container.replaceChildren();
+                if (sitemapData.lines.length === 0) {
+                    const empty = document.createElement('div');
+                    empty.className = 'tree-empty';
+                    empty.textContent = 'Enter a sitemap URL above to get started';
+                    container.appendChild(empty);
+                    return;
+                }
+                populateChildren(container, []);
+            }
+
+            document.getElementById('output-toggle').addEventListener('click', () => {
+                const panel = document.getElementById('output-panel');
+                const toggle = document.getElementById('output-toggle');
+                const expanded = panel.classList.toggle('collapsed') === false;
+                toggle.setAttribute('aria-expanded', String(expanded));
+                if (expanded) syncRawOutput();
+            });
+
+            function populatePageList(container, pathSegments) {
+                container.replaceChildren();
+                getLeafPages(pathSegments).forEach((line) => {
+                    container.appendChild(createPageRow(line, pathSegments.length + 1));
+                });
+            }
+
+            function createPageRow(line, depth) {
+                const parsed = parseUrlPath(line);
+                const loc = parsed?.loc || line.split('\t')[0];
+                const label = parsed ? getPageLabel(parsed) : loc;
+
+                const row = document.createElement('div');
+                row.className = 'tree-row page';
+                row.style.paddingLeft = `${12 + depth * 20}px`;
+
+                const spacer = document.createElement('span');
+                spacer.className = 'disclosure-spacer';
+                const icon = document.createElement('span');
+                icon.className = 'tree-icon';
+                icon.textContent = '📄';
+                const name = document.createElement('a');
+                name.className = 'tree-name tree-link';
+                name.href = loc;
+                name.target = '_blank';
+                name.rel = 'noopener noreferrer';
+                name.textContent = label;
+                name.title = loc;
+
+                row.append(spacer, icon, name);
+                return createTreeLine(null, row);
+            }
+
+            function createPagesNode(pathSegments, count) {
+                const node = document.createElement('div');
+                node.className = 'tree-node';
+                const depth = pathSegments.length;
+
+                const row = document.createElement('div');
+                row.className = 'tree-row pages';
+                row.style.paddingLeft = `${12 + depth * 20}px`;
+
+                const disclosure = document.createElement('button');
+                disclosure.type = 'button';
+                disclosure.className = 'disclosure';
+                disclosure.textContent = '▶';
+                disclosure.setAttribute('aria-expanded', 'false');
+                disclosure.setAttribute('aria-label', 'Expand pages');
+
+                const icon = document.createElement('span');
+                icon.className = 'tree-icon';
+                icon.textContent = '📄';
+                const name = document.createElement('span');
+                name.className = 'tree-name';
+                name.textContent = LEAF_PAGES_LABEL;
+
+                row.append(disclosure, icon, name);
+
+                const children = document.createElement('div');
+                children.className = 'tree-children';
+                children.hidden = true;
+
+                disclosure.addEventListener('click', () => {
+                    const expanded = disclosure.getAttribute('aria-expanded') === 'true';
+                    if (expanded) {
+                        disclosure.textContent = '▶';
+                        disclosure.setAttribute('aria-expanded', 'false');
+                        disclosure.setAttribute('aria-label', 'Expand pages');
+                        children.hidden = true;
+                    } else {
+                        if (!children.dataset.loaded) {
+                            populatePageList(children, pathSegments);
+                            children.dataset.loaded = 'true';
+                        }
+                        disclosure.textContent = '▼';
+                        disclosure.setAttribute('aria-expanded', 'true');
+                        disclosure.setAttribute('aria-label', 'Collapse pages');
+                        children.hidden = false;
+                    }
+                });
+
+                node.append(createTreeLine(count, row), children);
+                return node;
+            }
+
+            function createFolderNode(pathSegments, count) {
+                const node = document.createElement('div');
+                node.className = 'tree-node';
+                const depth = pathSegments.length - 1;
+
+                const row = document.createElement('div');
+                row.className = 'tree-row folder';
+                row.style.paddingLeft = `${12 + depth * 20}px`;
+
+                const disclosure = document.createElement('button');
+                disclosure.type = 'button';
+                disclosure.className = 'disclosure';
+                disclosure.textContent = '▶';
+                disclosure.setAttribute('aria-expanded', 'false');
+                disclosure.setAttribute('aria-label', 'Expand folder');
+
+                const icon = document.createElement('span');
+                icon.className = 'tree-icon';
+                icon.textContent = '📁';
+                const name = document.createElement('span');
+                name.className = 'tree-name';
+                name.textContent = pathSegments[pathSegments.length - 1];
+
+                row.append(disclosure, icon, name);
+
+                const children = document.createElement('div');
+                children.className = 'tree-children';
+                children.hidden = true;
+
+                disclosure.addEventListener('click', () => {
+                    const expanded = disclosure.getAttribute('aria-expanded') === 'true';
+                    if (expanded) {
+                        disclosure.textContent = '▶';
+                        disclosure.setAttribute('aria-expanded', 'false');
+                        disclosure.setAttribute('aria-label', 'Expand folder');
+                        children.hidden = true;
+                    } else {
+                        if (!children.dataset.loaded) {
+                            populateChildren(children, pathSegments);
+                            children.dataset.loaded = 'true';
+                        }
+                        disclosure.textContent = '▼';
+                        disclosure.setAttribute('aria-expanded', 'true');
+                        disclosure.setAttribute('aria-label', 'Collapse folder');
+                        children.hidden = false;
+                    }
+                });
+
+                node.append(createTreeLine(count, row), children);
+                return node;
+            }
+
+            sitemapData.index = createIndexNode();
             const params = new URLSearchParams(window.location.search);
             if (params.get('url')) {
                 const urlElem = document.getElementById('url');
