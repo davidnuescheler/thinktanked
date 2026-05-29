@@ -368,6 +368,76 @@
                 font-size: 0.75rem;
                 color: var(--text-secondary);
             }
+
+            .load-status {
+                flex-shrink: 0;
+                background: var(--surface);
+                border-bottom: 1px solid var(--border-subtle);
+                padding: 10px 24px;
+                font-size: 0.8125rem;
+                color: var(--text-secondary);
+            }
+
+            .load-status[hidden] {
+                display: none;
+            }
+
+            .load-status-track {
+                height: 2px;
+                background: var(--border-subtle);
+                margin: -10px -24px 10px;
+                overflow: hidden;
+            }
+
+            .load-status-track::after {
+                content: '';
+                display: block;
+                height: 100%;
+                width: 40%;
+                background: var(--accent);
+                animation: load-indeterminate 1.2s ease-in-out infinite;
+            }
+
+            @keyframes load-indeterminate {
+                0% { transform: translateX(-100%); }
+                100% { transform: translateX(350%); }
+            }
+
+            .load-status-content {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                min-width: 0;
+            }
+
+            .load-status-label {
+                flex-shrink: 0;
+                font-weight: 600;
+                color: var(--text);
+            }
+
+            .load-status-file {
+                flex: 1;
+                min-width: 0;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                font-family: 'SF Mono', SFMono-Regular, ui-monospace, Menlo, Consolas, monospace;
+                font-size: 0.75rem;
+                color: var(--text);
+            }
+
+            .load-status-count {
+                flex-shrink: 0;
+                font-variant-numeric: tabular-nums;
+                color: var(--text);
+                font-weight: 500;
+            }
+
+            .url-form button:disabled {
+                opacity: 0.6;
+                cursor: not-allowed;
+            }
         </style>
     </head>
     <body>
@@ -381,6 +451,15 @@
                 <button type="submit">Fetch</button>
             </form>
         </header>
+
+        <div id="load-status" class="load-status" hidden>
+            <div class="load-status-track" aria-hidden="true"></div>
+            <div class="load-status-content">
+                <span class="load-status-label">Loading</span>
+                <span id="load-status-file" class="load-status-file"></span>
+                <span class="load-status-count"><span id="load-status-count">0</span> URLs discovered</span>
+            </div>
+        </div>
 
         <main class="app-main">
             <section class="explorer-panel">
@@ -411,12 +490,27 @@
         <script>
             const LEAF_PAGES = '__leaf_pages__';
             const LEAF_PAGES_LABEL = 'Pages';
+            const TRAILING_SLASH_MAJORITY = 0.8;
 
             const sitemapData = {
                 lines: [],
                 index: null,
                 rawOutputDirty: false,
+                loading: false,
+                stripTrailingSlashes: false,
             };
+
+            function setLoading(loading) {
+                sitemapData.loading = loading;
+                document.getElementById('load-status').hidden = !loading;
+                document.querySelector('#input-form button').disabled = loading;
+                document.getElementById('url').disabled = loading;
+            }
+
+            function updateLoadStatus(file) {
+                document.getElementById('load-status-file').textContent = file;
+                document.getElementById('load-status-count').textContent = sitemapData.lines.length.toLocaleString();
+            }
 
             function createIndexNode() {
                 return { leafCount: 0, urlCount: 0, folders: new Map() };
@@ -426,12 +520,52 @@
                 const loc = urlLine.split('\t')[0];
                 if (!loc) return null;
                 try {
-                    const { pathname } = new URL(loc);
+                    let pathname = new URL(loc).pathname;
+                    if (sitemapData.stripTrailingSlashes && pathname.length > 1 && pathname.endsWith('/')) {
+                        pathname = pathname.slice(0, -1);
+                    }
                     const isDirectory = pathname.length > 1 && pathname.endsWith('/');
                     const segments = pathname.split('/').filter(Boolean);
                     return { loc, segments, isDirectory };
                 } catch {
                     return null;
+                }
+            }
+
+            function countTrailingSlashUrls(lines) {
+                let slashCount = 0;
+                lines.forEach((line) => {
+                    const loc = line.split('\t')[0];
+                    if (!loc) return;
+                    try {
+                        const { pathname } = new URL(loc);
+                        if (pathname.length > 1 && pathname.endsWith('/')) slashCount += 1;
+                    } catch {
+                        /* ignore invalid URLs */
+                    }
+                });
+                return slashCount;
+            }
+
+            function rebuildIndex() {
+                sitemapData.index = createIndexNode();
+                sitemapData.lines.forEach((line) => {
+                    const parsed = parseUrlPath(line);
+                    if (parsed) addUrlToIndex(sitemapData.index, parsed);
+                });
+            }
+
+            function applyTrailingSlashPolicy() {
+                const { lines } = sitemapData;
+                if (!lines.length) {
+                    sitemapData.stripTrailingSlashes = false;
+                    return;
+                }
+                const slashCount = countTrailingSlashUrls(lines);
+                sitemapData.stripTrailingSlashes = slashCount / lines.length >= TRAILING_SLASH_MAJORITY;
+                if (sitemapData.stripTrailingSlashes) {
+                    rebuildIndex();
+                    renderTree();
                 }
             }
 
@@ -503,6 +637,9 @@
 
             function setTotalUrls(count) {
                 document.getElementById('total-urls').textContent = count.toLocaleString();
+                if (sitemapData.loading) {
+                    document.getElementById('load-status-count').textContent = count.toLocaleString();
+                }
             }
 
             function appendSitemapLines(lines) {
@@ -533,9 +670,9 @@
                 sitemapData.rawOutputDirty = false;
             }
 
-            async function loadSitemap(sitemapURL, sitemapURLs = []) {
+            async function loadSitemap(sitemapURL, callbacks) {
                 try {
-                    console.log('loading', sitemapURL);
+                    callbacks.onFileStart(sitemapURL);
                     const resp = await fetch(`https://little-forest-58aa.david8603.workers.dev/?url=${sitemapURL}`);
                     const xml = await resp.text();
                     const sitemap = new DOMParser().parseFromString(xml, 'text/xml');
@@ -544,17 +681,19 @@
                         const loc = subSitemaps[i];
                         const subSitemapURL = new URL(loc.textContent.trim(), sitemapURL);
                         // eslint-disable-next-line no-await-in-loop
-                        await loadSitemap(subSitemapURL.href, sitemapURLs);
+                        await loadSitemap(subSitemapURL.href, callbacks);
                     }
-                    const urlLocs = sitemap.querySelectorAll('url');
-                    urlLocs.forEach((url) => {
+                    const newLines = [];
+                    sitemap.querySelectorAll('url').forEach((url) => {
                         const loc = url.querySelector('loc');
                         const locURL = new URL(loc.textContent.trim());
                         const lastMod = url.querySelector('lastmod');
                         const lastModDate = lastMod ? lastMod.textContent.trim() : '';
-                        sitemapURLs.push(`${locURL}\t${lastModDate}`);
+                        newLines.push(`${locURL}\t${lastModDate}`);
                     });
-                    return sitemapURLs.sort();
+                    if (newLines.length) {
+                        callbacks.onUrlsFound(newLines);
+                    }
                 } catch (e) {
                     console.log(e);
                 }
@@ -583,24 +722,34 @@
                 history.pushState({}, '', `${window.location.pathname}?url=${encodeURIComponent(url.href)}`);
                 sitemapData.lines = [];
                 sitemapData.index = createIndexNode();
+                sitemapData.stripTrailingSlashes = false;
                 sitemapData.rawOutputDirty = true;
                 document.getElementById('output').value = '';
                 setTotalUrls(0);
                 renderTree();
+                setLoading(true);
+                updateLoadStatus('Starting…');
+                renderTree();
 
-                const fetchAndAppend = async (sitemapUrl) => {
-                    const urls = await loadSitemap(sitemapUrl);
-                    appendSitemapLines(urls);
+                const callbacks = {
+                    onFileStart: (file) => updateLoadStatus(file),
+                    onUrlsFound: (lines) => appendSitemapLines(lines),
                 };
-                console.log(url);
-                if (url.pathname === '/') {
-                    console.log('root');
-                    const rootSitemaps = await getRootSitemaps(url.href);
-                    rootSitemaps.forEach(async (sitemap) => {
-                        await fetchAndAppend(sitemap);
-                    });
-                } else {
-                    await fetchAndAppend(url.href);
+
+                try {
+                    if (url.pathname === '/') {
+                        updateLoadStatus('robots.txt');
+                        const rootSitemaps = await getRootSitemaps(url.href);
+                        for (let i = 0; i < rootSitemaps.length; i += 1) {
+                            // eslint-disable-next-line no-await-in-loop
+                            await loadSitemap(rootSitemaps[i], callbacks);
+                        }
+                    } else {
+                        await loadSitemap(url.href, callbacks);
+                    }
+                } finally {
+                    applyTrailingSlashPolicy();
+                    setLoading(false);
                 }
             });
 
@@ -665,7 +814,9 @@
                 if (sitemapData.lines.length === 0) {
                     const empty = document.createElement('div');
                     empty.className = 'tree-empty';
-                    empty.textContent = 'Enter a sitemap URL above to get started';
+                    empty.textContent = sitemapData.loading
+                        ? 'Discovering URLs…'
+                        : 'Enter a sitemap URL above to get started';
                     container.appendChild(empty);
                     return;
                 }
