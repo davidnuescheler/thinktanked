@@ -844,6 +844,44 @@
                 return `${FCORS_BASE}?${params.toString()}`;
             }
 
+            function stripInlineCssAndJs(html) {
+                const doc = new DOMParser().parseFromString(html, 'text/html');
+                doc.querySelectorAll('script, style').forEach((el) => el.remove());
+                if (doc.body) {
+                    [...doc.body.children].forEach((el) => {
+                        if (el.tagName === 'HEADER' || el.tagName === 'FOOTER') el.remove();
+                    });
+                }
+                doc.querySelectorAll('*').forEach((el) => {
+                    el.removeAttribute('style');
+                    [...el.attributes].forEach((attr) => {
+                        if (/^on/i.test(attr.name)) el.removeAttribute(attr.name);
+                    });
+                    ['href', 'src', 'action', 'formaction', 'xlink:href'].forEach((name) => {
+                        const val = el.getAttribute(name);
+                        if (val && /^\s*javascript:/i.test(val)) el.removeAttribute(name);
+                    });
+                });
+                return `<!DOCTYPE html>\n${doc.documentElement.outerHTML}`;
+            }
+
+            function looksLikeHtml(text) {
+                const sample = text.slice(0, 4096).toLowerCase();
+                return /<!doctype html|<html[\s>]|<head[\s>]|<body[\s>]/i.test(sample);
+            }
+
+            async function prepareBlobForSave(blob, contentType = '') {
+                const type = contentType.split(';')[0].trim().toLowerCase();
+                const isHtml = type.includes('html') || (!type && blob.type.includes('html'));
+                if (!isHtml && type && !type.startsWith('text/')) return blob;
+
+                const text = await blob.text();
+                if (!isHtml && !looksLikeHtml(text)) return blob;
+
+                const stripped = stripInlineCssAndJs(text);
+                return new Blob([stripped], { type: 'text/html;charset=utf-8' });
+            }
+
             function sanitizePathSegment(segment) {
                 const cleaned = segment.replace(/[\0-\x1f\x7f]/g, '').replace(/[/\\]/g, '_').trim();
                 if (!cleaned || cleaned === '.' || cleaned === '..') return '_';
@@ -924,7 +962,9 @@
                         try {
                             const resp = await fetch(fcorsUrl(url));
                             if (!resp.ok) throw new Error(String(resp.status));
-                            const blob = await resp.blob();
+                            const contentType = resp.headers.get('content-type') || '';
+                            let blob = await resp.blob();
+                            blob = await prepareBlobForSave(blob, contentType);
                             await writeUrlToFolder(dirHandle, url, blob);
                             saved += 1;
                         } catch (err) {
