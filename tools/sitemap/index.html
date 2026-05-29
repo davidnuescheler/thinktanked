@@ -197,6 +197,37 @@
                 text-decoration: underline;
             }
 
+            .save-as-btn {
+                flex-shrink: 0;
+                padding: 2px 8px;
+                font-size: 0.6875rem;
+                font-weight: 500;
+                color: var(--text-secondary);
+                background: var(--surface);
+                border: 1px solid var(--border);
+                border-radius: 6px;
+                cursor: pointer;
+                opacity: 0;
+                transition: opacity 0.1s, background 0.1s, color 0.1s;
+            }
+
+            .tree-row:hover .save-as-btn,
+            .save-as-btn:focus-visible,
+            .save-as-btn:disabled {
+                opacity: 1;
+            }
+
+            .save-as-btn:hover:not(:disabled) {
+                color: var(--accent);
+                border-color: var(--accent);
+                background: #f0f7ff;
+            }
+
+            .save-as-btn:disabled {
+                cursor: wait;
+                opacity: 0.6;
+            }
+
             .disclosure {
                 width: 18px;
                 height: 18px;
@@ -491,6 +522,8 @@
             const LEAF_PAGES = '__leaf_pages__';
             const LEAF_PAGES_LABEL = 'Pages';
             const TRAILING_SLASH_MAJORITY = 0.8;
+            const FCORS_BASE = 'https://www.fcors.org/';
+            const FCORS_API_KEY = 'XiKldIyVZFnouIUO';
 
             const sitemapData = {
                 lines: [],
@@ -773,6 +806,155 @@
                 return isDirectory ? `${name}/` : name;
             }
 
+            function getUrlFromLine(line) {
+                const loc = line.split('\t')[0]?.trim();
+                if (!loc) return null;
+                try {
+                    const parsed = new URL(loc);
+                    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
+                    return parsed.href;
+                } catch {
+                    return null;
+                }
+            }
+
+            function getUrlsUnderPath(pathSegments) {
+                return sitemapData.lines
+                    .map((line) => getUrlFromLine(line))
+                    .filter((url) => {
+                        if (!url) return false;
+                        const parsed = parseUrlPath(`${url}\t`);
+                        if (!parsed) return false;
+                        if (parsed.segments.length < pathSegments.length) return false;
+                        return pathSegments.every((seg, i) => parsed.segments[i] === seg);
+                    });
+            }
+
+            function getUrlsForLeafPages(pathSegments) {
+                return getLeafPages(pathSegments)
+                    .map((line) => getUrlFromLine(line))
+                    .filter(Boolean);
+            }
+
+            function fcorsUrl(targetUrl) {
+                const params = new URLSearchParams({
+                    url: targetUrl,
+                    key: FCORS_API_KEY,
+                });
+                return `${FCORS_BASE}?${params.toString()}`;
+            }
+
+            function sanitizePathSegment(segment) {
+                const cleaned = segment.replace(/[\0-\x1f\x7f]/g, '').replace(/[/\\]/g, '_').trim();
+                if (!cleaned || cleaned === '.' || cleaned === '..') return '_';
+                return cleaned.slice(0, 200);
+            }
+
+            function urlToRelativePath(url) {
+                const parsed = parseUrlPath(`${url}\t`);
+                if (!parsed?.segments.length) {
+                    return ['index.html'];
+                }
+                const parts = parsed.segments.map(sanitizePathSegment);
+                if (parsed.isDirectory) {
+                    return [...parts, 'index.html'];
+                }
+                const last = parts[parts.length - 1];
+                if (!last.includes('.')) {
+                    parts[parts.length - 1] = `${last}.html`;
+                }
+                return parts;
+            }
+
+            async function getOrCreateDir(parentHandle, name) {
+                return parentHandle.getDirectoryHandle(sanitizePathSegment(name), { create: true });
+            }
+
+            async function writeUrlToFolder(rootHandle, url, blob) {
+                const parts = urlToRelativePath(url);
+                let dir = rootHandle;
+                for (let i = 0; i < parts.length - 1; i += 1) {
+                    dir = await getOrCreateDir(dir, parts[i]);
+                }
+                const fileHandle = await dir.getFileHandle(parts[parts.length - 1], { create: true });
+                const writable = await fileHandle.createWritable();
+                await writable.write(blob);
+                await writable.close();
+            }
+
+            function setSaveStatus(active, file = '', saved = 0, total = 0) {
+                const bar = document.getElementById('load-status');
+                const label = bar.querySelector('.load-status-label');
+                if (active) {
+                    bar.hidden = false;
+                    label.textContent = 'Saving';
+                    document.getElementById('load-status-file').textContent = file;
+                    document.getElementById('load-status-count').textContent = `${saved.toLocaleString()} / ${total.toLocaleString()}`;
+                } else if (!sitemapData.loading) {
+                    bar.hidden = true;
+                    label.textContent = 'Loading';
+                }
+            }
+
+            async function saveUrlsToFolder(urls, statusLabel) {
+                if (!urls.length) return;
+                if (!window.showDirectoryPicker) {
+                    window.alert('Saving to a folder requires a browser that supports the File System Access API (Chrome or Edge).');
+                    return;
+                }
+
+                let dirHandle;
+                try {
+                    dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+                } catch (err) {
+                    if (err?.name !== 'AbortError') console.error(err);
+                    return;
+                }
+
+                const total = urls.length;
+                let saved = 0;
+                let failed = 0;
+                setSaveStatus(true, statusLabel, saved, total);
+                document.querySelectorAll('.save-as-btn').forEach((btn) => { btn.disabled = true; });
+
+                try {
+                    for (let i = 0; i < urls.length; i += 1) {
+                        const url = urls[i];
+                        setSaveStatus(true, url, saved, total);
+                        try {
+                            const resp = await fetch(fcorsUrl(url));
+                            if (!resp.ok) throw new Error(String(resp.status));
+                            const blob = await resp.blob();
+                            await writeUrlToFolder(dirHandle, url, blob);
+                            saved += 1;
+                        } catch (err) {
+                            failed += 1;
+                            console.error('Save failed:', url, err);
+                        }
+                    }
+                } finally {
+                    document.querySelectorAll('.save-as-btn').forEach((btn) => { btn.disabled = false; });
+                    setSaveStatus(false);
+                }
+
+                if (failed) {
+                    window.alert(`Saved ${saved} of ${total} URLs. ${failed} failed — see console for details.`);
+                }
+            }
+
+            function createSaveAsButton(urls, label) {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'save-as-btn';
+                btn.textContent = 'Save as';
+                btn.title = `Fetch ${urls.length.toLocaleString()} URL(s) and save to a folder`;
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    saveUrlsToFolder(urls, label);
+                });
+                return btn;
+            }
+
             function populateChildren(container, pathSegments) {
                 container.replaceChildren();
                 const index = getIndexAtPath(pathSegments);
@@ -860,7 +1042,7 @@
                 name.textContent = label;
                 name.title = loc;
 
-                row.append(spacer, icon, name);
+                row.append(spacer, icon, name, createSaveAsButton([loc], label));
                 return createTreeLine(null, row);
             }
 
@@ -887,7 +1069,8 @@
                 name.className = 'tree-name';
                 name.textContent = LEAF_PAGES_LABEL;
 
-                row.append(disclosure, icon, name);
+                const pageUrls = getUrlsForLeafPages(pathSegments);
+                row.append(disclosure, icon, name, createSaveAsButton(pageUrls, LEAF_PAGES_LABEL));
 
                 const children = document.createElement('div');
                 children.className = 'tree-children';
@@ -939,7 +1122,9 @@
                 name.className = 'tree-name';
                 name.textContent = pathSegments[pathSegments.length - 1];
 
-                row.append(disclosure, icon, name);
+                const folderLabel = `/${pathSegments.join('/')}`;
+                const folderUrls = getUrlsUnderPath(pathSegments);
+                row.append(disclosure, icon, name, createSaveAsButton(folderUrls, folderLabel));
 
                 const children = document.createElement('div');
                 children.className = 'tree-children';
