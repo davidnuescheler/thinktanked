@@ -844,7 +844,7 @@
                 return `${FCORS_BASE}?${params.toString()}`;
             }
 
-            function stripInlineCssAndJs(html) {
+            function stripInlineCssAndJs(html, pageUrl) {
                 const doc = new DOMParser().parseFromString(html, 'text/html');
                 doc.querySelectorAll('script, style').forEach((el) => el.remove());
                 if (doc.body) {
@@ -862,6 +862,21 @@
                         if (val && /^\s*javascript:/i.test(val)) el.removeAttribute(name);
                     });
                 });
+                if (pageUrl) {
+                    let head = doc.head;
+                    if (!head) {
+                        head = doc.createElement('head');
+                        doc.documentElement.insertBefore(head, doc.body || null);
+                    }
+                    const hasBaseHref = [...head.querySelectorAll('base')].some(
+                        (el) => el.getAttribute('href')?.trim()
+                    );
+                    if (!hasBaseHref) {
+                        const base = doc.createElement('base');
+                        base.href = pageUrl;
+                        head.prepend(base);
+                    }
+                }
                 return `<!DOCTYPE html>\n${doc.documentElement.outerHTML}`;
             }
 
@@ -870,7 +885,7 @@
                 return /<!doctype html|<html[\s>]|<head[\s>]|<body[\s>]/i.test(sample);
             }
 
-            async function prepareBlobForSave(blob, contentType = '') {
+            async function prepareBlobForSave(blob, contentType = '', pageUrl = '') {
                 const type = contentType.split(';')[0].trim().toLowerCase();
                 const isHtml = type.includes('html') || (!type && blob.type.includes('html'));
                 if (!isHtml && type && !type.startsWith('text/')) return blob;
@@ -878,7 +893,7 @@
                 const text = await blob.text();
                 if (!isHtml && !looksLikeHtml(text)) return blob;
 
-                const stripped = stripInlineCssAndJs(text);
+                const stripped = stripInlineCssAndJs(text, pageUrl);
                 return new Blob([stripped], { type: 'text/html;charset=utf-8' });
             }
 
@@ -984,7 +999,7 @@
                             if (!resp.ok) throw new Error(String(resp.status));
                             const contentType = resp.headers.get('content-type') || '';
                             let blob = await resp.blob();
-                            blob = await prepareBlobForSave(blob, contentType);
+                            blob = await prepareBlobForSave(blob, contentType, url);
                             await writeUrlToFolder(dirHandle, url, blob);
                             saved += 1;
                         } catch (err) {
