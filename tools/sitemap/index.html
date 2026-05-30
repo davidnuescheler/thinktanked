@@ -908,6 +908,21 @@
                 return parentHandle.getDirectoryHandle(sanitizePathSegment(name), { create: true });
             }
 
+            async function urlExistsInFolder(rootHandle, url) {
+                const parts = urlToRelativePath(url);
+                let dir = rootHandle;
+                try {
+                    for (let i = 0; i < parts.length - 1; i += 1) {
+                        dir = await dir.getDirectoryHandle(parts[i]);
+                    }
+                    await dir.getFileHandle(parts[parts.length - 1]);
+                    return true;
+                } catch (err) {
+                    if (err.name === 'NotFoundError') return false;
+                    throw err;
+                }
+            }
+
             async function writeUrlToFolder(rootHandle, url, blob) {
                 const parts = urlToRelativePath(url);
                 let dir = rootHandle;
@@ -951,6 +966,7 @@
 
                 const total = urls.length;
                 let saved = 0;
+                let skipped = 0;
                 let failed = 0;
                 setSaveStatus(true, statusLabel, saved, total);
                 document.querySelectorAll('.save-as-btn').forEach((btn) => { btn.disabled = true; });
@@ -958,8 +974,12 @@
                 try {
                     for (let i = 0; i < urls.length; i += 1) {
                         const url = urls[i];
-                        setSaveStatus(true, url, saved, total);
+                        setSaveStatus(true, url, saved + skipped, total);
                         try {
+                            if (await urlExistsInFolder(dirHandle, url)) {
+                                skipped += 1;
+                                continue;
+                            }
                             const resp = await fetch(fcorsUrl(url));
                             if (!resp.ok) throw new Error(String(resp.status));
                             const contentType = resp.headers.get('content-type') || '';
@@ -978,7 +998,9 @@
                 }
 
                 if (failed) {
-                    window.alert(`Saved ${saved} of ${total} URLs. ${failed} failed — see console for details.`);
+                    window.alert(`Saved ${saved}, skipped ${skipped} existing, ${failed} failed — see console for details.`);
+                } else if (saved === 0 && skipped > 0) {
+                    window.alert(`All ${skipped} file(s) already exist locally — nothing downloaded.`);
                 }
             }
 
