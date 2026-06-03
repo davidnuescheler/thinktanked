@@ -132,6 +132,59 @@
                 background: #fafafa;
                 font-size: 0.875rem;
                 color: var(--text-secondary);
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 16px;
+                flex-wrap: wrap;
+            }
+
+            .explorer-header-left {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                flex-wrap: wrap;
+            }
+
+            .selection-count {
+                font-size: 0.8125rem;
+                color: var(--text-secondary);
+            }
+
+            .explorer-actions {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+
+            .explorer-actions button {
+                padding: 6px 14px;
+                font-size: 0.8125rem;
+                font-weight: 500;
+                border-radius: 8px;
+                cursor: pointer;
+                border: 1px solid var(--border);
+                background: var(--surface);
+                color: var(--text);
+            }
+
+            .explorer-actions button:hover:not(:disabled) {
+                background: var(--row-hover);
+            }
+
+            .explorer-actions button:disabled {
+                opacity: 0.45;
+                cursor: not-allowed;
+            }
+
+            #save-selected-btn {
+                color: #fff;
+                background: var(--accent);
+                border-color: var(--accent);
+            }
+
+            #save-selected-btn:hover:not(:disabled) {
+                background: var(--accent-hover);
             }
 
             .explorer-header .count-pill {
@@ -177,9 +230,20 @@
                 margin-right: 8px;
             }
 
-            .tree-row.folder:hover,
+            .tree-row.folder:hover {
+                background: var(--row-hover);
+            }
+
+            .tree-row.folder.selected {
+                background: #e8f2fc;
+            }
+
             .tree-row.pages:hover {
                 background: var(--row-hover);
+            }
+
+            .tree-row.pages.selected {
+                background: #e8f2fc;
             }
 
             .tree-row.file,
@@ -197,35 +261,13 @@
                 text-decoration: underline;
             }
 
-            .save-as-btn {
+            .tree-select {
+                width: 14px;
+                height: 14px;
                 flex-shrink: 0;
-                padding: 2px 8px;
-                font-size: 0.6875rem;
-                font-weight: 500;
-                color: var(--text-secondary);
-                background: var(--surface);
-                border: 1px solid var(--border);
-                border-radius: 6px;
+                margin: 0;
                 cursor: pointer;
-                opacity: 0;
-                transition: opacity 0.1s, background 0.1s, color 0.1s;
-            }
-
-            .tree-row:hover .save-as-btn,
-            .save-as-btn:focus-visible,
-            .save-as-btn:disabled {
-                opacity: 1;
-            }
-
-            .save-as-btn:hover:not(:disabled) {
-                color: var(--accent);
-                border-color: var(--accent);
-                background: #f0f7ff;
-            }
-
-            .save-as-btn:disabled {
-                cursor: wait;
-                opacity: 0.6;
+                accent-color: var(--accent);
             }
 
             .disclosure {
@@ -469,6 +511,184 @@
                 opacity: 0.6;
                 cursor: not-allowed;
             }
+
+            .save-modal {
+                border: none;
+                border-radius: var(--radius);
+                padding: 0;
+                max-width: 420px;
+                width: calc(100% - 32px);
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+            }
+
+            .save-modal::backdrop {
+                background: rgba(0, 0, 0, 0.35);
+            }
+
+            .save-modal-form {
+                padding: 24px;
+            }
+
+            .save-modal-form h2 {
+                margin: 0 0 8px;
+                font-size: 1.125rem;
+                font-weight: 600;
+            }
+
+            .save-modal-summary {
+                margin: 0 0 20px;
+                font-size: 0.875rem;
+                color: var(--text-secondary);
+            }
+
+            .save-speed-options {
+                border: none;
+                margin: 0 0 24px;
+                padding: 0;
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .save-speed-options legend {
+                font-size: 0.8125rem;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.04em;
+                color: var(--text-secondary);
+                margin-bottom: 12px;
+            }
+
+            .save-speed-option {
+                display: flex;
+                align-items: flex-start;
+                gap: 10px;
+                padding: 10px 12px;
+                border: 1px solid var(--border-subtle);
+                border-radius: 8px;
+                cursor: pointer;
+                transition: border-color 0.15s, background 0.15s;
+            }
+
+            .save-speed-option:has(input:checked) {
+                border-color: var(--accent);
+                background: #f0f7ff;
+            }
+
+            .save-speed-option input {
+                margin-top: 3px;
+                accent-color: var(--accent);
+            }
+
+            .save-speed-label {
+                display: flex;
+                flex-direction: column;
+                gap: 2px;
+                font-size: 0.875rem;
+            }
+
+            .save-speed-label strong {
+                font-weight: 600;
+                color: var(--text);
+            }
+
+            .save-speed-label span {
+                font-size: 0.8125rem;
+                color: var(--text-secondary);
+            }
+
+            .save-host-options {
+                border: none;
+                margin: 0 0 24px;
+                padding: 0;
+            }
+
+            .save-host-options legend {
+                font-size: 0.8125rem;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.04em;
+                color: var(--text-secondary);
+                margin-bottom: 12px;
+            }
+
+            .save-host-toggle {
+                display: flex;
+                align-items: flex-start;
+                gap: 10px;
+                margin-bottom: 12px;
+                font-size: 0.875rem;
+                cursor: pointer;
+            }
+
+            .save-host-toggle input {
+                margin-top: 3px;
+                accent-color: var(--accent);
+            }
+
+            .save-host-field {
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+            }
+
+            .save-host-field span {
+                font-size: 0.8125rem;
+                color: var(--text-secondary);
+            }
+
+            .save-host-field input {
+                padding: 8px 12px;
+                font-size: 0.875rem;
+                border: 1px solid var(--border);
+                border-radius: 8px;
+                background: var(--bg);
+                color: var(--text);
+            }
+
+            .save-host-field input:disabled {
+                opacity: 0.5;
+            }
+
+            .save-host-field input:focus {
+                outline: none;
+                border-color: var(--accent);
+                box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2);
+                background: var(--surface);
+            }
+
+            .save-host-hint {
+                margin: 8px 0 0;
+                font-size: 0.75rem;
+                color: var(--text-secondary);
+            }
+
+            .save-modal-actions {
+                display: flex;
+                justify-content: flex-end;
+                gap: 8px;
+            }
+
+            .save-modal-actions button {
+                padding: 8px 16px;
+                font-size: 0.875rem;
+                font-weight: 500;
+                border-radius: 8px;
+                cursor: pointer;
+                border: 1px solid var(--border);
+                background: var(--surface);
+                color: var(--text);
+            }
+
+            .save-modal-actions button[type="submit"] {
+                color: #fff;
+                background: var(--accent);
+                border-color: var(--accent);
+            }
+
+            .save-modal-actions button[type="submit"]:hover {
+                background: var(--accent-hover);
+            }
         </style>
     </head>
     <body>
@@ -495,7 +715,14 @@
         <main class="app-main">
             <section class="explorer-panel">
                 <div class="explorer-header">
-                    <span id="total-urls" class="count-pill">0</span> Total URLs
+                    <div class="explorer-header-left">
+                        <span id="total-urls" class="count-pill">0</span> Total URLs
+                        <span id="selection-count" class="selection-count"></span>
+                    </div>
+                    <div class="explorer-actions">
+                        <button type="button" id="clear-selection-btn" disabled>Clear</button>
+                        <button type="button" id="save-selected-btn" disabled>Save selected</button>
+                    </div>
                 </div>
                 <div class="explorer-grid">
                     <div id="top-folders" class="tree-root">
@@ -518,6 +745,80 @@
             </div>
         </section>
 
+        <dialog id="save-modal" class="save-modal">
+            <form method="dialog" class="save-modal-form" id="save-modal-form">
+                <h2>Save selected</h2>
+                <p id="save-modal-summary" class="save-modal-summary"></p>
+                <fieldset class="save-speed-options">
+                    <legend>Speed</legend>
+                    <label class="save-speed-option">
+                        <input type="radio" name="save-speed" value="sloth">
+                        <span class="save-speed-label">
+                            <strong>Sloth</strong>
+                            <span>Wait 30s between requests</span>
+                        </span>
+                    </label>
+                    <label class="save-speed-option">
+                        <input type="radio" name="save-speed" value="chill">
+                        <span class="save-speed-label">
+                            <strong>Chill</strong>
+                            <span>Wait 5s between requests</span>
+                        </span>
+                    </label>
+                    <label class="save-speed-option">
+                        <input type="radio" name="save-speed" value="standard" checked>
+                        <span class="save-speed-label">
+                            <strong>Standard</strong>
+                            <span>One request at a time</span>
+                        </span>
+                    </label>
+                    <label class="save-speed-option">
+                        <input type="radio" name="save-speed" value="hurry">
+                        <span class="save-speed-label">
+                            <strong>Hurry</strong>
+                            <span>10 requests in parallel</span>
+                        </span>
+                    </label>
+                    <label class="save-speed-option">
+                        <input type="radio" name="save-speed" value="madmax">
+                        <span class="save-speed-label">
+                            <strong>Mad Max</strong>
+                            <span>100 requests in parallel</span>
+                        </span>
+                    </label>
+                </fieldset>
+                <fieldset class="save-host-options">
+                    <legend>Host</legend>
+                    <label class="save-host-toggle">
+                        <input type="checkbox" id="save-host-override">
+                        <span>Use sitemap host instead of each <code>&lt;loc&gt;</code> host</span>
+                    </label>
+                    <label class="save-host-field">
+                        <span>Override host</span>
+                        <input type="text" id="save-host-value" placeholder="https://example.com" disabled>
+                    </label>
+                    <p class="save-host-hint">Defaults to the host from the sitemap URL above.</p>
+                </fieldset>
+                <fieldset class="save-host-options">
+                    <legend>Assets</legend>
+                    <label class="save-host-toggle">
+                        <input type="checkbox" id="save-download-images">
+                        <span>Download <code>img</code> and <code>picture</code> images to <code>assets/images/</code></span>
+                    </label>
+                    <p class="save-host-hint">Rewrites image references in saved HTML to local paths.</p>
+                    <label class="save-host-toggle">
+                        <input type="checkbox" id="save-image-head-only">
+                        <span>HEAD only — log image URLs without downloading</span>
+                    </label>
+                    <p class="save-host-hint">Sends HEAD requests for each image and records status in download.log.</p>
+                </fieldset>
+                <div class="save-modal-actions">
+                    <button type="button" id="save-modal-cancel">Cancel</button>
+                    <button type="submit" value="save">Save</button>
+                </div>
+            </form>
+        </dialog>
+
         <script>
             const LEAF_PAGES = '__leaf_pages__';
             const LEAF_PAGES_LABEL = 'Pages';
@@ -525,12 +826,23 @@
             const FCORS_BASE = 'https://www.fcors.org/';
             const FCORS_API_KEY = 'XiKldIyVZFnouIUO';
 
+            const SAVE_SPEEDS = {
+                sloth: { delayMs: 30000, concurrency: 1 },
+                chill: { delayMs: 5000, concurrency: 1 },
+                standard: { delayMs: 0, concurrency: 1 },
+                hurry: { delayMs: 0, concurrency: 10 },
+                madmax: { delayMs: 0, concurrency: 100 },
+            };
+
+            let pendingSaveUrls = null;
+
             const sitemapData = {
                 lines: [],
                 index: null,
                 rawOutputDirty: false,
                 loading: false,
                 stripTrailingSlashes: false,
+                sourceUrl: '',
             };
 
             function setLoading(loading) {
@@ -538,11 +850,145 @@
                 document.getElementById('load-status').hidden = !loading;
                 document.querySelector('#input-form button').disabled = loading;
                 document.getElementById('url').disabled = loading;
+                updateSelectionUI();
             }
 
             function updateLoadStatus(file) {
                 document.getElementById('load-status-file').textContent = file;
                 document.getElementById('load-status-count').textContent = sitemapData.lines.length.toLocaleString();
+            }
+
+            function getSitemapSourceOrigin() {
+                const val = sitemapData.sourceUrl || document.getElementById('url').value.trim();
+                if (!val) return '';
+                try {
+                    return new URL(val).origin;
+                } catch {
+                    return '';
+                }
+            }
+
+            function parseOverrideOrigin(value) {
+                const trimmed = value.trim();
+                if (!trimmed) return null;
+                try {
+                    const parsed = trimmed.includes('://') ? new URL(trimmed) : new URL(`https://${trimmed}`);
+                    return parsed.origin;
+                } catch {
+                    return null;
+                }
+            }
+
+            function rewriteUrlHost(url, overrideOrigin) {
+                const source = new URL(overrideOrigin);
+                const target = new URL(url);
+                target.protocol = source.protocol;
+                target.username = source.username;
+                target.password = source.password;
+                target.hostname = source.hostname;
+                target.port = source.port;
+                return target.href;
+            }
+
+            function resolveSaveUrl(url, hostOverride) {
+                if (!hostOverride?.enabled || !hostOverride.origin) return url;
+                return rewriteUrlHost(url, hostOverride.origin);
+            }
+
+            function setSaveHostFieldEnabled(enabled) {
+                document.getElementById('save-host-value').disabled = !enabled;
+            }
+
+            const selectedFolders = new Set();
+            const selectedPages = new Set();
+
+            function pathKey(pathSegments) {
+                return JSON.stringify(pathSegments);
+            }
+
+            function parsePathKey(key) {
+                return JSON.parse(key);
+            }
+
+            function updateSelectionUI() {
+                const folderCount = selectedFolders.size;
+                const pagesCount = selectedPages.size;
+                const itemCount = folderCount + pagesCount;
+                const urlCount = itemCount ? getUrlsForSelection().length : 0;
+                const saveBtn = document.getElementById('save-selected-btn');
+                const clearBtn = document.getElementById('clear-selection-btn');
+                const countEl = document.getElementById('selection-count');
+                saveBtn.disabled = itemCount === 0 || sitemapData.loading;
+                clearBtn.disabled = itemCount === 0;
+                if (!itemCount) {
+                    countEl.textContent = '';
+                    return;
+                }
+                const parts = [];
+                if (folderCount) {
+                    parts.push(`${folderCount.toLocaleString()} folder${folderCount === 1 ? '' : 's'}`);
+                }
+                if (pagesCount) {
+                    parts.push(`${pagesCount.toLocaleString()} Pages`);
+                }
+                countEl.textContent = `${parts.join(', ')}, ${urlCount.toLocaleString()} URL${urlCount === 1 ? '' : 's'}`;
+            }
+
+            function clearSelection() {
+                selectedFolders.clear();
+                selectedPages.clear();
+                document.querySelectorAll('.tree-row.folder.selected, .tree-row.pages.selected').forEach((row) => {
+                    row.classList.remove('selected');
+                    const cb = row.querySelector('.tree-select');
+                    if (cb) cb.checked = false;
+                });
+                updateSelectionUI();
+            }
+
+            function getUrlsForSelection() {
+                const urls = new Set();
+                selectedFolders.forEach((key) => {
+                    getUrlsUnderPath(parsePathKey(key)).forEach((url) => urls.add(url));
+                });
+                selectedPages.forEach((key) => {
+                    getUrlsForLeafPages(parsePathKey(key)).forEach((url) => urls.add(url));
+                });
+                return [...urls];
+            }
+
+            function createTreeCheckbox(pathSegments, row, kind) {
+                const cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.className = 'tree-select';
+                const key = pathKey(pathSegments);
+                const selected = kind === 'folder' ? selectedFolders : selectedPages;
+                const pathLabel = pathSegments.length ? `/${pathSegments.join('/')}` : '/';
+                cb.setAttribute(
+                    'aria-label',
+                    kind === 'folder' ? `Select folder ${pathLabel}` : `Select Pages at ${pathLabel}`
+                );
+                cb.checked = selected.has(key);
+                if (cb.checked) row.classList.add('selected');
+                cb.addEventListener('click', (e) => e.stopPropagation());
+                cb.addEventListener('change', () => {
+                    if (cb.checked) {
+                        selected.add(key);
+                        row.classList.add('selected');
+                    } else {
+                        selected.delete(key);
+                        row.classList.remove('selected');
+                    }
+                    updateSelectionUI();
+                });
+                return cb;
+            }
+
+            function createFolderCheckbox(pathSegments, row) {
+                return createTreeCheckbox(pathSegments, row, 'folder');
+            }
+
+            function createPagesCheckbox(pathSegments, row) {
+                return createTreeCheckbox(pathSegments, row, 'pages');
             }
 
             function createIndexNode() {
@@ -752,11 +1198,14 @@
             document.getElementById('input-form').addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const url = new URL(document.getElementById('url').value);
+                sitemapData.sourceUrl = url.href;
                 history.pushState({}, '', `${window.location.pathname}?url=${encodeURIComponent(url.href)}`);
                 sitemapData.lines = [];
                 sitemapData.index = createIndexNode();
                 sitemapData.stripTrailingSlashes = false;
                 sitemapData.rawOutputDirty = true;
+                selectedFolders.clear();
+                selectedPages.clear();
                 document.getElementById('output').value = '';
                 setTotalUrls(0);
                 renderTree();
@@ -885,7 +1334,7 @@
                 return /<!doctype html|<html[\s>]|<head[\s>]|<body[\s>]/i.test(sample);
             }
 
-            async function prepareBlobForSave(blob, contentType = '', pageUrl = '') {
+            async function prepareBlobForSave(blob, contentType = '', pageUrl = '', dirHandle = null, saveOptions = null) {
                 const type = contentType.split(';')[0].trim().toLowerCase();
                 const isHtml = type.includes('html') || (!type && blob.type.includes('html'));
                 if (!isHtml && type && !type.startsWith('text/')) return blob;
@@ -893,8 +1342,13 @@
                 const text = await blob.text();
                 if (!isHtml && !looksLikeHtml(text)) return blob;
 
-                const stripped = stripInlineCssAndJs(text, pageUrl);
-                return new Blob([stripped], { type: 'text/html;charset=utf-8' });
+                let html = stripInlineCssAndJs(text, pageUrl);
+                if (saveOptions?.imageHeadOnly && pageUrl) {
+                    await probeImagesInHtml(html, pageUrl, saveOptions);
+                } else if (saveOptions?.downloadImages && dirHandle && pageUrl) {
+                    html = await downloadAndRewriteImages(html, pageUrl, urlToRelativePath(pageUrl), dirHandle);
+                }
+                return new Blob([html], { type: 'text/html;charset=utf-8' });
             }
 
             function sanitizePathSegment(segment) {
@@ -917,6 +1371,238 @@
                     parts[parts.length - 1] = `${last}.html`;
                 }
                 return parts;
+            }
+
+            function imageUrlToAssetParts(absoluteUrl) {
+                const { pathname } = new URL(absoluteUrl);
+                const segments = pathname.split('/').filter(Boolean).map(sanitizePathSegment);
+                if (!segments.length) segments.push('image');
+                const last = segments[segments.length - 1];
+                if (!last.includes('.')) segments[segments.length - 1] = `${last}.img`;
+                return ['assets', 'images', ...segments];
+            }
+
+            function imageAssetKey(absoluteUrl) {
+                const parsed = new URL(absoluteUrl);
+                return `${parsed.origin}${parsed.pathname}`;
+            }
+
+            function firstSrcsetUrl(srcset) {
+                if (!srcset?.trim()) return null;
+                for (const part of srcset.split(',')) {
+                    const [url] = part.trim().split(/\s+/);
+                    if (url) return url;
+                }
+                return null;
+            }
+
+            function rewriteSrcsetToLocal(srcset, localPath) {
+                if (!srcset?.trim() || !localPath) return srcset;
+                return srcset.split(',').map((part) => {
+                    const trimmed = part.trim();
+                    if (!trimmed) return '';
+                    const [, ...descriptor] = trimmed.split(/\s+/);
+                    return descriptor.length ? `${localPath} ${descriptor.join(' ')}` : localPath;
+                }).filter(Boolean).join(', ');
+            }
+
+            function relativePathBetween(fromParts, toParts) {
+                let i = 0;
+                while (i < fromParts.length - 1 && i < toParts.length && fromParts[i] === toParts[i]) {
+                    i += 1;
+                }
+                const up = fromParts.length - 1 - i;
+                const prefix = up > 0 ? '../'.repeat(up) : '';
+                return prefix + toParts.slice(i).join('/');
+            }
+
+            function resolveResourceUrl(value, pageUrl) {
+                if (!value?.trim()) return null;
+                if (/^\s*(data:|blob:|javascript:)/i.test(value.trim())) return null;
+                try {
+                    return new URL(value.trim(), pageUrl).href;
+                } catch {
+                    return null;
+                }
+            }
+
+            async function fileExistsAtParts(rootHandle, parts) {
+                let dir = rootHandle;
+                try {
+                    for (let i = 0; i < parts.length - 1; i += 1) {
+                        dir = await dir.getDirectoryHandle(parts[i]);
+                    }
+                    await dir.getFileHandle(parts[parts.length - 1]);
+                    return true;
+                } catch (err) {
+                    if (err.name === 'NotFoundError') return false;
+                    throw err;
+                }
+            }
+
+            async function writePartsToFolder(rootHandle, parts, blob) {
+                let dir = rootHandle;
+                for (let i = 0; i < parts.length - 1; i += 1) {
+                    dir = await getOrCreateDir(dir, parts[i]);
+                }
+                const fileHandle = await dir.getFileHandle(parts[parts.length - 1], { create: true });
+                const writable = await fileHandle.createWritable();
+                await writable.write(blob);
+                await writable.close();
+            }
+
+            function collectImageUrlsFromHtml(html, pageUrl) {
+                const doc = new DOMParser().parseFromString(html, 'text/html');
+                const urls = new Set();
+                const add = (value) => {
+                    const absolute = resolveResourceUrl(value, pageUrl);
+                    if (absolute) urls.add(absolute);
+                };
+                doc.querySelectorAll('picture').forEach((picture) => {
+                    const img = picture.querySelector('img[src]');
+                    if (img) add(img.getAttribute('src'));
+                });
+                doc.querySelectorAll('img[src]').forEach((img) => {
+                    if (img.closest('picture')) return;
+                    add(img.getAttribute('src'));
+                });
+                doc.querySelectorAll('img[srcset]:not([src])').forEach((img) => {
+                    if (img.closest('picture')) return;
+                    add(firstSrcsetUrl(img.getAttribute('srcset') || ''));
+                });
+                return [...urls];
+            }
+
+            async function probeImageAsset(absoluteUrl, saveOptions) {
+                const assetKey = imageAssetKey(absoluteUrl);
+                if (saveOptions.probedImageKeys.has(assetKey)) return;
+                saveOptions.probedImageKeys.add(assetKey);
+                const start = performance.now();
+                try {
+                    const resp = await fetch(fcorsUrl(absoluteUrl), { method: 'HEAD' });
+                    const contentLength = resp.headers.get('content-length');
+                    logDownload({
+                        url: absoluteUrl,
+                        status: resp.status,
+                        bytes: contentLength ? Number(contentLength) : null,
+                        durationMs: performance.now() - start,
+                        method: 'HEAD',
+                    });
+                } catch {
+                    logDownload({
+                        url: absoluteUrl,
+                        status: null,
+                        bytes: null,
+                        durationMs: performance.now() - start,
+                        method: 'HEAD',
+                    });
+                }
+            }
+
+            async function probeImagesInHtml(html, pageUrl, saveOptions) {
+                const urls = collectImageUrlsFromHtml(html, pageUrl);
+                await Promise.all(urls.map((url) => probeImageAsset(url, saveOptions)));
+            }
+
+            async function downloadImageAsset(dirHandle, absoluteUrl, assetParts) {
+                const start = performance.now();
+                if (await fileExistsAtParts(dirHandle, assetParts)) {
+                    logDownload({
+                        url: absoluteUrl,
+                        status: null,
+                        bytes: null,
+                        durationMs: performance.now() - start,
+                    });
+                    return;
+                }
+                try {
+                    const resp = await fetch(fcorsUrl(absoluteUrl));
+                    const durationMs = performance.now() - start;
+                    if (!resp.ok) {
+                        logDownload({
+                            url: absoluteUrl,
+                            status: resp.status,
+                            bytes: null,
+                            durationMs,
+                        });
+                        throw new Error(String(resp.status));
+                    }
+                    const blob = await resp.blob();
+                    await writePartsToFolder(dirHandle, assetParts, blob);
+                    logDownload({
+                        url: absoluteUrl,
+                        status: resp.status,
+                        bytes: blob.size,
+                        durationMs: performance.now() - start,
+                    });
+                } catch (err) {
+                    if (!String(err.message).match(/^\d+$/)) {
+                        logDownload({
+                            url: absoluteUrl,
+                            status: null,
+                            bytes: null,
+                            durationMs: performance.now() - start,
+                        });
+                    }
+                    throw err;
+                }
+            }
+
+            async function downloadAndRewriteImages(html, pageUrl, htmlParts, dirHandle) {
+                const doc = new DOMParser().parseFromString(html, 'text/html');
+                const localByAssetKey = new Map();
+
+                async function ensureLocalPath(fetchUrl) {
+                    if (!fetchUrl) return null;
+                    const assetKey = imageAssetKey(fetchUrl);
+                    if (localByAssetKey.has(assetKey)) return localByAssetKey.get(assetKey);
+                    const assetParts = imageUrlToAssetParts(fetchUrl);
+                    try {
+                        await downloadImageAsset(dirHandle, fetchUrl, assetParts);
+                    } catch (err) {
+                        console.error('Image download failed:', fetchUrl, err);
+                        return null;
+                    }
+                    const rel = relativePathBetween(htmlParts, assetParts);
+                    localByAssetKey.set(assetKey, rel);
+                    return rel;
+                }
+
+                for (const picture of doc.querySelectorAll('picture')) {
+                    const img = picture.querySelector('img[src]');
+                    if (!img) continue;
+                    const fetchUrl = resolveResourceUrl(img.getAttribute('src'), pageUrl);
+                    const localPath = await ensureLocalPath(fetchUrl);
+                    if (!localPath) continue;
+                    img.setAttribute('src', localPath);
+                    if (img.hasAttribute('srcset')) {
+                        img.setAttribute('srcset', rewriteSrcsetToLocal(img.getAttribute('srcset'), localPath));
+                    }
+                    picture.querySelectorAll('source[srcset]').forEach((source) => {
+                        source.setAttribute('srcset', rewriteSrcsetToLocal(source.getAttribute('srcset'), localPath));
+                    });
+                }
+
+                for (const img of doc.querySelectorAll('img[src]')) {
+                    if (img.closest('picture')) continue;
+                    const fetchUrl = resolveResourceUrl(img.getAttribute('src'), pageUrl);
+                    const localPath = await ensureLocalPath(fetchUrl);
+                    if (!localPath) continue;
+                    img.setAttribute('src', localPath);
+                    if (img.hasAttribute('srcset')) {
+                        img.setAttribute('srcset', rewriteSrcsetToLocal(img.getAttribute('srcset'), localPath));
+                    }
+                }
+
+                for (const img of doc.querySelectorAll('img[srcset]:not([src])')) {
+                    if (img.closest('picture')) continue;
+                    const fetchUrl = resolveResourceUrl(firstSrcsetUrl(img.getAttribute('srcset') || ''), pageUrl);
+                    const localPath = await ensureLocalPath(fetchUrl);
+                    if (!localPath) continue;
+                    img.setAttribute('srcset', rewriteSrcsetToLocal(img.getAttribute('srcset'), localPath));
+                }
+
+                return `<!DOCTYPE html>\n${doc.documentElement.outerHTML}`;
             }
 
             async function getOrCreateDir(parentHandle, name) {
@@ -964,12 +1650,128 @@
                 }
             }
 
-            async function saveUrlsToFolder(urls, statusLabel) {
+            function sleep(ms) {
+                return new Promise((resolve) => { setTimeout(resolve, ms); });
+            }
+
+            const downloadLog = {
+                handle: null,
+                lines: [],
+                needsHeader: false,
+            };
+
+            function tsvField(value) {
+                if (value === null || value === undefined || value === '') return '';
+                return String(value).replace(/\t/g, ' ').replace(/\n/g, ' ');
+            }
+
+            function formatDownloadLogLine({ url, status, bytes, durationMs, method = 'GET' }) {
+                return [
+                    tsvField(new Date().toISOString()),
+                    tsvField(method),
+                    tsvField(url),
+                    tsvField(status ?? ''),
+                    tsvField(bytes ?? ''),
+                    tsvField(Math.round(durationMs)),
+                ].join('\t');
+            }
+
+            async function initDownloadLog(dirHandle) {
+                downloadLog.handle = await dirHandle.getFileHandle('download.log', { create: true });
+                downloadLog.lines = [];
+                const file = await downloadLog.handle.getFile();
+                downloadLog.needsHeader = file.size === 0;
+            }
+
+            function logDownloadComment(line) {
+                downloadLog.lines.push(line);
+            }
+
+            function logDownload(entry) {
+                downloadLog.lines.push(formatDownloadLogLine(entry));
+            }
+
+            async function flushDownloadLog(extraLines = []) {
+                if (!downloadLog.handle) return;
+                const rows = [...downloadLog.lines, ...extraLines];
+                if (!rows.length) {
+                    downloadLog.handle = null;
+                    downloadLog.lines = [];
+                    return;
+                }
+                if (downloadLog.needsHeader) {
+                    rows.unshift('timestamp\tmethod\tURL\tresponse_code\tsize\ttiming_ms');
+                }
+                const file = await downloadLog.handle.getFile();
+                const writable = await downloadLog.handle.createWritable({ keepExistingData: true });
+                await writable.seek(file.size);
+                await writable.write(`${rows.join('\n')}\n`);
+                await writable.close();
+                downloadLog.handle = null;
+                downloadLog.lines = [];
+            }
+
+            async function closeDownloadLog(summaryLine) {
+                await flushDownloadLog(summaryLine ? [summaryLine] : []);
+            }
+
+            async function downloadUrlToFolder(dirHandle, url, hostOverride, saveOptions) {
+                const fetchUrl = resolveSaveUrl(url, hostOverride);
+                const start = performance.now();
+                if (await urlExistsInFolder(dirHandle, fetchUrl)) {
+                    logDownload({
+                        url: fetchUrl,
+                        status: null,
+                        bytes: null,
+                        durationMs: performance.now() - start,
+                    });
+                    return 'skipped';
+                }
+                try {
+                    const resp = await fetch(fcorsUrl(fetchUrl));
+                    const durationMs = performance.now() - start;
+                    if (!resp.ok) {
+                        logDownload({
+                            url: fetchUrl,
+                            status: resp.status,
+                            bytes: null,
+                            durationMs,
+                        });
+                        throw new Error(String(resp.status));
+                    }
+                    const contentType = resp.headers.get('content-type') || '';
+                    let blob = await resp.blob();
+                    const bytes = blob.size;
+                    blob = await prepareBlobForSave(blob, contentType, fetchUrl, dirHandle, saveOptions);
+                    await writeUrlToFolder(dirHandle, fetchUrl, blob);
+                    logDownload({
+                        url: fetchUrl,
+                        status: resp.status,
+                        bytes,
+                        durationMs: performance.now() - start,
+                    });
+                    return 'saved';
+                } catch (err) {
+                    if (!String(err.message).match(/^\d+$/)) {
+                        logDownload({
+                            url: fetchUrl,
+                            status: null,
+                            bytes: null,
+                            durationMs: performance.now() - start,
+                        });
+                    }
+                    throw err;
+                }
+            }
+
+            async function saveUrlsToFolder(urls, statusLabel, speedKey = 'standard', hostOverride = null, saveOptions = null) {
                 if (!urls.length) return;
                 if (!window.showDirectoryPicker) {
                     window.alert('Saving to a folder requires a browser that supports the File System Access API (Chrome or Edge).');
                     return;
                 }
+
+                const speed = SAVE_SPEEDS[speedKey] || SAVE_SPEEDS.standard;
 
                 let dirHandle;
                 try {
@@ -983,32 +1785,72 @@
                 let saved = 0;
                 let skipped = 0;
                 let failed = 0;
-                setSaveStatus(true, statusLabel, saved, total);
-                document.querySelectorAll('.save-as-btn').forEach((btn) => { btn.disabled = true; });
+                let processed = 0;
+
+                const updateProgress = (url) => {
+                    setSaveStatus(true, url, processed, total);
+                };
+
+                setSaveStatus(true, statusLabel, processed, total);
+                const saveBtn = document.getElementById('save-selected-btn');
+                const clearBtn = document.getElementById('clear-selection-btn');
+                saveBtn.disabled = true;
+                clearBtn.disabled = true;
+
+                await initDownloadLog(dirHandle);
+                logDownloadComment(`# session start speed=${speedKey} urls=${total}`);
 
                 try {
-                    for (let i = 0; i < urls.length; i += 1) {
-                        const url = urls[i];
-                        setSaveStatus(true, url, saved + skipped, total);
-                        try {
-                            if (await urlExistsInFolder(dirHandle, url)) {
-                                skipped += 1;
-                                continue;
+                    if (speed.concurrency === 1) {
+                        for (let i = 0; i < urls.length; i += 1) {
+                            const url = urls[i];
+                            updateProgress(resolveSaveUrl(url, hostOverride));
+                            let fetched = false;
+                            try {
+                                const result = await downloadUrlToFolder(dirHandle, url, hostOverride, saveOptions);
+                                if (result === 'skipped') skipped += 1;
+                                else {
+                                    saved += 1;
+                                    fetched = true;
+                                }
+                            } catch (err) {
+                                failed += 1;
+                                fetched = true;
+                                console.error('Save failed:', url, err);
                             }
-                            const resp = await fetch(fcorsUrl(url));
-                            if (!resp.ok) throw new Error(String(resp.status));
-                            const contentType = resp.headers.get('content-type') || '';
-                            let blob = await resp.blob();
-                            blob = await prepareBlobForSave(blob, contentType, url);
-                            await writeUrlToFolder(dirHandle, url, blob);
-                            saved += 1;
-                        } catch (err) {
-                            failed += 1;
-                            console.error('Save failed:', url, err);
+                            processed += 1;
+                            if (fetched && speed.delayMs && i < urls.length - 1) {
+                                await sleep(speed.delayMs);
+                            }
                         }
+                    } else {
+                        let nextIndex = 0;
+                        const worker = async () => {
+                            while (nextIndex < urls.length) {
+                                const url = urls[nextIndex];
+                                nextIndex += 1;
+                                updateProgress(resolveSaveUrl(url, hostOverride));
+                                try {
+                                    const result = await downloadUrlToFolder(dirHandle, url, hostOverride, saveOptions);
+                                    if (result === 'skipped') skipped += 1;
+                                    else saved += 1;
+                                } catch (err) {
+                                    failed += 1;
+                                    console.error('Save failed:', url, err);
+                                }
+                                processed += 1;
+                                updateProgress(url);
+                            }
+                        };
+                        const workers = Array.from(
+                            { length: Math.min(speed.concurrency, urls.length) },
+                            () => worker()
+                        );
+                        await Promise.all(workers);
                     }
                 } finally {
-                    document.querySelectorAll('.save-as-btn').forEach((btn) => { btn.disabled = false; });
+                    await closeDownloadLog(`# session end saved=${saved} skipped=${skipped} failed=${failed}`);
+                    updateSelectionUI();
                     setSaveStatus(false);
                 }
 
@@ -1019,17 +1861,17 @@
                 }
             }
 
-            function createSaveAsButton(urls, label) {
-                const btn = document.createElement('button');
-                btn.type = 'button';
-                btn.className = 'save-as-btn';
-                btn.textContent = 'Save as';
-                btn.title = `Fetch ${urls.length.toLocaleString()} URL(s) and save to a folder`;
-                btn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    saveUrlsToFolder(urls, label);
-                });
-                return btn;
+            function openSaveModal(urls) {
+                pendingSaveUrls = urls;
+                document.getElementById('save-modal-summary').textContent =
+                    `${urls.length.toLocaleString()} URL${urls.length === 1 ? '' : 's'} will be saved to a folder you choose.`;
+                const sourceOrigin = getSitemapSourceOrigin();
+                const hostOverride = document.getElementById('save-host-override');
+                const hostValue = document.getElementById('save-host-value');
+                hostOverride.checked = Boolean(sourceOrigin);
+                hostValue.value = sourceOrigin;
+                setSaveHostFieldEnabled(hostOverride.checked);
+                document.getElementById('save-modal').showModal();
             }
 
             function populateChildren(container, pathSegments) {
@@ -1071,6 +1913,9 @@
                 const container = document.getElementById('top-folders');
                 container.replaceChildren();
                 if (sitemapData.lines.length === 0) {
+                    selectedFolders.clear();
+                    selectedPages.clear();
+                    updateSelectionUI();
                     const empty = document.createElement('div');
                     empty.className = 'tree-empty';
                     empty.textContent = sitemapData.loading
@@ -1080,7 +1925,54 @@
                     return;
                 }
                 populateChildren(container, []);
+                updateSelectionUI();
             }
+
+            document.getElementById('save-selected-btn').addEventListener('click', () => {
+                const urls = getUrlsForSelection();
+                if (!urls.length) return;
+                openSaveModal(urls);
+            });
+
+            document.getElementById('save-host-override').addEventListener('change', (e) => {
+                setSaveHostFieldEnabled(e.target.checked);
+            });
+
+            document.getElementById('save-modal-cancel').addEventListener('click', () => {
+                document.getElementById('save-modal').close();
+            });
+
+            document.getElementById('save-modal-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const urls = pendingSaveUrls;
+                if (!urls?.length) {
+                    document.getElementById('save-modal').close();
+                    return;
+                }
+                const speedKey = document.querySelector('input[name="save-speed"]:checked')?.value || 'standard';
+                const hostOverrideEnabled = document.getElementById('save-host-override').checked;
+                let hostOverride = { enabled: false, origin: null };
+                if (hostOverrideEnabled) {
+                    const origin = parseOverrideOrigin(document.getElementById('save-host-value').value);
+                    if (!origin) {
+                        window.alert('Enter a valid override host (e.g. https://example.com).');
+                        return;
+                    }
+                    hostOverride = { enabled: true, origin };
+                }
+                document.getElementById('save-modal').close();
+                const parts = [];
+                if (selectedFolders.size) parts.push(`${selectedFolders.size} folder(s)`);
+                if (selectedPages.size) parts.push(`${selectedPages.size} Pages`);
+                saveUrlsToFolder(urls, parts.join(', '), speedKey, hostOverride, {
+                    downloadImages: document.getElementById('save-download-images').checked,
+                    imageHeadOnly: document.getElementById('save-image-head-only').checked,
+                    probedImageKeys: new Set(),
+                });
+                pendingSaveUrls = null;
+            });
+
+            document.getElementById('clear-selection-btn').addEventListener('click', clearSelection);
 
             document.getElementById('output-toggle').addEventListener('click', () => {
                 const panel = document.getElementById('output-panel');
@@ -1119,7 +2011,7 @@
                 name.textContent = label;
                 name.title = loc;
 
-                row.append(spacer, icon, name, createSaveAsButton([loc], label));
+                row.append(spacer, icon, name);
                 return createTreeLine(null, row);
             }
 
@@ -1146,8 +2038,12 @@
                 name.className = 'tree-name';
                 name.textContent = LEAF_PAGES_LABEL;
 
-                const pageUrls = getUrlsForLeafPages(pathSegments);
-                row.append(disclosure, icon, name, createSaveAsButton(pageUrls, LEAF_PAGES_LABEL));
+                row.append(
+                    createPagesCheckbox(pathSegments, row),
+                    disclosure,
+                    icon,
+                    name
+                );
 
                 const children = document.createElement('div');
                 children.className = 'tree-children';
@@ -1199,9 +2095,12 @@
                 name.className = 'tree-name';
                 name.textContent = pathSegments[pathSegments.length - 1];
 
-                const folderLabel = `/${pathSegments.join('/')}`;
-                const folderUrls = getUrlsUnderPath(pathSegments);
-                row.append(disclosure, icon, name, createSaveAsButton(folderUrls, folderLabel));
+                row.append(
+                    createFolderCheckbox(pathSegments, row),
+                    disclosure,
+                    icon,
+                    name
+                );
 
                 const children = document.createElement('div');
                 children.className = 'tree-children';
