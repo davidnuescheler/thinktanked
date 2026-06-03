@@ -597,10 +597,54 @@
                 color: var(--text-secondary);
             }
 
+            .save-advanced-settings {
+                margin: 0 0 24px;
+                border: 1px solid var(--border-subtle);
+                border-radius: 8px;
+                overflow: hidden;
+            }
+
+            .save-advanced-settings summary {
+                padding: 10px 12px;
+                font-size: 0.8125rem;
+                font-weight: 600;
+                color: var(--text-secondary);
+                cursor: pointer;
+                list-style: none;
+                user-select: none;
+            }
+
+            .save-advanced-settings summary::-webkit-details-marker {
+                display: none;
+            }
+
+            .save-advanced-settings summary::before {
+                content: '▸';
+                display: inline-block;
+                margin-right: 8px;
+                transition: transform 0.15s;
+            }
+
+            .save-advanced-settings[open] summary::before {
+                transform: rotate(90deg);
+            }
+
+            .save-advanced-settings[open] summary {
+                border-bottom: 1px solid var(--border-subtle);
+            }
+
+            .save-advanced-settings-body {
+                padding: 16px 12px 4px;
+            }
+
             .save-host-options {
                 border: none;
-                margin: 0 0 24px;
+                margin: 0 0 20px;
                 padding: 0;
+            }
+
+            .save-host-options:last-child {
+                margin-bottom: 0;
             }
 
             .save-host-options legend {
@@ -787,6 +831,9 @@
                         </span>
                     </label>
                 </fieldset>
+                <details class="save-advanced-settings">
+                    <summary>Advanced settings</summary>
+                    <div class="save-advanced-settings-body">
                 <fieldset class="save-host-options">
                     <legend>Host</legend>
                     <label class="save-host-toggle">
@@ -810,8 +857,15 @@
                         <input type="checkbox" id="save-image-head-only">
                         <span>HEAD only — log image URLs without downloading</span>
                     </label>
-                    <p class="save-host-hint">Sends HEAD requests for each image and records status in download.log.</p>
+                    <p class="save-host-hint">Sends HEAD requests for each image and records status in download.tsv.</p>
+                    <label class="save-host-toggle">
+                        <input type="checkbox" id="save-image-direct">
+                        <span>Fetch images directly (skip FCORS proxy)</span>
+                    </label>
+                    <p class="save-host-hint">Requires the image host to allow cross-origin requests from this page.</p>
                 </fieldset>
+                    </div>
+                </details>
                 <div class="save-modal-actions">
                     <button type="button" id="save-modal-cancel">Cancel</button>
                     <button type="submit" value="save">Save</button>
@@ -1293,6 +1347,10 @@
                 return `${FCORS_BASE}?${params.toString()}`;
             }
 
+            function imageRequestUrl(absoluteUrl, directFetch = false) {
+                return directFetch ? absoluteUrl : fcorsUrl(absoluteUrl);
+            }
+
             function stripInlineCssAndJs(html, pageUrl) {
                 const doc = new DOMParser().parseFromString(html, 'text/html');
                 doc.querySelectorAll('script, style').forEach((el) => el.remove());
@@ -1346,7 +1404,7 @@
                 if (saveOptions?.imageHeadOnly && pageUrl) {
                     await probeImagesInHtml(html, pageUrl, saveOptions);
                 } else if (saveOptions?.downloadImages && dirHandle && pageUrl) {
-                    html = await downloadAndRewriteImages(html, pageUrl, urlToRelativePath(pageUrl), dirHandle);
+                    html = await downloadAndRewriteImages(html, pageUrl, urlToRelativePath(pageUrl), dirHandle, saveOptions);
                 }
                 return new Blob([html], { type: 'text/html;charset=utf-8' });
             }
@@ -1479,7 +1537,7 @@
                 saveOptions.probedImageKeys.add(assetKey);
                 const start = performance.now();
                 try {
-                    const resp = await fetch(fcorsUrl(absoluteUrl), { method: 'HEAD' });
+                    const resp = await fetch(imageRequestUrl(absoluteUrl, saveOptions.imageDirectFetch), { method: 'HEAD' });
                     const contentLength = resp.headers.get('content-length');
                     logDownload({
                         url: absoluteUrl,
@@ -1504,7 +1562,7 @@
                 await Promise.all(urls.map((url) => probeImageAsset(url, saveOptions)));
             }
 
-            async function downloadImageAsset(dirHandle, absoluteUrl, assetParts) {
+            async function downloadImageAsset(dirHandle, absoluteUrl, assetParts, saveOptions = null) {
                 const start = performance.now();
                 if (await fileExistsAtParts(dirHandle, assetParts)) {
                     logDownload({
@@ -1516,7 +1574,7 @@
                     return;
                 }
                 try {
-                    const resp = await fetch(fcorsUrl(absoluteUrl));
+                    const resp = await fetch(imageRequestUrl(absoluteUrl, saveOptions?.imageDirectFetch));
                     const durationMs = performance.now() - start;
                     if (!resp.ok) {
                         logDownload({
@@ -1548,7 +1606,7 @@
                 }
             }
 
-            async function downloadAndRewriteImages(html, pageUrl, htmlParts, dirHandle) {
+            async function downloadAndRewriteImages(html, pageUrl, htmlParts, dirHandle, saveOptions = null) {
                 const doc = new DOMParser().parseFromString(html, 'text/html');
                 const localByAssetKey = new Map();
 
@@ -1558,7 +1616,7 @@
                     if (localByAssetKey.has(assetKey)) return localByAssetKey.get(assetKey);
                     const assetParts = imageUrlToAssetParts(fetchUrl);
                     try {
-                        await downloadImageAsset(dirHandle, fetchUrl, assetParts);
+                        await downloadImageAsset(dirHandle, fetchUrl, assetParts, saveOptions);
                     } catch (err) {
                         console.error('Image download failed:', fetchUrl, err);
                         return null;
@@ -1677,7 +1735,7 @@
             }
 
             async function initDownloadLog(dirHandle) {
-                downloadLog.handle = await dirHandle.getFileHandle('download.log', { create: true });
+                downloadLog.handle = await dirHandle.getFileHandle('download.tsv', { create: true });
                 downloadLog.lines = [];
                 const file = await downloadLog.handle.getFile();
                 downloadLog.needsHeader = file.size === 0;
@@ -1871,6 +1929,7 @@
                 hostOverride.checked = Boolean(sourceOrigin);
                 hostValue.value = sourceOrigin;
                 setSaveHostFieldEnabled(hostOverride.checked);
+                document.querySelector('.save-advanced-settings').open = false;
                 document.getElementById('save-modal').showModal();
             }
 
@@ -1967,6 +2026,7 @@
                 saveUrlsToFolder(urls, parts.join(', '), speedKey, hostOverride, {
                     downloadImages: document.getElementById('save-download-images').checked,
                     imageHeadOnly: document.getElementById('save-image-head-only').checked,
+                    imageDirectFetch: document.getElementById('save-image-direct').checked,
                     probedImageKeys: new Set(),
                 });
                 pendingSaveUrls = null;
