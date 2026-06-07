@@ -14,6 +14,8 @@
                 --text-secondary: #6e6e73;
                 --accent: #0071e3;
                 --accent-hover: #0077ed;
+                --visited: #5856d6;
+                --visited-hover: #6e6ce0;
                 --row-hover: #f5f5f7;
                 --count-bg: #e8e8ed;
                 --radius: 10px;
@@ -249,6 +251,75 @@
             .tree-row.file,
             .tree-row.page {
                 color: var(--text-secondary);
+            }
+
+            .tree-row.page .tree-link {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                flex: 0 1 auto;
+                max-width: 100%;
+                padding: 4px 6px 4px 12px;
+                border-radius: 999px;
+                border: 1.5px solid var(--surface);
+                background-color: var(--surface);
+                color: var(--text-secondary);
+                font-size: 0.8125rem;
+                font-weight: 500;
+                text-decoration: none;
+            }
+
+            .tree-pill-label {
+                min-width: 0;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+            .tree-pill-check {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+                width: 18px;
+                height: 18px;
+                border-radius: 999px;
+                color: #fff;
+                font-size: 0.6875rem;
+                font-weight: 700;
+                line-height: 1;
+            }
+
+            .tree-row.page .tree-link:hover {
+                color: var(--accent);
+                border-color: var(--accent);
+            }
+
+            .tree-row.page .tree-link:hover .tree-pill-check {
+                background-color: var(--visited-hover);
+                color: #fff;
+            }
+
+            .tree-row.page .tree-link:visited {
+                background-color: var(--visited);
+                border-color: var(--visited);
+                color: #fff;
+            }
+
+            .tree-row.page .tree-link:visited .tree-pill-check {
+                background-color: var(--visited);
+                color: #fff;
+            }
+
+            .tree-row.page .tree-link:visited:hover {
+                background-color: var(--visited-hover);
+                border-color: var(--visited-hover);
+                color: #fff;
+            }
+
+            .tree-row.page .tree-link:visited:hover .tree-pill-check {
+                background-color: var(--visited-hover);
+                color: #fff;
             }
 
             .tree-link {
@@ -2068,8 +2139,15 @@
                 name.href = loc;
                 name.target = '_blank';
                 name.rel = 'noopener noreferrer';
-                name.textContent = label;
                 name.title = loc;
+                const labelEl = document.createElement('span');
+                labelEl.className = 'tree-pill-label';
+                labelEl.textContent = label;
+                const checkEl = document.createElement('span');
+                checkEl.className = 'tree-pill-check';
+                checkEl.setAttribute('aria-hidden', 'true');
+                checkEl.textContent = '✓';
+                name.append(labelEl, checkEl);
 
                 row.append(spacer, icon, name);
                 return createTreeLine(null, row);
