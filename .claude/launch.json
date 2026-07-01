@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "maxi-grid",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["http-server", "maxis-multiplication-grid", "-p", "8765", "-c-1"],
+      "port": 8765
+    }
+  ]
+}
