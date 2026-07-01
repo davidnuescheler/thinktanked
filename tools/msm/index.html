@@ -514,6 +514,27 @@
 
             let daSdkPromise = null;
 
+            function logDa(phase, details = {}) {
+                console.log('[MSM DA]', phase, details);
+            }
+
+            function logDaSdkState(sdk, label = 'sdk') {
+                if (!sdk) {
+                    logDa(`${label}: missing`);
+                    return;
+                }
+                logDa(`${label}: state`, {
+                    hasToken: Boolean(sdk.token),
+                    hasActions: Boolean(sdk.actions),
+                    hasDaFetch: Boolean(sdk.actions?.daFetch),
+                    context: sdk.context ? {
+                        org: sdk.context.org,
+                        repo: sdk.context.repo,
+                        branch: sdk.context.branch,
+                    } : null,
+                });
+            }
+
             function formatLocaleLabel(locale) {
                 return locale || DEFAULT_LOCALE_LABEL;
             }
@@ -533,9 +554,14 @@
 
             function resolveDaTarget(sdk) {
                 const fromUrl = parseAemDaTarget(siteData.sourceUrl);
+                const fromSdk = sdk?.context ? { org: sdk.context.org, repo: sdk.context.repo, branch: sdk.context.branch ?? null } : null;
+                logDa('resolve target', {
+                    sourceUrl: siteData.sourceUrl,
+                    fromUrl,
+                    fromSdk,
+                });
                 if (fromUrl) return fromUrl;
-                const { org, repo } = sdk?.context || {};
-                if (org && repo) return { org, repo, branch: null };
+                if (fromSdk?.org && fromSdk?.repo) return { org: fromSdk.org, repo: fromSdk.repo, branch: fromSdk.branch };
                 return null;
             }
 
@@ -560,15 +586,26 @@
             }
 
             async function loadDaSdkOptional(timeoutMs = DA_SDK_TIMEOUT_MS) {
-                if (isStandaloneDevHost()) return null;
+                if (isStandaloneDevHost()) {
+                    logDa('sdk load skipped', { reason: 'standalone dev host', hostname: window.location.hostname });
+                    return null;
+                }
+                logDa('sdk load start', { url: DA_SDK_URL, timeoutMs });
                 try {
-                    return await Promise.race([
+                    const sdk = await Promise.race([
                         loadDaSdk(),
                         new Promise((resolve) => {
                             setTimeout(() => resolve(null), timeoutMs);
                         }),
                     ]);
-                } catch {
+                    if (!sdk) {
+                        logDa('sdk load failed', { reason: 'timeout or empty response', timeoutMs });
+                        return null;
+                    }
+                    logDaSdkState(sdk, 'sdk loaded');
+                    return sdk;
+                } catch (error) {
+                    logDa('sdk load failed', { reason: 'import error', message: error?.message || String(error) });
                     return null;
                 }
             }
@@ -612,8 +649,12 @@
             }
 
             async function listDaPath(daFetch, listPath) {
-                const resp = await daFetch(`${DA_ORIGIN}/list${listPath}`);
-                if (!resp.ok) return { files: [], folders: [] };
+                const url = `${DA_ORIGIN}/list${listPath}`;
+                const resp = await daFetch(url);
+                if (!resp.ok) {
+                    logDa('list failed', { listPath, status: resp.status, statusText: resp.statusText });
+                    return { files: [], folders: [] };
+                }
                 const json = await resp.json();
                 const files = [];
                 const folders = [];
@@ -622,6 +663,7 @@
                     if (child.ext) files.push(child);
                     else folders.push(child.path);
                 });
+                logDa('list ok', { listPath, files: files.length, folders: folders.length });
                 return { files, folders };
             }
 
@@ -671,15 +713,46 @@
             }
 
             async function augmentFromDa(sdk) {
+                logDa('augment start', {
+                    localeDepth: siteData.localeDepth,
+                    locales: siteData.locales,
+                    localeCount: siteData.locales.length,
+                });
+                logDaSdkState(sdk, 'augment sdk');
+
                 const { daFetch } = sdk.actions || {};
-                if (!sdk.token || !daFetch) return false;
-                if (siteData.localeDepth === 0) return false;
+                if (!sdk.token) {
+                    logDa('augment skipped', { reason: 'missing token' });
+                    return false;
+                }
+                if (!daFetch) {
+                    logDa('augment skipped', { reason: 'missing daFetch action' });
+                    return false;
+                }
+                if (siteData.localeDepth === 0) {
+                    logDa('augment skipped', { reason: 'localeDepth is 0 (no locale prefix detected)' });
+                    return false;
+                }
+                if (!siteData.locales.length) {
+                    logDa('augment skipped', { reason: 'no locales from sitemap' });
+                    return false;
+                }
 
                 const target = resolveDaTarget(sdk);
-                if (!target?.org || !target?.repo) return false;
+                if (!target?.org || !target?.repo) {
+                    logDa('augment skipped', {
+                        reason: 'could not resolve org/repo',
+                        target,
+                        sourceUrl: siteData.sourceUrl,
+                    });
+                    return false;
+                }
                 siteData.daTarget = target;
                 const { org, repo } = target;
+                logDa('augment crawl start', { org, repo, locales: siteData.locales });
 
+                let totalHtmlFiles = 0;
+                let totalMappedPages = 0;
                 for (let i = 0; i < siteData.locales.length; i += 1) {
                     const locale = siteData.locales[i];
                     updateLoadStatus(`DA: ${locale}`);
@@ -687,10 +760,20 @@
                     const files = await crawlDaLocale(daFetch, org, repo, locale, (path) => {
                         updateLoadStatus(`DA: ${path.split('/').slice(-3).join('/')}`);
                     });
+                    totalHtmlFiles += files.length;
+                    let mappedForLocale = 0;
                     files.forEach((file) => {
                         const pageKey = daItemToPageKey(file.path, org, repo, locale);
                         if (pageKey === null) return;
+                        mappedForLocale += 1;
                         ensurePageEntry(pageKey).daPaths.set(locale, file.path);
+                    });
+                    totalMappedPages += mappedForLocale;
+                    logDa('locale crawl done', {
+                        locale,
+                        htmlFiles: files.length,
+                        mappedPages: mappedForLocale,
+                        root: `/${org}/${repo}/${locale}`,
                     });
                 }
 
@@ -698,6 +781,13 @@
                 siteData.locales = sortLocalesByPageCount(new Set(siteData.locales));
                 siteData.daConnected = true;
                 computePresenceStats();
+                logDa('augment complete', {
+                    connected: true,
+                    target: siteData.daTarget,
+                    totalHtmlFiles,
+                    totalMappedPages,
+                    presenceStats: siteData.presenceStats,
+                });
                 return true;
             }
 
@@ -1147,10 +1237,26 @@
 
                     const sdk = await loadDaSdkOptional();
                     if (sdk?.token && sdk.actions?.daFetch) {
-                        await augmentFromDa(sdk);
+                        const connected = await augmentFromDa(sdk);
+                        if (!connected) {
+                            siteData.daConnected = false;
+                            computePresenceStats();
+                            logDa('not connected', {
+                                reason: 'augmentFromDa returned false — see earlier [MSM DA] logs',
+                                localeDepth: siteData.localeDepth,
+                                locales: siteData.locales,
+                                daTarget: siteData.daTarget,
+                            });
+                        }
                     } else {
                         siteData.daConnected = false;
                         computePresenceStats();
+                        logDa('not connected', {
+                            reason: sdk ? 'sdk missing token or daFetch' : 'sdk unavailable',
+                            hostname: window.location.hostname,
+                            sourceUrl: siteData.sourceUrl,
+                        });
+                        if (sdk) logDaSdkState(sdk, 'sdk rejected');
                     }
                     setTotalPaths(siteData.pageRegistry.size);
                     updateLocaleMeta();
