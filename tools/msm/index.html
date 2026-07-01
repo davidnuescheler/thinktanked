@@ -1,0 +1,1132 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>MSM — Locale Matrix</title>
+        <style>
+            :root {
+                --bg: #f5f5f7;
+                --surface: #ffffff;
+                --border: #d2d2d7;
+                --border-subtle: #e8e8ed;
+                --text: #1d1d1f;
+                --text-secondary: #6e6e73;
+                --accent: #0071e3;
+                --accent-hover: #0077ed;
+                --present: #248a3d;
+                --present-bg: #e8f5ec;
+                --missing: #c7c7cc;
+                --row-hover: #f5f5f7;
+                --count-bg: #e8e8ed;
+                --radius: 10px;
+                --shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+                --locale-col: 8rem;
+            }
+
+            * {
+                box-sizing: border-box;
+            }
+
+            html,
+            body {
+                height: 100%;
+                margin: 0;
+            }
+
+            body {
+                display: flex;
+                flex-direction: column;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+                background: var(--bg);
+                color: var(--text);
+                -webkit-font-smoothing: antialiased;
+            }
+
+            .app-header {
+                flex-shrink: 0;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 24px;
+                padding: 16px 24px;
+                background: var(--surface);
+                border-bottom: 1px solid var(--border-subtle);
+                box-shadow: var(--shadow);
+            }
+
+            .brand h1 {
+                margin: 0;
+                font-size: 1.25rem;
+                font-weight: 600;
+                letter-spacing: -0.02em;
+            }
+
+            .brand p {
+                margin: 2px 0 0;
+                font-size: 0.8125rem;
+                color: var(--text-secondary);
+            }
+
+            .url-form {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                flex: 1;
+                max-width: 640px;
+            }
+
+            .url-form input {
+                flex: 1;
+                padding: 8px 12px;
+                font-size: 0.875rem;
+                border: 1px solid var(--border);
+                border-radius: 8px;
+                background: var(--bg);
+                color: var(--text);
+                outline: none;
+            }
+
+            .url-form input:focus {
+                border-color: var(--accent);
+                box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2);
+                background: var(--surface);
+            }
+
+            .url-form button {
+                flex-shrink: 0;
+                padding: 8px 18px;
+                font-size: 0.875rem;
+                font-weight: 500;
+                color: #fff;
+                background: var(--accent);
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+            }
+
+            .url-form button:hover {
+                background: var(--accent-hover);
+            }
+
+            .url-form button:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
+
+            .load-status {
+                flex-shrink: 0;
+                background: var(--surface);
+                border-bottom: 1px solid var(--border-subtle);
+                padding: 10px 24px;
+                font-size: 0.8125rem;
+                color: var(--text-secondary);
+            }
+
+            .load-status[hidden] {
+                display: none;
+            }
+
+            .app-main {
+                flex: 1;
+                min-height: 0;
+                overflow: auto;
+                padding: 20px 24px;
+            }
+
+            .explorer-panel {
+                background: var(--surface);
+                border: 1px solid var(--border-subtle);
+                border-radius: var(--radius);
+                box-shadow: var(--shadow);
+                overflow: hidden;
+            }
+
+            .explorer-header {
+                padding: 12px 16px;
+                border-bottom: 1px solid var(--border-subtle);
+                background: #fafafa;
+                font-size: 0.875rem;
+                color: var(--text-secondary);
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                flex-wrap: wrap;
+            }
+
+            .count-pill {
+                display: inline-block;
+                min-width: 2rem;
+                padding: 2px 10px;
+                font-size: 0.8125rem;
+                font-weight: 600;
+                font-variant-numeric: tabular-nums;
+                text-align: center;
+                color: var(--text);
+                background: var(--count-bg);
+                border-radius: 10px;
+            }
+
+            .meta-note {
+                font-size: 0.8125rem;
+                color: var(--text-secondary);
+            }
+
+            .msm-scroll {
+                overflow-x: auto;
+            }
+
+            .msm-grid {
+                display: grid;
+                grid-template-columns: 72px minmax(260px, 1fr);
+                min-width: min(100%, 480px);
+            }
+
+            .msm-grid.has-locales {
+                grid-template-columns: 72px minmax(260px, 1fr) repeat(var(--locale-count), var(--locale-col));
+            }
+
+            .msm-header-row {
+                display: contents;
+            }
+
+            .msm-header-row[hidden] {
+                display: none;
+            }
+
+            .msm-header-row:not([hidden]) {
+                display: contents;
+            }
+
+            .msm-line,
+            .tree-root,
+            .tree-node,
+            .tree-children:not([hidden]),
+            .tree-line {
+                display: contents;
+            }
+
+            .tree-children[hidden] {
+                display: none;
+            }
+
+            .msm-header-cell {
+                position: sticky;
+                top: 0;
+                z-index: 2;
+                padding: 10px 8px;
+                font-size: 0.6875rem;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.03em;
+                color: var(--text-secondary);
+                background: #fafafa;
+                border-bottom: 1px solid var(--border-subtle);
+            }
+
+            .msm-header-cell.structure {
+                grid-column: 2;
+                padding-left: 16px;
+            }
+
+            .msm-header-cell.locale {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: flex-end;
+                gap: 4px;
+                min-width: var(--locale-col);
+                text-align: center;
+                writing-mode: horizontal-tb;
+                transform: none;
+                white-space: nowrap;
+                padding: 8px 6px;
+            }
+
+            .locale-header-name {
+                font-size: 0.6875rem;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.03em;
+                color: var(--text-secondary);
+                max-width: 100%;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            .locale-header-count {
+                font-size: 0.75rem;
+                font-weight: 700;
+                font-variant-numeric: tabular-nums;
+                color: var(--text);
+            }
+
+            .tree-count {
+                grid-column: 1;
+                padding: 4px 12px 4px 16px;
+                text-align: right;
+                align-self: center;
+            }
+
+            .tree-count-pill {
+                display: inline-block;
+                min-width: 2rem;
+                padding: 2px 8px;
+                font-size: 0.75rem;
+                font-weight: 600;
+                font-variant-numeric: tabular-nums;
+                color: var(--text);
+                background: var(--count-bg);
+                border-radius: 8px;
+            }
+
+            .tree-row {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                grid-column: 2;
+                padding: 4px 16px 4px 12px;
+                line-height: 1.5;
+                font-size: 0.875rem;
+                border-radius: 6px;
+                margin-right: 8px;
+            }
+
+            .tree-row.folder:hover,
+            .tree-row.pages:hover {
+                background: var(--row-hover);
+            }
+
+            .tree-row.page {
+                color: var(--text-secondary);
+            }
+
+            .tree-link {
+                color: inherit;
+                text-decoration: none;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+            .tree-link:hover {
+                color: var(--accent);
+                text-decoration: underline;
+            }
+
+            .disclosure {
+                width: 18px;
+                height: 18px;
+                flex-shrink: 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border: none;
+                background: none;
+                cursor: pointer;
+                padding: 0;
+                font-size: 9px;
+                color: var(--text-secondary);
+                border-radius: 4px;
+            }
+
+            .disclosure:hover {
+                background: var(--border-subtle);
+                color: var(--text);
+            }
+
+            .disclosure-spacer {
+                width: 18px;
+                flex-shrink: 0;
+            }
+
+            .tree-icon {
+                flex-shrink: 0;
+                font-size: 1rem;
+                line-height: 1;
+            }
+
+            .tree-name {
+                flex: 1;
+                min-width: 0;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+            .tree-row.folder .tree-name,
+            .tree-row.pages .tree-name {
+                font-weight: 500;
+            }
+
+            .locale-cells {
+                display: contents;
+            }
+
+            .locale-cell {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                align-self: center;
+                min-width: var(--locale-col);
+                width: var(--locale-col);
+                height: 28px;
+                margin: 2px 0;
+                font-size: 0.875rem;
+                font-weight: 700;
+                border-radius: 999px;
+            }
+
+            .locale-cell.missing {
+                color: var(--missing);
+                font-weight: 400;
+            }
+
+            .locale-cell.count {
+                font-size: 0.75rem;
+                font-weight: 600;
+                font-variant-numeric: tabular-nums;
+                color: var(--text);
+            }
+
+            .locale-cell.count.zero {
+                color: var(--missing);
+                font-weight: 400;
+            }
+
+            .locale-cell.present {
+                color: var(--present);
+                background: var(--present-bg);
+            }
+
+            .locale-cell.present a {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 100%;
+                height: 100%;
+                color: inherit;
+                text-decoration: none;
+                border-radius: 999px;
+            }
+
+            .locale-cell.present a:hover {
+                background: #d4edd9;
+            }
+
+            .tree-empty {
+                grid-column: 1 / -1;
+                padding: 48px 24px;
+                text-align: center;
+                color: var(--text-secondary);
+                font-size: 0.875rem;
+            }
+        </style>
+    </head>
+    <body>
+        <header class="app-header">
+            <div class="brand">
+                <h1>MSM</h1>
+                <p>Locale coverage matrix from sitemap URLs</p>
+            </div>
+            <form id="input-form" class="url-form">
+                <input id="url" type="url" placeholder="https://example.com/sitemap.xml" required>
+                <button type="submit">Fetch</button>
+            </form>
+        </header>
+
+        <div id="load-status" class="load-status" hidden>
+            <span class="load-status-label">Loading</span>
+            <span id="load-status-file"></span>
+            ·
+            <span id="load-status-count">0</span> URLs
+        </div>
+
+        <main class="app-main">
+            <section class="explorer-panel">
+                <div class="explorer-header">
+                    <span id="total-urls" class="count-pill">0</span> Total URLs
+                    <span id="locale-meta" class="meta-note"></span>
+                </div>
+                <div class="msm-scroll">
+                    <div id="msm-grid" class="msm-grid">
+                        <div id="msm-header" class="msm-header-row" hidden></div>
+                        <div id="tree-root" class="tree-root">
+                            <div class="tree-empty">Enter a sitemap URL above to get started</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <script>
+            const LEAF_PAGES = '__leaf_pages__';
+            const LEAF_PAGES_LABEL = 'Pages';
+            const TRAILING_SLASH_MAJORITY = 0.8;
+            const FCORS_BASE = 'https://www.fcors.org/';
+            const FCORS_API_KEY = 'XiKldIyVZFnouIUO';
+
+            const siteData = {
+                lines: [],
+                index: null,
+                loading: false,
+                stripTrailingSlashes: false,
+                localeDepth: 1,
+                locales: [],
+                localeTotals: new Map(),
+                pageRegistry: new Map(),
+                sourceUrl: '',
+            };
+
+            function fcorsUrl(targetUrl) {
+                const params = new URLSearchParams({
+                    url: targetUrl,
+                    key: FCORS_API_KEY,
+                });
+                return `${FCORS_BASE}?${params.toString()}`;
+            }
+
+            function setLoading(loading) {
+                siteData.loading = loading;
+                document.getElementById('load-status').hidden = !loading;
+                document.querySelector('#input-form button').disabled = loading;
+                document.getElementById('url').disabled = loading;
+            }
+
+            function updateLoadStatus(file) {
+                document.getElementById('load-status-file').textContent = file;
+                document.getElementById('load-status-count').textContent = siteData.lines.length.toLocaleString();
+            }
+
+            function createIndexNode() {
+                return { leafCount: 0, urlCount: 0, folders: new Map() };
+            }
+
+            function parsePathname(loc, stripTrailingSlashes) {
+                let pathname = new URL(loc).pathname;
+                if (stripTrailingSlashes && pathname.length > 1 && pathname.endsWith('/')) {
+                    pathname = pathname.slice(0, -1);
+                }
+                const isDirectory = pathname.length > 1 && pathname.endsWith('/');
+                const segments = pathname.split('/').filter(Boolean);
+                return { segments, isDirectory };
+            }
+
+            function pageKeyFromSegments(segments, isDirectory) {
+                if (!segments.length) return '';
+                const tail = segments[segments.length - 1];
+                const path = segments.join('/');
+                return isDirectory ? `${path}/` : path;
+            }
+
+            function pageKeySegments(pageKey) {
+                if (!pageKey) return { segments: [], isDirectory: false };
+                const isDirectory = pageKey.endsWith('/');
+                const segments = (isDirectory ? pageKey.slice(0, -1) : pageKey).split('/').filter(Boolean);
+                return { segments, isDirectory };
+            }
+
+            function pageKeyUnderFolderPath(pageKey, pathSegments) {
+                const { segments } = pageKeySegments(pageKey);
+                if (segments.length < pathSegments.length) return false;
+                return pathSegments.every((seg, i) => segments[i] === seg);
+            }
+
+            function isLeafInPagesBucket(pageKey, pathSegments) {
+                const { segments, isDirectory } = pageKeySegments(pageKey);
+                if (isDirectory) return false;
+                const parent = segments.length <= 1 ? [] : segments.slice(0, -1);
+                if (parent.length !== pathSegments.length) return false;
+                return pathSegments.every((seg, i) => parent[i] === seg);
+            }
+
+            function getDistinctPathsUnderPath(pathSegments, pagesOnly = false) {
+                const keys = [];
+                siteData.pageRegistry.forEach((entry, pageKey) => {
+                    if (pagesOnly) {
+                        if (isLeafInPagesBucket(pageKey, pathSegments)) keys.push(pageKey);
+                    } else if (pageKeyUnderFolderPath(pageKey, pathSegments)) {
+                        keys.push(pageKey);
+                    }
+                });
+                return keys.sort((a, b) => a.localeCompare(b));
+            }
+
+            function countDistinctPaths(pathSegments, pagesOnly = false) {
+                return getDistinctPathsUnderPath(pathSegments, pagesOnly).length;
+            }
+
+            function countPathsForLocale(pathSegments, locale, pagesOnly = false) {
+                return getDistinctPathsUnderPath(pathSegments, pagesOnly)
+                    .filter((pageKey) => siteData.pageRegistry.get(pageKey)?.locales.has(locale)).length;
+            }
+
+            function getPageLabelFromKey(pageKey) {
+                const { segments, isDirectory } = pageKeySegments(pageKey);
+                if (!segments.length) return '(locale root)';
+                const name = segments[segments.length - 1];
+                return isDirectory ? `${name}/` : name;
+            }
+
+            function sortLocalesByPageCount(localeSet) {
+                const totals = new Map();
+                localeSet.forEach((locale) => totals.set(locale, 0));
+                siteData.pageRegistry.forEach((entry) => {
+                    entry.locales.forEach((locale) => {
+                        totals.set(locale, (totals.get(locale) || 0) + 1);
+                    });
+                });
+                siteData.localeTotals = totals;
+                return [...localeSet].sort((a, b) => {
+                    const diff = (totals.get(b) || 0) - (totals.get(a) || 0);
+                    return diff !== 0 ? diff : a.localeCompare(b);
+                });
+            }
+
+            function parsePageUrl(line) {
+                const loc = line.split('\t')[0];
+                if (!loc) return null;
+                try {
+                    const { segments, isDirectory } = parsePathname(loc, siteData.stripTrailingSlashes);
+                    if (segments.length < siteData.localeDepth) return null;
+                    const locale = segments.slice(0, siteData.localeDepth).join('/');
+                    const pageSegments = segments.slice(siteData.localeDepth);
+                    return {
+                        loc,
+                        locale,
+                        pageSegments,
+                        isDirectory,
+                        pageKey: pageKeyFromSegments(pageSegments, isDirectory),
+                    };
+                } catch {
+                    return null;
+                }
+            }
+
+            function countTrailingSlashUrls(lines) {
+                let slashCount = 0;
+                lines.forEach((line) => {
+                    const loc = line.split('\t')[0];
+                    if (!loc) return;
+                    try {
+                        const { pathname } = new URL(loc);
+                        if (pathname.length > 1 && pathname.endsWith('/')) slashCount += 1;
+                    } catch {
+                        /* ignore */
+                    }
+                });
+                return slashCount;
+            }
+
+            function scoreLocaleDepth(lines, depth, stripTrailingSlashes) {
+                const pageToLocales = new Map();
+                let validUrls = 0;
+
+                lines.forEach((line) => {
+                    const loc = line.split('\t')[0];
+                    if (!loc) return;
+                    try {
+                        const { segments, isDirectory } = parsePathname(loc, stripTrailingSlashes);
+                        if (segments.length < depth) return;
+                        validUrls += 1;
+                        const locale = segments.slice(0, depth).join('/');
+                        const pageSegments = segments.slice(depth);
+                        const pageKey = pageKeyFromSegments(pageSegments, isDirectory);
+                        if (!pageToLocales.has(pageKey)) pageToLocales.set(pageKey, new Set());
+                        pageToLocales.get(pageKey).add(locale);
+                    } catch {
+                        /* ignore */
+                    }
+                });
+
+                let multiLocalePages = 0;
+                const locales = new Set();
+                pageToLocales.forEach((localeSet) => {
+                    localeSet.forEach((locale) => locales.add(locale));
+                    if (localeSet.size >= 2) multiLocalePages += 1;
+                });
+
+                return {
+                    depth,
+                    multiLocalePages,
+                    localeCount: locales.size,
+                    validUrls,
+                    pageCount: pageToLocales.size,
+                };
+            }
+
+            function detectLocaleDepth(lines, stripTrailingSlashes) {
+                const one = scoreLocaleDepth(lines, 1, stripTrailingSlashes);
+                const two = scoreLocaleDepth(lines, 2, stripTrailingSlashes);
+                if (two.multiLocalePages > one.multiLocalePages) return 2;
+                if (one.multiLocalePages > two.multiLocalePages) return 1;
+                if (two.localeCount > one.localeCount && two.validUrls >= one.validUrls * 0.5) return 2;
+                return 1;
+            }
+
+            function addPageToIndex(index, pageSegments, isDirectory) {
+                if (pageSegments.length === 0) return;
+
+                if (isDirectory) {
+                    let node = index;
+                    for (let i = 0; i < pageSegments.length; i += 1) {
+                        const folder = pageSegments[i];
+                        if (!node.folders.has(folder)) {
+                            node.folders.set(folder, createIndexNode());
+                        }
+                        const child = node.folders.get(folder);
+                        child.urlCount += 1;
+                        node = child;
+                    }
+                    node.leafCount += 1;
+                    return;
+                }
+
+                if (pageSegments.length === 1) {
+                    index.leafCount += 1;
+                    return;
+                }
+
+                let node = index;
+                for (let i = 0; i < pageSegments.length - 1; i += 1) {
+                    const folder = pageSegments[i];
+                    if (!node.folders.has(folder)) {
+                        node.folders.set(folder, createIndexNode());
+                    }
+                    const child = node.folders.get(folder);
+                    child.urlCount += 1;
+                    node = child;
+                }
+                node.leafCount += 1;
+            }
+
+            function rebuildSiteModel() {
+                siteData.pageRegistry = new Map();
+                siteData.index = createIndexNode();
+                siteData.localeDepth = detectLocaleDepth(siteData.lines, siteData.stripTrailingSlashes);
+
+                const localeSet = new Set();
+                siteData.lines.forEach((line) => {
+                    const parsed = parsePageUrl(line);
+                    if (!parsed) return;
+                    localeSet.add(parsed.locale);
+                    addPageToIndex(siteData.index, parsed.pageSegments, parsed.isDirectory);
+                    if (!siteData.pageRegistry.has(parsed.pageKey)) {
+                        siteData.pageRegistry.set(parsed.pageKey, { locales: new Set(), urls: new Map() });
+                    }
+                    const entry = siteData.pageRegistry.get(parsed.pageKey);
+                    entry.locales.add(parsed.locale);
+                    entry.urls.set(parsed.locale, parsed.loc);
+                });
+
+                siteData.locales = sortLocalesByPageCount(localeSet);
+            }
+
+            function applyTrailingSlashPolicy() {
+                const { lines } = siteData;
+                if (!lines.length) {
+                    siteData.stripTrailingSlashes = false;
+                    return;
+                }
+                const slashCount = countTrailingSlashUrls(lines);
+                siteData.stripTrailingSlashes = slashCount / lines.length >= TRAILING_SLASH_MAJORITY;
+                rebuildSiteModel();
+                renderTree();
+            }
+
+            function getIndexAtPath(pathSegments) {
+                let node = siteData.index;
+                for (let i = 0; i < pathSegments.length; i += 1) {
+                    if (!node?.folders.has(pathSegments[i])) return null;
+                    node = node.folders.get(pathSegments[i]);
+                }
+                return node;
+            }
+
+            function getBuckets(pathSegments) {
+                const index = getIndexAtPath(pathSegments);
+                if (!index) return [];
+                const entries = [];
+                index.folders.forEach((child, name) => {
+                    entries.push([name, countDistinctPaths([...pathSegments, name], false)]);
+                });
+                const pagesCount = countDistinctPaths(pathSegments, true);
+                if (pagesCount > 0) {
+                    entries.push([LEAF_PAGES, pagesCount]);
+                }
+                return entries.sort((a, b) => b[1] - a[1]);
+            }
+
+            function getLeafPageKeys(pathSegments) {
+                return getDistinctPathsUnderPath(pathSegments, true);
+            }
+
+            function setTotalUrls(count) {
+                document.getElementById('total-urls').textContent = count.toLocaleString();
+                if (siteData.loading) {
+                    document.getElementById('load-status-count').textContent = count.toLocaleString();
+                }
+            }
+
+            function updateLocaleMeta() {
+                const meta = document.getElementById('locale-meta');
+                if (!siteData.locales.length) {
+                    meta.textContent = '';
+                    return;
+                }
+                meta.textContent = `${siteData.locales.length} locale${siteData.locales.length === 1 ? '' : 's'} · ${siteData.localeDepth}-segment prefix`;
+            }
+
+            function appendSitemapLines(lines) {
+                if (!lines?.length) return;
+                siteData.lines.push(...lines);
+                setTotalUrls(siteData.lines.length);
+            }
+
+            async function loadSitemap(sitemapURL, callbacks) {
+                try {
+                    callbacks.onFileStart(sitemapURL);
+                    const resp = await fetch(fcorsUrl(sitemapURL));
+                    const xml = await resp.text();
+                    const sitemap = new DOMParser().parseFromString(xml, 'text/xml');
+                    const subSitemaps = [...sitemap.querySelectorAll('sitemap loc')];
+                    for (let i = 0; i < subSitemaps.length; i += 1) {
+                        const loc = subSitemaps[i];
+                        const subSitemapURL = new URL(loc.textContent.trim(), sitemapURL);
+                        // eslint-disable-next-line no-await-in-loop
+                        await loadSitemap(subSitemapURL.href, callbacks);
+                    }
+                    const newLines = [];
+                    sitemap.querySelectorAll('url').forEach((url) => {
+                        const loc = url.querySelector('loc');
+                        const locURL = new URL(loc.textContent.trim());
+                        const lastMod = url.querySelector('lastmod');
+                        const lastModDate = lastMod ? lastMod.textContent.trim() : '';
+                        newLines.push(`${locURL}\t${lastModDate}`);
+                    });
+                    if (newLines.length) {
+                        callbacks.onUrlsFound(newLines);
+                    }
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+
+            async function getRootSitemaps(url) {
+                const resp = await fetch(fcorsUrl(`${url}robots.txt`));
+                const txt = await resp.text();
+                const sitemapURLs = [];
+                txt.split('\n').forEach((line) => {
+                    const [name, value] = line.split(/:(.*)/s);
+                    if (name.trim().toLowerCase() === 'sitemap') {
+                        sitemapURLs.push(value.trim());
+                    }
+                });
+                return sitemapURLs;
+            }
+
+            document.getElementById('input-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const url = new URL(document.getElementById('url').value);
+                siteData.sourceUrl = url.href;
+                history.pushState({}, '', `${window.location.pathname}?url=${encodeURIComponent(url.href)}`);
+                siteData.lines = [];
+                siteData.index = createIndexNode();
+                siteData.pageRegistry = new Map();
+                siteData.locales = [];
+                siteData.localeTotals = new Map();
+                siteData.localeDepth = 1;
+                siteData.stripTrailingSlashes = false;
+                setTotalUrls(0);
+                updateLocaleMeta();
+                renderTree();
+                setLoading(true);
+                updateLoadStatus('Starting…');
+
+                const callbacks = {
+                    onFileStart: (file) => updateLoadStatus(file),
+                    onUrlsFound: (lines) => appendSitemapLines(lines),
+                };
+
+                try {
+                    if (url.pathname === '/') {
+                        const sitemapURLs = await getRootSitemaps(url.href);
+                        for (let i = 0; i < sitemapURLs.length; i += 1) {
+                            // eslint-disable-next-line no-await-in-loop
+                            await loadSitemap(sitemapURLs[i], callbacks);
+                        }
+                    } else {
+                        await loadSitemap(url.href, callbacks);
+                    }
+                    applyTrailingSlashPolicy();
+                    updateLocaleMeta();
+                } finally {
+                    setLoading(false);
+                    renderTree();
+                }
+            });
+
+            function createLocaleCells(pageKey) {
+                const cells = document.createElement('div');
+                cells.className = 'locale-cells';
+                const entry = siteData.pageRegistry.get(pageKey);
+                siteData.locales.forEach((locale, index) => {
+                    const cell = document.createElement('span');
+                    cell.className = 'locale-cell';
+                    cell.style.gridColumn = String(3 + index);
+                    const href = entry?.urls.get(locale);
+                    if (href) {
+                        cell.classList.add('present');
+                        const link = document.createElement('a');
+                        link.href = href;
+                        link.target = '_blank';
+                        link.rel = 'noopener noreferrer';
+                        link.textContent = '✓';
+                        link.title = href;
+                        cell.appendChild(link);
+                    } else {
+                        cell.classList.add('missing');
+                        cell.textContent = '·';
+                        cell.title = `Missing in ${locale}`;
+                    }
+                    cells.appendChild(cell);
+                });
+                return cells;
+            }
+
+            function createLocaleCountCells(pathSegments, pagesOnly = false) {
+                const cells = document.createElement('div');
+                cells.className = 'locale-cells';
+                siteData.locales.forEach((locale, index) => {
+                    const cell = document.createElement('span');
+                    cell.className = 'locale-cell count';
+                    cell.style.gridColumn = String(3 + index);
+                    const count = countPathsForLocale(pathSegments, locale, pagesOnly);
+                    cell.textContent = count.toLocaleString();
+                    cell.title = `${count.toLocaleString()} path${count === 1 ? '' : 's'} in ${locale}`;
+                    if (count === 0) cell.classList.add('zero');
+                    cells.appendChild(cell);
+                });
+                return cells;
+            }
+
+            function createTreeLine(count, row, localeCells = null) {
+                const line = document.createElement('div');
+                line.className = 'msm-line tree-line';
+                const cell = document.createElement('div');
+                cell.className = 'tree-count';
+                if (count !== null) {
+                    const pill = document.createElement('span');
+                    pill.className = 'tree-count-pill';
+                    pill.textContent = count.toLocaleString();
+                    cell.appendChild(pill);
+                }
+                line.append(cell, row);
+                if (localeCells) line.append(localeCells);
+                return line;
+            }
+
+            function createPageRow(pageKey, depth) {
+                const row = document.createElement('div');
+                row.className = 'tree-row page';
+                row.style.paddingLeft = `${12 + depth * 20}px`;
+
+                const spacer = document.createElement('span');
+                spacer.className = 'disclosure-spacer';
+                const icon = document.createElement('span');
+                icon.className = 'tree-icon';
+                icon.textContent = '📄';
+                const name = document.createElement('span');
+                name.className = 'tree-name';
+                name.textContent = getPageLabelFromKey(pageKey);
+                name.title = pageKey || '(locale root)';
+
+                row.append(spacer, icon, name);
+                return createTreeLine(null, row, createLocaleCells(pageKey));
+            }
+
+            function populatePageList(container, pathSegments) {
+                container.replaceChildren();
+                getLeafPageKeys(pathSegments).forEach((pageKey) => {
+                    container.appendChild(createPageRow(pageKey, pathSegments.length + 1));
+                });
+            }
+
+            function createPagesNode(pathSegments, count) {
+                const node = document.createElement('div');
+                node.className = 'tree-node';
+                const depth = pathSegments.length;
+
+                const row = document.createElement('div');
+                row.className = 'tree-row pages';
+                row.style.paddingLeft = `${12 + depth * 20}px`;
+
+                const disclosure = document.createElement('button');
+                disclosure.type = 'button';
+                disclosure.className = 'disclosure';
+                disclosure.textContent = '▶';
+                disclosure.setAttribute('aria-expanded', 'false');
+
+                const icon = document.createElement('span');
+                icon.className = 'tree-icon';
+                icon.textContent = '📄';
+                const name = document.createElement('span');
+                name.className = 'tree-name';
+                name.textContent = LEAF_PAGES_LABEL;
+
+                row.append(disclosure, icon, name);
+
+                const children = document.createElement('div');
+                children.className = 'tree-children';
+                children.hidden = true;
+
+                disclosure.addEventListener('click', () => {
+                    const expanded = disclosure.getAttribute('aria-expanded') === 'true';
+                    if (expanded) {
+                        disclosure.textContent = '▶';
+                        disclosure.setAttribute('aria-expanded', 'false');
+                        children.hidden = true;
+                    } else {
+                        if (!children.dataset.loaded) {
+                            populatePageList(children, pathSegments);
+                            children.dataset.loaded = 'true';
+                        }
+                        disclosure.textContent = '▼';
+                        disclosure.setAttribute('aria-expanded', 'true');
+                        children.hidden = false;
+                    }
+                });
+
+                node.append(createTreeLine(count, row, createLocaleCountCells(pathSegments, true)), children);
+                return node;
+            }
+
+            function createFolderNode(pathSegments, count) {
+                const node = document.createElement('div');
+                node.className = 'tree-node';
+                const depth = pathSegments.length - 1;
+
+                const row = document.createElement('div');
+                row.className = 'tree-row folder';
+                row.style.paddingLeft = `${12 + depth * 20}px`;
+
+                const disclosure = document.createElement('button');
+                disclosure.type = 'button';
+                disclosure.className = 'disclosure';
+                disclosure.textContent = '▶';
+                disclosure.setAttribute('aria-expanded', 'false');
+
+                const icon = document.createElement('span');
+                icon.className = 'tree-icon';
+                icon.textContent = '📁';
+                const name = document.createElement('span');
+                name.className = 'tree-name';
+                name.textContent = pathSegments[pathSegments.length - 1];
+
+                row.append(disclosure, icon, name);
+
+                const children = document.createElement('div');
+                children.className = 'tree-children';
+                children.hidden = true;
+
+                disclosure.addEventListener('click', () => {
+                    const expanded = disclosure.getAttribute('aria-expanded') === 'true';
+                    if (expanded) {
+                        disclosure.textContent = '▶';
+                        disclosure.setAttribute('aria-expanded', 'false');
+                        children.hidden = true;
+                    } else {
+                        if (!children.dataset.loaded) {
+                            populateChildren(children, pathSegments);
+                            children.dataset.loaded = 'true';
+                        }
+                        disclosure.textContent = '▼';
+                        disclosure.setAttribute('aria-expanded', 'true');
+                        children.hidden = false;
+                    }
+                });
+
+                node.append(createTreeLine(count, row, createLocaleCountCells(pathSegments, false)), children);
+                return node;
+            }
+
+            function populateChildren(container, pathSegments) {
+                container.replaceChildren();
+                const entries = getBuckets(pathSegments);
+                if (entries.length === 0) {
+                    const empty = document.createElement('div');
+                    empty.className = 'tree-empty';
+                    empty.textContent = 'No pages here';
+                    container.appendChild(empty);
+                    return;
+                }
+                entries.forEach(([name, count]) => {
+                    if (name === LEAF_PAGES) {
+                        container.appendChild(createPagesNode(pathSegments, count));
+                    } else {
+                        container.appendChild(createFolderNode([...pathSegments, name], count));
+                    }
+                });
+            }
+
+            function renderLocaleHeader() {
+                const header = document.getElementById('msm-header');
+                header.replaceChildren();
+                if (!siteData.locales.length) {
+                    header.hidden = true;
+                    return;
+                }
+                header.hidden = false;
+                const spacer = document.createElement('div');
+                spacer.className = 'msm-header-cell';
+                spacer.style.gridColumn = '1';
+                const structure = document.createElement('div');
+                structure.className = 'msm-header-cell structure';
+                structure.textContent = 'Structure';
+                header.append(spacer, structure);
+                siteData.locales.forEach((locale, index) => {
+                    const cell = document.createElement('div');
+                    cell.className = 'msm-header-cell locale';
+                    cell.style.gridColumn = String(3 + index);
+                    const name = document.createElement('span');
+                    name.className = 'locale-header-name';
+                    name.textContent = locale;
+                    const total = document.createElement('span');
+                    total.className = 'locale-header-count';
+                    total.textContent = (siteData.localeTotals.get(locale) || 0).toLocaleString();
+                    cell.append(name, total);
+                    cell.title = `${locale}: ${total.textContent} paths`;
+                    header.appendChild(cell);
+                });
+            }
+
+            function renderTree() {
+                const grid = document.getElementById('msm-grid');
+                const container = document.getElementById('tree-root');
+                grid.style.setProperty('--locale-count', siteData.locales.length);
+                grid.classList.toggle('has-locales', siteData.locales.length > 0);
+                renderLocaleHeader();
+                container.replaceChildren();
+
+                if (siteData.lines.length === 0) {
+                    const empty = document.createElement('div');
+                    empty.className = 'tree-empty';
+                    empty.textContent = siteData.loading
+                        ? 'Discovering URLs…'
+                        : 'Enter a sitemap URL above to get started';
+                    container.appendChild(empty);
+                    return;
+                }
+
+                populateChildren(container, []);
+            }
+
+            siteData.index = createIndexNode();
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('url')) {
+                document.getElementById('url').value = params.get('url');
+                document.getElementById('input-form').dispatchEvent(new Event('submit'));
+            }
+        </script>
+    </body>
+</html>
