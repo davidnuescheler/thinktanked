@@ -1277,7 +1277,7 @@
             async function loadSitemap(sitemapURL, callbacks) {
                 try {
                     callbacks.onFileStart(sitemapURL);
-                    const resp = await fetch(`https://little-forest-58aa.david8603.workers.dev/?url=${sitemapURL}`);
+                    const resp = await fetch(fcorsUrl(sitemapURL));
                     const xml = await resp.text();
                     const sitemap = new DOMParser().parseFromString(xml, 'text/xml');
                     const subSitemaps = [...sitemap.querySelectorAll('sitemap loc')];
@@ -1305,7 +1305,7 @@
 
             async function getRootSitemaps(url) {
                 console.log(url);
-                const resp = await fetch(`https://little-forest-58aa.david8603.workers.dev/?url=${url}robots.txt`);
+                const resp = await fetch(fcorsUrl(`${url}robots.txt`));
                 const txt = await resp.text();
                 const lines = txt.split('\n');
                 console.log(txt);

@@ -16,6 +16,10 @@
                 --accent-hover: #0077ed;
                 --present: #248a3d;
                 --present-bg: #e8f5ec;
+                --sitemap-only: #c93403;
+                --sitemap-only-bg: #fcece8;
+                --da-only: #0071e3;
+                --da-only-bg: #e8f2fc;
                 --missing: #c7c7cc;
                 --row-hover: #f5f5f7;
                 --count-bg: #e8e8ed;
@@ -394,12 +398,24 @@
                 font-weight: 400;
             }
 
-            .locale-cell.present {
+            .locale-cell.present-both {
                 color: var(--present);
                 background: var(--present-bg);
             }
 
-            .locale-cell.present a {
+            .locale-cell.present-sitemap {
+                color: var(--sitemap-only);
+                background: var(--sitemap-only-bg);
+            }
+
+            .locale-cell.present-da {
+                color: var(--da-only);
+                background: var(--da-only-bg);
+            }
+
+            .locale-cell.present-both a,
+            .locale-cell.present-sitemap a,
+            .locale-cell.present-da a {
                 display: flex;
                 align-items: center;
                 justify-content: center;
@@ -410,8 +426,16 @@
                 border-radius: 999px;
             }
 
-            .locale-cell.present a:hover {
+            .locale-cell.present-both a:hover {
                 background: #d4edd9;
+            }
+
+            .locale-cell.present-sitemap a:hover {
+                background: #f8ddd6;
+            }
+
+            .locale-cell.present-da a:hover {
+                background: #d4e8fc;
             }
 
             .tree-empty {
@@ -445,7 +469,7 @@
         <main class="app-main">
             <section class="explorer-panel">
                 <div class="explorer-header">
-                    <span id="total-urls" class="count-pill">0</span> Total URLs
+                    <span id="total-paths" class="count-pill">0</span> paths
                     <span id="locale-meta" class="meta-note"></span>
                 </div>
                 <div class="msm-scroll">
@@ -465,6 +489,9 @@
             const TRAILING_SLASH_MAJORITY = 0.8;
             const FCORS_BASE = 'https://www.fcors.org/';
             const FCORS_API_KEY = 'XiKldIyVZFnouIUO';
+            const DA_ORIGIN = 'https://admin.da.live';
+            const DA_SDK_URL = 'https://da.live/nx/utils/sdk.js';
+            const DA_SDK_TIMEOUT_MS = 2000;
 
             const siteData = {
                 lines: [],
@@ -476,7 +503,11 @@
                 localeTotals: new Map(),
                 pageRegistry: new Map(),
                 sourceUrl: '',
+                daConnected: false,
+                presenceStats: null,
             };
+
+            let daSdkPromise = null;
 
             function fcorsUrl(targetUrl) {
                 const params = new URLSearchParams({
@@ -484,6 +515,155 @@
                     key: FCORS_API_KEY,
                 });
                 return `${FCORS_BASE}?${params.toString()}`;
+            }
+
+            function isStandaloneDevHost() {
+                const { hostname } = window.location;
+                return hostname === 'localhost' || hostname === '127.0.0.1';
+            }
+
+            async function loadDaSdk() {
+                if (!daSdkPromise) {
+                    daSdkPromise = import(DA_SDK_URL).then((mod) => mod.default);
+                }
+                return daSdkPromise;
+            }
+
+            async function loadDaSdkOptional(timeoutMs = DA_SDK_TIMEOUT_MS) {
+                if (isStandaloneDevHost()) return null;
+                try {
+                    return await Promise.race([
+                        loadDaSdk(),
+                        new Promise((resolve) => {
+                            setTimeout(() => resolve(null), timeoutMs);
+                        }),
+                    ]);
+                } catch {
+                    return null;
+                }
+            }
+
+            function daHtmlToPageKey(relativePath) {
+                if (!relativePath || relativePath === 'index') return '';
+                return relativePath;
+            }
+
+            function daItemToPageKey(itemPath, org, repo, locale) {
+                const prefix = `/${org}/${repo}/${locale}/`;
+                if (!itemPath.startsWith(prefix)) return null;
+                let relative = itemPath.slice(prefix.length);
+                if (relative.endsWith('.html')) relative = relative.slice(0, -5);
+                return daHtmlToPageKey(relative);
+            }
+
+            function daEditUrl(itemPath) {
+                return `https://da.live/edit#${itemPath.replace(/\.html$/, '')}`;
+            }
+
+            function ensurePageEntry(pageKey) {
+                if (!siteData.pageRegistry.has(pageKey)) {
+                    siteData.pageRegistry.set(pageKey, {
+                        sitemapUrls: new Map(),
+                        daPaths: new Map(),
+                    });
+                }
+                return siteData.pageRegistry.get(pageKey);
+            }
+
+            function getLocalePresence(pageKey, locale) {
+                const entry = siteData.pageRegistry.get(pageKey);
+                if (!entry) return 'none';
+                const inSitemap = entry.sitemapUrls.has(locale);
+                const inDa = entry.daPaths.has(locale);
+                if (inSitemap && inDa) return 'both';
+                if (inSitemap) return 'sitemap';
+                if (inDa) return 'da';
+                return 'none';
+            }
+
+            async function listDaPath(daFetch, listPath) {
+                const resp = await daFetch(`${DA_ORIGIN}/list${listPath}`);
+                if (!resp.ok) return { files: [], folders: [] };
+                const json = await resp.json();
+                const files = [];
+                const folders = [];
+                (Array.isArray(json) ? json : []).forEach((child) => {
+                    if (!child.name) return;
+                    if (child.ext) files.push(child);
+                    else folders.push(child.path);
+                });
+                return { files, folders };
+            }
+
+            async function crawlDaLocale(daFetch, org, repo, locale, onProgress) {
+                const root = `/${org}/${repo}/${locale}`;
+                const folders = [root];
+                const htmlFiles = [];
+
+                while (folders.length) {
+                    const current = folders.pop();
+                    onProgress?.(current);
+                    // eslint-disable-next-line no-await-in-loop
+                    const { files, folders: subfolders } = await listDaPath(daFetch, current);
+                    files.forEach((file) => {
+                        if (file.ext === 'html') htmlFiles.push(file);
+                    });
+                    folders.push(...subfolders);
+                }
+                return htmlFiles;
+            }
+
+            function rebuildIndexFromPageRegistry() {
+                siteData.index = createIndexNode();
+                siteData.pageRegistry.forEach((entry, pageKey) => {
+                    const { segments, isDirectory } = pageKeySegments(pageKey);
+                    addPageToIndex(siteData.index, segments, isDirectory);
+                });
+            }
+
+            function computePresenceStats() {
+                const stats = {
+                    paths: siteData.pageRegistry.size,
+                    both: 0,
+                    sitemapOnly: 0,
+                    daOnly: 0,
+                };
+                siteData.pageRegistry.forEach((entry, pageKey) => {
+                    siteData.locales.forEach((locale) => {
+                        const presence = getLocalePresence(pageKey, locale);
+                        if (presence === 'both') stats.both += 1;
+                        else if (presence === 'sitemap') stats.sitemapOnly += 1;
+                        else if (presence === 'da') stats.daOnly += 1;
+                    });
+                });
+                siteData.presenceStats = stats;
+                return stats;
+            }
+
+            async function augmentFromDa(sdk) {
+                const { org, repo } = sdk.context || {};
+                const { daFetch } = sdk.actions || {};
+                if (!org || !repo || !sdk.token || !daFetch) return false;
+
+                for (let i = 0; i < siteData.locales.length; i += 1) {
+                    const locale = siteData.locales[i];
+                    updateLoadStatus(`DA: ${locale}`);
+                    // eslint-disable-next-line no-await-in-loop
+                    const files = await crawlDaLocale(daFetch, org, repo, locale, (path) => {
+                        updateLoadStatus(`DA: ${path.split('/').slice(-3).join('/')}`);
+                    });
+                    files.forEach((file) => {
+                        const pageKey = daItemToPageKey(file.path, org, repo, locale);
+                        if (pageKey === null) return;
+                        ensurePageEntry(pageKey).daPaths.set(locale, file.path);
+                    });
+                }
+
+                rebuildIndexFromPageRegistry();
+                siteData.locales = sortLocalesByPageCount(new Set(siteData.locales));
+                siteData.daConnected = true;
+                computePresenceStats();
+                return true;
             }
 
             function setLoading(loading) {
@@ -558,7 +738,7 @@
 
             function countPathsForLocale(pathSegments, locale, pagesOnly = false) {
                 return getDistinctPathsUnderPath(pathSegments, pagesOnly)
-                    .filter((pageKey) => siteData.pageRegistry.get(pageKey)?.locales.has(locale)).length;
+                    .filter((pageKey) => getLocalePresence(pageKey, locale) !== 'none').length;
             }
 
             function getPageLabelFromKey(pageKey) {
@@ -571,9 +751,11 @@
             function sortLocalesByPageCount(localeSet) {
                 const totals = new Map();
                 localeSet.forEach((locale) => totals.set(locale, 0));
-                siteData.pageRegistry.forEach((entry) => {
-                    entry.locales.forEach((locale) => {
-                        totals.set(locale, (totals.get(locale) || 0) + 1);
+                siteData.pageRegistry.forEach((entry, pageKey) => {
+                    localeSet.forEach((locale) => {
+                        if (getLocalePresence(pageKey, locale) !== 'none') {
+                            totals.set(locale, (totals.get(locale) || 0) + 1);
+                        }
                     });
                 });
                 siteData.localeTotals = totals;
@@ -711,15 +893,11 @@
                     if (!parsed) return;
                     localeSet.add(parsed.locale);
                     addPageToIndex(siteData.index, parsed.pageSegments, parsed.isDirectory);
-                    if (!siteData.pageRegistry.has(parsed.pageKey)) {
-                        siteData.pageRegistry.set(parsed.pageKey, { locales: new Set(), urls: new Map() });
-                    }
-                    const entry = siteData.pageRegistry.get(parsed.pageKey);
-                    entry.locales.add(parsed.locale);
-                    entry.urls.set(parsed.locale, parsed.loc);
+                    ensurePageEntry(parsed.pageKey).sitemapUrls.set(parsed.locale, parsed.loc);
                 });
 
                 siteData.locales = sortLocalesByPageCount(localeSet);
+                computePresenceStats();
             }
 
             function applyTrailingSlashPolicy() {
@@ -731,7 +909,6 @@
                 const slashCount = countTrailingSlashUrls(lines);
                 siteData.stripTrailingSlashes = slashCount / lines.length >= TRAILING_SLASH_MAJORITY;
                 rebuildSiteModel();
-                renderTree();
             }
 
             function getIndexAtPath(pathSegments) {
@@ -761,8 +938,11 @@
                 return getDistinctPathsUnderPath(pathSegments, true);
             }
 
-            function setTotalUrls(count) {
-                document.getElementById('total-urls').textContent = count.toLocaleString();
+            function setTotalPaths(count) {
+                document.getElementById('total-paths').textContent = count.toLocaleString();
+            }
+
+            function setLoadUrlCount(count) {
                 if (siteData.loading) {
                     document.getElementById('load-status-count').textContent = count.toLocaleString();
                 }
@@ -771,16 +951,29 @@
             function updateLocaleMeta() {
                 const meta = document.getElementById('locale-meta');
                 if (!siteData.locales.length) {
-                    meta.textContent = '';
+                    meta.textContent = siteData.lines.length
+                        ? `${siteData.lines.length.toLocaleString()} sitemap URLs`
+                        : '';
                     return;
                 }
-                meta.textContent = `${siteData.locales.length} locale${siteData.locales.length === 1 ? '' : 's'} · ${siteData.localeDepth}-segment prefix`;
+                const parts = [
+                    `${siteData.locales.length} locale${siteData.locales.length === 1 ? '' : 's'}`,
+                    `${siteData.localeDepth}-segment prefix`,
+                    `${siteData.lines.length.toLocaleString()} sitemap URLs`,
+                ];
+                if (siteData.daConnected && siteData.presenceStats) {
+                    const { both, sitemapOnly, daOnly } = siteData.presenceStats;
+                    parts.push(`✓ ${both.toLocaleString()} both`, `↑ ${sitemapOnly.toLocaleString()} sitemap only`, `↓ ${daOnly.toLocaleString()} DA only`);
+                } else if (!isStandaloneDevHost()) {
+                    parts.push('DA not connected');
+                }
+                meta.textContent = parts.join(' · ');
             }
 
             function appendSitemapLines(lines) {
                 if (!lines?.length) return;
                 siteData.lines.push(...lines);
-                setTotalUrls(siteData.lines.length);
+                setLoadUrlCount(siteData.lines.length);
             }
 
             async function loadSitemap(sitemapURL, callbacks) {
@@ -837,7 +1030,10 @@
                 siteData.localeTotals = new Map();
                 siteData.localeDepth = 1;
                 siteData.stripTrailingSlashes = false;
-                setTotalUrls(0);
+                siteData.daConnected = false;
+                siteData.presenceStats = null;
+                setTotalPaths(0);
+                setLoadUrlCount(0);
                 updateLocaleMeta();
                 renderTree();
                 setLoading(true);
@@ -859,6 +1055,16 @@
                         await loadSitemap(url.href, callbacks);
                     }
                     applyTrailingSlashPolicy();
+                    setTotalPaths(siteData.pageRegistry.size);
+
+                    const sdk = await loadDaSdkOptional();
+                    if (sdk?.token && sdk.actions?.daFetch) {
+                        await augmentFromDa(sdk);
+                    } else {
+                        siteData.daConnected = false;
+                        computePresenceStats();
+                    }
+                    setTotalPaths(siteData.pageRegistry.size);
                     updateLocaleMeta();
                 } finally {
                     setLoading(false);
@@ -874,21 +1080,39 @@
                     const cell = document.createElement('span');
                     cell.className = 'locale-cell';
                     cell.style.gridColumn = String(3 + index);
-                    const href = entry?.urls.get(locale);
-                    if (href) {
-                        cell.classList.add('present');
-                        const link = document.createElement('a');
-                        link.href = href;
-                        link.target = '_blank';
-                        link.rel = 'noopener noreferrer';
-                        link.textContent = '✓';
-                        link.title = href;
-                        cell.appendChild(link);
-                    } else {
+                    const presence = getLocalePresence(pageKey, locale);
+                    if (presence === 'none') {
                         cell.classList.add('missing');
                         cell.textContent = '·';
                         cell.title = `Missing in ${locale}`;
+                        cells.appendChild(cell);
+                        return;
                     }
+
+                    const link = document.createElement('a');
+                    link.target = '_blank';
+                    link.rel = 'noopener noreferrer';
+                    link.textContent = '✓';
+
+                    if (!siteData.daConnected) {
+                        cell.classList.add('present-both');
+                        link.href = entry.sitemapUrls.get(locale);
+                        link.title = entry.sitemapUrls.get(locale);
+                    } else {
+                        cell.classList.add(`present-${presence}`);
+                        if (presence === 'both') {
+                            link.href = entry.sitemapUrls.get(locale);
+                            link.title = `Sitemap and DA\n${entry.sitemapUrls.get(locale)}`;
+                        } else if (presence === 'sitemap') {
+                            link.href = entry.sitemapUrls.get(locale);
+                            link.title = `Sitemap only\n${entry.sitemapUrls.get(locale)}`;
+                        } else {
+                            link.href = daEditUrl(entry.daPaths.get(locale));
+                            link.title = `DA only\n${entry.daPaths.get(locale)}`;
+                        }
+                    }
+
+                    cell.appendChild(link);
                     cells.appendChild(cell);
                 });
                 return cells;
