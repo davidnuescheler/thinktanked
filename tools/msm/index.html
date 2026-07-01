@@ -495,6 +495,7 @@
             const DA_ORIGIN = 'https://admin.da.live';
             const DA_SDK_URL = 'https://da.live/nx/utils/sdk.js';
             const DA_SDK_TIMEOUT_MS = 2000;
+            const AEM_HOST_PATTERN = /^(.+)--(.+)--([^.]+)\.aem\.(live|page)$/i;
 
             const siteData = {
                 lines: [],
@@ -506,6 +507,7 @@
                 localeTotals: new Map(),
                 pageRegistry: new Map(),
                 sourceUrl: '',
+                daTarget: null,
                 daConnected: false,
                 presenceStats: null,
             };
@@ -514,6 +516,27 @@
 
             function formatLocaleLabel(locale) {
                 return locale || DEFAULT_LOCALE_LABEL;
+            }
+
+            function parseAemDaTarget(urlString) {
+                if (!urlString) return null;
+                try {
+                    const { hostname } = new URL(urlString);
+                    const match = hostname.match(AEM_HOST_PATTERN);
+                    if (!match) return null;
+                    const [, branch, site, org] = match;
+                    return { branch, org, repo: site };
+                } catch {
+                    return null;
+                }
+            }
+
+            function resolveDaTarget(sdk) {
+                const fromUrl = parseAemDaTarget(siteData.sourceUrl);
+                if (fromUrl) return fromUrl;
+                const { org, repo } = sdk?.context || {};
+                if (org && repo) return { org, repo, branch: null };
+                return null;
             }
 
             function fcorsUrl(targetUrl) {
@@ -648,10 +671,14 @@
             }
 
             async function augmentFromDa(sdk) {
-                const { org, repo } = sdk.context || {};
                 const { daFetch } = sdk.actions || {};
-                if (!org || !repo || !sdk.token || !daFetch) return false;
+                if (!sdk.token || !daFetch) return false;
                 if (siteData.localeDepth === 0) return false;
+
+                const target = resolveDaTarget(sdk);
+                if (!target?.org || !target?.repo) return false;
+                siteData.daTarget = target;
+                const { org, repo } = target;
 
                 for (let i = 0; i < siteData.locales.length; i += 1) {
                     const locale = siteData.locales[i];
@@ -1021,6 +1048,9 @@
                 if (siteData.daConnected && siteData.presenceStats) {
                     const { both, sitemapOnly, daOnly } = siteData.presenceStats;
                     parts.push(`✓ ${both.toLocaleString()} both`, `↑ ${sitemapOnly.toLocaleString()} sitemap only`, `↓ ${daOnly.toLocaleString()} DA only`);
+                    if (siteData.daTarget) {
+                        parts.push(`DA ${siteData.daTarget.org}/${siteData.daTarget.repo}`);
+                    }
                 } else if (!isStandaloneDevHost()) {
                     parts.push('DA not connected');
                 }
@@ -1088,6 +1118,7 @@
                 siteData.localeDepth = 1;
                 siteData.stripTrailingSlashes = false;
                 siteData.daConnected = false;
+                siteData.daTarget = null;
                 siteData.presenceStats = null;
                 setTotalPaths(0);
                 setLoadUrlCount(0);
