@@ -1,5 +1,3 @@
-const LEAF_PAGES = '__leaf_pages__';
-const LEAF_PAGES_LABEL = 'Pages';
 const TRAILING_SLASH_MAJORITY = 0.8;
 const LOCALE_SEGMENT = /^[a-z]{2}(?:[-_][a-z]{2})?$/i;
 const DEFAULT_LOCALE_KEY = '';
@@ -25,6 +23,8 @@ const siteData = {
     daTarget: null,
     daConnected: false,
     presenceStats: null,
+    diffOnly: false,
+    openFolder: [],
 };
 
 let daSdkPromise = null;
@@ -52,6 +52,43 @@ function logDaSdkState(sdk, label = 'sdk') {
 
 function formatLocaleLabel(locale) {
     return locale || DEFAULT_LOCALE_LABEL;
+}
+
+function readDiffOnlyFromUrl(search = window.location.search) {
+    const value = new URLSearchParams(search).get('diff');
+    return value === '1' || value === 'true';
+}
+
+function folderPathToParam(pathSegments) {
+    return pathSegments.map((seg) => encodeURIComponent(seg)).join('/');
+}
+
+function readFolderFromUrl(search = window.location.search) {
+    const value = new URLSearchParams(search).get('folder');
+    if (!value) return [];
+    return value.split('/').map((seg) => decodeURIComponent(seg)).filter(Boolean);
+}
+
+function isFolderPathPrefix(prefix, path) {
+    return prefix.length <= path.length && prefix.every((seg, i) => path[i] === seg);
+}
+
+function setOpenFolder(pathSegments) {
+    siteData.openFolder = pathSegments;
+    updateMsmUrl({ folder: pathSegments });
+}
+
+function updateMsmUrl({ url, diffOnly, folder } = {}) {
+    const params = new URLSearchParams();
+    const sitemapUrl = url ?? siteData.sourceUrl ?? document.getElementById('url').value;
+    if (sitemapUrl) params.set('url', sitemapUrl);
+    const diff = diffOnly ?? siteData.diffOnly;
+    if (diff) params.set('diff', '1');
+    const folderPath = folder ?? siteData.openFolder;
+    if (folderPath?.length) params.set('folder', folderPathToParam(folderPath));
+    const query = params.toString();
+    const next = query ? `${window.location.pathname}?${query}` : window.location.pathname;
+    history.pushState({}, '', next);
 }
 
 function parseAemDaTarget(urlString) {
@@ -161,6 +198,35 @@ function getLocalePresence(pageKey, locale) {
     if (inSitemap) return 'sitemap';
     if (inDa) return 'da';
     return 'none';
+}
+
+function pageHasLocaleDiff(pageKey) {
+    if (siteData.locales.length < 2) return false;
+    let baseline = null;
+    for (let i = 0; i < siteData.locales.length; i += 1) {
+        const presence = getLocalePresence(pageKey, siteData.locales[i]);
+        if (baseline === null) baseline = presence;
+        else if (presence !== baseline) return true;
+    }
+    return false;
+}
+
+function folderHasLocaleDiff(pathSegments) {
+    let found = false;
+    siteData.pageRegistry.forEach((entry, pageKey) => {
+        if (found) return;
+        if (!pageKeyUnderFolderPath(pageKey, pathSegments)) return;
+        if (pageHasLocaleDiff(pageKey)) found = true;
+    });
+    return found;
+}
+
+function countDiffPages() {
+    let count = 0;
+    siteData.pageRegistry.forEach((entry, pageKey) => {
+        if (pageHasLocaleDiff(pageKey)) count += 1;
+    });
+    return count;
 }
 
 async function listDaPath(daFetch, listPath) {
@@ -408,6 +474,7 @@ function isLeafInPagesBucket(pageKey, pathSegments) {
 function getDistinctPathsUnderPath(pathSegments, pagesOnly = false) {
     const keys = [];
     siteData.pageRegistry.forEach((entry, pageKey) => {
+        if (siteData.diffOnly && !pageHasLocaleDiff(pageKey)) return;
         if (pagesOnly) {
             if (isLeafInPagesBucket(pageKey, pathSegments)) keys.push(pageKey);
         } else if (pageKeyUnderFolderPath(pageKey, pathSegments)) {
@@ -651,26 +718,36 @@ function getIndexAtPath(pathSegments) {
     return node;
 }
 
-function getBuckets(pathSegments) {
+function getFolderEntries(pathSegments) {
     const index = getIndexAtPath(pathSegments);
     if (!index) return [];
     const entries = [];
     index.folders.forEach((child, name) => {
-        entries.push([name, countDistinctPaths([...pathSegments, name], false)]);
+        const childPath = [...pathSegments, name];
+        if (siteData.diffOnly && !folderHasLocaleDiff(childPath)) return;
+        entries.push([name, countDistinctPaths(childPath, false)]);
     });
-    const pagesCount = countDistinctPaths(pathSegments, true);
-    if (pagesCount > 0) {
-        entries.push([LEAF_PAGES, pagesCount]);
-    }
     return entries.sort((a, b) => b[1] - a[1]);
-}
-
-function getLeafPageKeys(pathSegments) {
-    return getDistinctPathsUnderPath(pathSegments, true);
 }
 
 function setTotalPaths(count) {
     document.getElementById('total-paths').textContent = count.toLocaleString();
+}
+
+function updateTotalPathsDisplay() {
+    const count = siteData.diffOnly ? countDiffPages() : siteData.pageRegistry.size;
+    setTotalPaths(count);
+}
+
+function updateDiffOnlyToggle() {
+    const toggle = document.getElementById('diff-only');
+    const enabled = siteData.locales.length >= 2 && siteData.lines.length > 0;
+    toggle.disabled = !enabled;
+    if (!enabled && siteData.diffOnly) {
+        siteData.diffOnly = false;
+        toggle.checked = false;
+        updateMsmUrl({ diffOnly: false });
+    }
 }
 
 function setLoadUrlCount(count) {
@@ -759,7 +836,7 @@ document.getElementById('input-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const url = new URL(document.getElementById('url').value);
     siteData.sourceUrl = url.href;
-    history.pushState({}, '', `${window.location.pathname}?url=${encodeURIComponent(url.href)}`);
+    updateMsmUrl({ url: url.href, diffOnly: siteData.diffOnly });
     siteData.lines = [];
     siteData.index = createIndexNode();
     siteData.pageRegistry = new Map();
@@ -793,7 +870,7 @@ document.getElementById('input-form').addEventListener('submit', async (e) => {
             await loadSitemap(url.href, callbacks);
         }
         applyTrailingSlashPolicy();
-        setTotalPaths(siteData.pageRegistry.size);
+        updateTotalPathsDisplay();
 
         const sdk = await loadDaSdkOptional();
         if (sdk?.token && sdk.actions?.daFetch) {
@@ -818,7 +895,7 @@ document.getElementById('input-form').addEventListener('submit', async (e) => {
             });
             if (sdk) logDaSdkState(sdk, 'sdk rejected');
         }
-        setTotalPaths(siteData.pageRegistry.size);
+        updateTotalPathsDisplay();
         updateLocaleMeta();
     } finally {
         setLoading(false);
@@ -923,65 +1000,31 @@ function createPageRow(pageKey, depth) {
     return createTreeLine(null, row, createLocaleCells(pageKey));
 }
 
-function populatePageList(container, pathSegments) {
+function populateChildren(container, pathSegments) {
     container.replaceChildren();
-    getLeafPageKeys(pathSegments).forEach((pageKey) => {
-        container.appendChild(createPageRow(pageKey, pathSegments.length + 1));
+    const folderEntries = getFolderEntries(pathSegments);
+    const leafPages = getDistinctPathsUnderPath(pathSegments, true);
+
+    if (folderEntries.length === 0 && leafPages.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'tree-empty';
+        empty.textContent = siteData.diffOnly ? 'No locale differences here' : 'No pages here';
+        container.appendChild(empty);
+        return;
+    }
+
+    folderEntries.forEach(([name, count]) => {
+        container.appendChild(createFolderNode([...pathSegments, name], count));
     });
-}
-
-function createPagesNode(pathSegments, count) {
-    const node = document.createElement('div');
-    node.className = 'tree-node';
-    const depth = pathSegments.length;
-
-    const row = document.createElement('div');
-    row.className = 'tree-row pages';
-    row.style.paddingLeft = `${12 + depth * 20}px`;
-
-    const disclosure = document.createElement('button');
-    disclosure.type = 'button';
-    disclosure.className = 'disclosure';
-    disclosure.textContent = '▶';
-    disclosure.setAttribute('aria-expanded', 'false');
-
-    const icon = document.createElement('span');
-    icon.className = 'tree-icon';
-    icon.textContent = '📄';
-    const name = document.createElement('span');
-    name.className = 'tree-name';
-    name.textContent = LEAF_PAGES_LABEL;
-
-    row.append(disclosure, icon, name);
-
-    const children = document.createElement('div');
-    children.className = 'tree-children';
-    children.hidden = true;
-
-    disclosure.addEventListener('click', () => {
-        const expanded = disclosure.getAttribute('aria-expanded') === 'true';
-        if (expanded) {
-            disclosure.textContent = '▶';
-            disclosure.setAttribute('aria-expanded', 'false');
-            children.hidden = true;
-        } else {
-            if (!children.dataset.loaded) {
-                populatePageList(children, pathSegments);
-                children.dataset.loaded = 'true';
-            }
-            disclosure.textContent = '▼';
-            disclosure.setAttribute('aria-expanded', 'true');
-            children.hidden = false;
-        }
+    leafPages.forEach((pageKey) => {
+        container.appendChild(createPageRow(pageKey, pathSegments.length));
     });
-
-    node.append(createTreeLine(count, row, createLocaleCountCells(pathSegments, true)), children);
-    return node;
 }
 
 function createFolderNode(pathSegments, count) {
     const node = document.createElement('div');
     node.className = 'tree-node';
+    node.dataset.folderPath = pathSegments.join('/');
     const depth = pathSegments.length - 1;
 
     const row = document.createElement('div');
@@ -1010,17 +1053,14 @@ function createFolderNode(pathSegments, count) {
     disclosure.addEventListener('click', () => {
         const expanded = disclosure.getAttribute('aria-expanded') === 'true';
         if (expanded) {
-            disclosure.textContent = '▶';
-            disclosure.setAttribute('aria-expanded', 'false');
-            children.hidden = true;
-        } else {
-            if (!children.dataset.loaded) {
-                populateChildren(children, pathSegments);
-                children.dataset.loaded = 'true';
+            collapseFolderNode(node);
+            if (isFolderPathPrefix(pathSegments, siteData.openFolder)) {
+                siteData.openFolder = [];
+                updateMsmUrl({ folder: [] });
             }
-            disclosure.textContent = '▼';
-            disclosure.setAttribute('aria-expanded', 'true');
-            children.hidden = false;
+        } else {
+            expandFolderNode(node, pathSegments);
+            setOpenFolder(pathSegments);
         }
     });
 
@@ -1028,23 +1068,54 @@ function createFolderNode(pathSegments, count) {
     return node;
 }
 
-function populateChildren(container, pathSegments) {
-    container.replaceChildren();
-    const entries = getBuckets(pathSegments);
-    if (entries.length === 0) {
-        const empty = document.createElement('div');
-        empty.className = 'tree-empty';
-        empty.textContent = 'No pages here';
-        container.appendChild(empty);
-        return;
+function expandFolderNode(node, pathSegments) {
+    const disclosure = node.querySelector('.tree-row.folder .disclosure');
+    const children = node.querySelector(':scope > .tree-children');
+    if (!disclosure || !children) return false;
+    if (!children.dataset.loaded) {
+        populateChildren(children, pathSegments);
+        children.dataset.loaded = 'true';
     }
-    entries.forEach(([name, count]) => {
-        if (name === LEAF_PAGES) {
-            container.appendChild(createPagesNode(pathSegments, count));
-        } else {
-            container.appendChild(createFolderNode([...pathSegments, name], count));
-        }
+    disclosure.textContent = '▼';
+    disclosure.setAttribute('aria-expanded', 'true');
+    children.hidden = false;
+    return true;
+}
+
+function collapseFolderNode(node) {
+    const disclosure = node.querySelector('.tree-row.folder .disclosure');
+    const children = node.querySelector(':scope > .tree-children');
+    if (!disclosure || !children) return;
+    disclosure.textContent = '▶';
+    disclosure.setAttribute('aria-expanded', 'false');
+    children.hidden = true;
+}
+
+function findFolderChildNode(container, folderName) {
+    return [...container.children].find((child) => {
+        if (!child.classList?.contains('tree-node')) return false;
+        return child.dataset.folderPath?.split('/').pop() === folderName;
     });
+}
+
+function restoreOpenFolder() {
+    const pathSegments = siteData.openFolder;
+    if (!pathSegments.length || !siteData.lines.length) return;
+
+    let container = document.getElementById('tree-root');
+    for (let i = 0; i < pathSegments.length; i += 1) {
+        const prefix = pathSegments.slice(0, i + 1);
+        const folderName = pathSegments[i];
+        const node = findFolderChildNode(container, folderName);
+        if (!node) {
+            siteData.openFolder = [];
+            updateMsmUrl({ folder: [] });
+            return;
+        }
+        if (!expandFolderNode(node, prefix)) return;
+        container = node.querySelector(':scope > .tree-children');
+        if (!container) return;
+    }
 }
 
 function renderLocaleHeader() {
@@ -1083,6 +1154,8 @@ function renderTree() {
     const container = document.getElementById('tree-root');
     grid.style.setProperty('--locale-count', siteData.locales.length);
     grid.classList.toggle('has-locales', siteData.locales.length > 0);
+    updateDiffOnlyToggle();
+    updateTotalPathsDisplay();
     renderLocaleHeader();
     container.replaceChildren();
 
@@ -1097,9 +1170,30 @@ function renderTree() {
     }
 
     populateChildren(container, []);
+    restoreOpenFolder();
 }
 
+document.getElementById('diff-only').addEventListener('change', (e) => {
+    siteData.diffOnly = e.target.checked;
+    updateMsmUrl({ diffOnly: siteData.diffOnly });
+    renderTree();
+});
+
+function syncMsmStateFromUrl() {
+    siteData.diffOnly = readDiffOnlyFromUrl();
+    siteData.openFolder = readFolderFromUrl();
+    document.getElementById('diff-only').checked = siteData.diffOnly;
+    renderTree();
+}
+
+window.addEventListener('popstate', () => {
+    syncMsmStateFromUrl();
+});
+
 siteData.index = createIndexNode();
+siteData.diffOnly = readDiffOnlyFromUrl();
+siteData.openFolder = readFolderFromUrl();
+document.getElementById('diff-only').checked = siteData.diffOnly;
 const params = new URLSearchParams(window.location.search);
 if (params.get('url')) {
     document.getElementById('url').value = params.get('url');
