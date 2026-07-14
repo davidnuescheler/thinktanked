@@ -30,10 +30,14 @@
                 <div class="explorer-header">
                     <span id="total-paths" class="count-pill">0</span> paths
                     <span id="locale-meta" class="meta-note"></span>
-                    <label class="diff-only-toggle">
-                        <input id="diff-only" type="checkbox">
-                        Show diff only
-                    </label>
+                    <span id="selection-count" class="selection-count"></span>
+                    <div class="explorer-actions">
+                        <button type="button" id="copy-selected-btn" disabled>Copy selected</button>
+                        <label class="diff-only-toggle">
+                            <input id="diff-only" type="checkbox">
+                            Show diff only
+                        </label>
+                    </div>
                 </div>
                 <div class="msm-scroll">
                     <div id="msm-grid" class="msm-grid">

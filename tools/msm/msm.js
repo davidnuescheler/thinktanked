@@ -28,6 +28,144 @@ const siteData = {
 };
 
 let daSdkPromise = null;
+const selectedFolders = new Set();
+const selectedPages = new Set();
+
+function pathKey(pathSegments) {
+    return JSON.stringify(pathSegments);
+}
+
+function parsePathKey(key) {
+    return JSON.parse(key);
+}
+
+function getPreviewLinkForPageLocale(pageKey, locale) {
+    const entry = siteData.pageRegistry.get(pageKey);
+    if (!entry || getLocalePresence(pageKey, locale) === 'none') return null;
+    if (entry.sitemapUrls.has(locale)) return entry.sitemapUrls.get(locale);
+    const origin = getSitemapLoadOrigin();
+    if (!origin) return null;
+    let path = '';
+    if (siteData.localeDepth > 0) path += `/${locale}`;
+    if (pageKey) {
+        const pagePath = pageKey.endsWith('/') ? pageKey.slice(0, -1) : pageKey;
+        path += `/${pagePath}`;
+    } else if (!path) {
+        path = '/';
+    }
+    return new URL(path, origin).href;
+}
+
+function getCopyableUrlsForPage(pageKey) {
+    const urls = [];
+    siteData.locales.forEach((locale) => {
+        const url = getPreviewLinkForPageLocale(pageKey, locale);
+        if (url) urls.push(url);
+    });
+    return urls;
+}
+
+function getCopyableUrlsUnderPath(pathSegments) {
+    const urls = new Set();
+    getDistinctPathsUnderPath(pathSegments, false).forEach((pageKey) => {
+        getCopyableUrlsForPage(pageKey).forEach((url) => urls.add(url));
+    });
+    return [...urls];
+}
+
+function getUrlsForSelection() {
+    const urls = new Set();
+    selectedFolders.forEach((key) => {
+        getCopyableUrlsUnderPath(parsePathKey(key)).forEach((url) => urls.add(url));
+    });
+    selectedPages.forEach((pageKey) => {
+        getCopyableUrlsForPage(pageKey).forEach((url) => urls.add(url));
+    });
+    return [...urls].sort((a, b) => a.localeCompare(b));
+}
+
+function updateSelectionUI() {
+    const folderCount = selectedFolders.size;
+    const pageCount = selectedPages.size;
+    const itemCount = folderCount + pageCount;
+    const urlCount = itemCount ? getUrlsForSelection().length : 0;
+    const copyBtn = document.getElementById('copy-selected-btn');
+    const countEl = document.getElementById('selection-count');
+    copyBtn.disabled = itemCount === 0 || siteData.loading;
+    if (!itemCount) {
+        countEl.textContent = '';
+        return;
+    }
+    const parts = [];
+    if (folderCount) {
+        parts.push(`${folderCount.toLocaleString()} folder${folderCount === 1 ? '' : 's'}`);
+    }
+    if (pageCount) {
+        parts.push(`${pageCount.toLocaleString()} page${pageCount === 1 ? '' : 's'}`);
+    }
+    countEl.textContent = `${parts.join(', ')}, ${urlCount.toLocaleString()} URL${urlCount === 1 ? '' : 's'}`;
+}
+
+function clearSelection() {
+    selectedFolders.clear();
+    selectedPages.clear();
+    document.querySelectorAll('.tree-row.folder.selected, .tree-row.page.selected').forEach((row) => {
+        row.classList.remove('selected');
+        const cb = row.querySelector('.tree-select');
+        if (cb) cb.checked = false;
+    });
+    updateSelectionUI();
+}
+
+function createTreeCheckbox(key, row, kind) {
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.className = 'tree-select';
+    const selected = kind === 'folder' ? selectedFolders : selectedPages;
+    cb.checked = selected.has(key);
+    if (cb.checked) row.classList.add('selected');
+    if (kind === 'folder') {
+        const pathSegments = parsePathKey(key);
+        const pathLabel = pathSegments.length ? `/${pathSegments.join('/')}` : '/';
+        cb.setAttribute('aria-label', `Select folder ${pathLabel}`);
+    } else {
+        cb.setAttribute('aria-label', `Select page ${key || '(locale root)'}`);
+    }
+    cb.addEventListener('click', (e) => e.stopPropagation());
+    cb.addEventListener('change', () => {
+        if (cb.checked) {
+            selected.add(key);
+            row.classList.add('selected');
+        } else {
+            selected.delete(key);
+            row.classList.remove('selected');
+        }
+        updateSelectionUI();
+    });
+    return cb;
+}
+
+async function copySelectedUrls() {
+    const urls = getUrlsForSelection();
+    if (!urls.length) return;
+    const text = urls.join('\n');
+    const copyBtn = document.getElementById('copy-selected-btn');
+    try {
+        await navigator.clipboard.writeText(text);
+    } catch {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+    }
+    const original = copyBtn.textContent;
+    copyBtn.textContent = 'Copied!';
+    setTimeout(() => {
+        copyBtn.textContent = original;
+    }, 1500);
+}
 
 function logDa(phase, details = {}) {
     console.log('[MSM DA]', phase, details);
@@ -52,6 +190,42 @@ function logDaSdkState(sdk, label = 'sdk') {
 
 function formatLocaleLabel(locale) {
     return locale || DEFAULT_LOCALE_LABEL;
+}
+
+function isLocalhostHostname(hostname) {
+    return hostname === 'localhost' || hostname === '127.0.0.1';
+}
+
+function normalizeSitemapUrl(urlString, baseUrl) {
+    try {
+        const url = new URL(urlString.trim(), baseUrl);
+        if (!isLocalhostHostname(url.hostname) && url.protocol === 'http:') {
+            url.protocol = 'https:';
+        }
+        return url.href;
+    } catch {
+        return urlString;
+    }
+}
+
+function getSitemapLoadOrigin() {
+    if (!siteData.sourceUrl) return null;
+    try {
+        return new URL(siteData.sourceUrl).origin;
+    } catch {
+        return null;
+    }
+}
+
+function resolvePreviewUrl(sitemapLoc) {
+    try {
+        const locUrl = new URL(sitemapLoc);
+        const origin = getSitemapLoadOrigin();
+        if (!origin) return locUrl.href;
+        return new URL(`${locUrl.pathname}${locUrl.search}${locUrl.hash}`, origin).href;
+    } catch {
+        return sitemapLoc;
+    }
 }
 
 function readDiffOnlyFromUrl(search = window.location.search) {
@@ -422,6 +596,7 @@ function setLoading(loading) {
     document.getElementById('load-status').hidden = !loading;
     document.querySelector('#input-form button').disabled = loading;
     document.getElementById('url').disabled = loading;
+    updateSelectionUI();
 }
 
 function updateLoadStatus(file) {
@@ -691,7 +866,7 @@ function rebuildSiteModel() {
         if (!parsed) return;
         localeSet.add(parsed.locale);
         addPageToIndex(siteData.index, parsed.pageSegments, parsed.isDirectory);
-        ensurePageEntry(parsed.pageKey).sitemapUrls.set(parsed.locale, parsed.loc);
+        ensurePageEntry(parsed.pageKey).sitemapUrls.set(parsed.locale, resolvePreviewUrl(parsed.loc));
     });
 
     siteData.locales = sortLocalesByPageCount(localeSet);
@@ -792,21 +967,22 @@ function appendSitemapLines(lines) {
 
 async function loadSitemap(sitemapURL, callbacks) {
     try {
-        callbacks.onFileStart(sitemapURL);
-        const resp = await fetch(fcorsUrl(sitemapURL));
+        const normalizedSitemapURL = normalizeSitemapUrl(sitemapURL);
+        callbacks.onFileStart(normalizedSitemapURL);
+        const resp = await fetch(fcorsUrl(normalizedSitemapURL));
         const xml = await resp.text();
         const sitemap = new DOMParser().parseFromString(xml, 'text/xml');
         const subSitemaps = [...sitemap.querySelectorAll('sitemap loc')];
         for (let i = 0; i < subSitemaps.length; i += 1) {
             const loc = subSitemaps[i];
-            const subSitemapURL = new URL(loc.textContent.trim(), sitemapURL);
+            const subSitemapURL = normalizeSitemapUrl(loc.textContent.trim(), normalizedSitemapURL);
             // eslint-disable-next-line no-await-in-loop
-            await loadSitemap(subSitemapURL.href, callbacks);
+            await loadSitemap(subSitemapURL, callbacks);
         }
         const newLines = [];
         sitemap.querySelectorAll('url').forEach((url) => {
             const loc = url.querySelector('loc');
-            const locURL = new URL(loc.textContent.trim());
+            const locURL = normalizeSitemapUrl(loc.textContent.trim(), normalizedSitemapURL);
             const lastMod = url.querySelector('lastmod');
             const lastModDate = lastMod ? lastMod.textContent.trim() : '';
             newLines.push(`${locURL}\t${lastModDate}`);
@@ -826,7 +1002,7 @@ async function getRootSitemaps(url) {
     txt.split('\n').forEach((line) => {
         const [name, value] = line.split(/:(.*)/s);
         if (name.trim().toLowerCase() === 'sitemap') {
-            sitemapURLs.push(value.trim());
+            sitemapURLs.push(normalizeSitemapUrl(value.trim(), url));
         }
     });
     return sitemapURLs;
@@ -834,7 +1010,7 @@ async function getRootSitemaps(url) {
 
 document.getElementById('input-form').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const url = new URL(document.getElementById('url').value);
+    const url = new URL(normalizeSitemapUrl(document.getElementById('url').value));
     siteData.sourceUrl = url.href;
     updateMsmUrl({ url: url.href, diffOnly: siteData.diffOnly });
     siteData.lines = [];
@@ -847,6 +1023,7 @@ document.getElementById('input-form').addEventListener('submit', async (e) => {
     siteData.daConnected = false;
     siteData.daTarget = null;
     siteData.presenceStats = null;
+    clearSelection();
     setTotalPaths(0);
     setLoadUrlCount(0);
     updateLocaleMeta();
@@ -986,8 +1163,7 @@ function createPageRow(pageKey, depth) {
     row.className = 'tree-row page';
     row.style.paddingLeft = `${12 + depth * 20}px`;
 
-    const spacer = document.createElement('span');
-    spacer.className = 'disclosure-spacer';
+    const checkbox = createTreeCheckbox(pageKey, row, 'page');
     const icon = document.createElement('span');
     icon.className = 'tree-icon';
     icon.textContent = '📄';
@@ -996,7 +1172,7 @@ function createPageRow(pageKey, depth) {
     name.textContent = getPageLabelFromKey(pageKey);
     name.title = pageKey || '(locale root)';
 
-    row.append(spacer, icon, name);
+    row.append(checkbox, icon, name);
     return createTreeLine(null, row, createLocaleCells(pageKey));
 }
 
@@ -1031,6 +1207,7 @@ function createFolderNode(pathSegments, count) {
     row.className = 'tree-row folder';
     row.style.paddingLeft = `${12 + depth * 20}px`;
 
+    const checkbox = createTreeCheckbox(pathKey(pathSegments), row, 'folder');
     const disclosure = document.createElement('button');
     disclosure.type = 'button';
     disclosure.className = 'disclosure';
@@ -1044,7 +1221,7 @@ function createFolderNode(pathSegments, count) {
     name.className = 'tree-name';
     name.textContent = pathSegments[pathSegments.length - 1];
 
-    row.append(disclosure, icon, name);
+    row.append(checkbox, disclosure, icon, name);
 
     const children = document.createElement('div');
     children.className = 'tree-children';
@@ -1171,7 +1348,12 @@ function renderTree() {
 
     populateChildren(container, []);
     restoreOpenFolder();
+    updateSelectionUI();
 }
+
+document.getElementById('copy-selected-btn').addEventListener('click', () => {
+    copySelectedUrls();
+});
 
 document.getElementById('diff-only').addEventListener('change', (e) => {
     siteData.diffOnly = e.target.checked;
