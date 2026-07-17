@@ -1,16 +1,7 @@
 const TRAILING_SLASH_MAJORITY = 0.8;
-const LOCALE_SEGMENT = /^[a-z]{2}(?:[-_][a-z]{2})?$/i;
+const DEFAULT_LOCALE_DEPTH = 1;
 const DEFAULT_LOCALE_KEY = '';
 const DEFAULT_LOCALE_LABEL = 'default';
-
-function isLocaleSegment(segment) {
-    return LOCALE_SEGMENT.test(segment);
-}
-
-function localeSegmentsValid(segments, depth) {
-    if (depth === 0) return true;
-    return segments.slice(0, depth).every(isLocaleSegment);
-}
 const FCORS_BASE = 'https://www.fcors.org/';
 const FCORS_API_KEY = 'XiKldIyVZFnouIUO';
 const DA_ORIGIN = 'https://admin.da.live';
@@ -24,9 +15,7 @@ const siteData = {
     index: null,
     loading: false,
     stripTrailingSlashes: false,
-    localeDepth: 1,
-    detectedLocaleDepth: 0,
-    localePrefixOverride: null,
+    localeDepth: DEFAULT_LOCALE_DEPTH,
     locales: [],
     localeTotals: new Map(),
     pageRegistry: new Map(),
@@ -240,12 +229,16 @@ function resolvePreviewUrl(sitemapLoc) {
     }
 }
 
-function readLocalePrefixFromUrl(search = window.location.search) {
+function readLocaleDepthFromUrl(search = window.location.search) {
     const value = new URLSearchParams(search).get('prefix');
-    if (value === null || value === 'auto') return null;
+    if (value === null) return DEFAULT_LOCALE_DEPTH;
     const depth = Number(value);
     if (Number.isInteger(depth) && depth >= 0 && depth <= 3) return depth;
-    return null;
+    return DEFAULT_LOCALE_DEPTH;
+}
+
+function readLocaleDepthFromControl() {
+    return Number(document.getElementById('locale-prefix').value);
 }
 
 function readDiffOnlyFromUrl(search = window.location.search) {
@@ -280,8 +273,8 @@ function updateMsmUrl({ url, diffOnly, folder, localePrefix } = {}) {
     if (diff) params.set('diff', '1');
     const folderPath = folder ?? siteData.openFolder;
     if (folderPath?.length) params.set('folder', folderPathToParam(folderPath));
-    const prefix = localePrefix !== undefined ? localePrefix : siteData.localePrefixOverride;
-    if (prefix !== null) params.set('prefix', String(prefix));
+    const prefix = localePrefix !== undefined ? localePrefix : siteData.localeDepth;
+    params.set('prefix', String(prefix));
     const query = params.toString();
     const next = query ? `${window.location.pathname}?${query}` : window.location.pathname;
     history.pushState({}, '', next);
@@ -619,6 +612,7 @@ function setLoading(loading) {
     document.querySelector('#input-form button').disabled = loading;
     document.getElementById('url').disabled = loading;
     updateSelectionUI();
+    updateLocalePrefixControl();
 }
 
 function updateLoadStatus(file) {
@@ -714,6 +708,24 @@ function sortLocalesByPageCount(localeSet) {
     });
 }
 
+function looksLikeFileSegment(segment) {
+    return /\.[a-z0-9][\w.-]*$/i.test(segment);
+}
+
+function localePrefixUsesFolderSegments(segments, depth, isDirectory) {
+    if (depth === 0) return true;
+    const localeSegments = segments.slice(0, depth);
+    if (localeSegments.some(looksLikeFileSegment)) return false;
+    if (segments.length > depth) return true;
+    return isDirectory && segments.length === depth;
+}
+
+function isDirectLocaleFileUrl(pageSegments, isDirectory) {
+    return pageSegments.length === 1
+        && looksLikeFileSegment(pageSegments[0])
+        && !isDirectory;
+}
+
 function parsePageUrl(line) {
     const loc = line.split('\t')[0];
     if (!loc) return null;
@@ -729,9 +741,10 @@ function parsePageUrl(line) {
             };
         }
         if (segments.length < siteData.localeDepth) return null;
-        if (!localeSegmentsValid(segments, siteData.localeDepth)) return null;
+        if (!localePrefixUsesFolderSegments(segments, siteData.localeDepth, isDirectory)) return null;
         const locale = segments.slice(0, siteData.localeDepth).join('/');
         const pageSegments = segments.slice(siteData.localeDepth);
+        if (isDirectLocaleFileUrl(pageSegments, isDirectory)) return null;
         return {
             loc,
             locale,
@@ -757,114 +770,6 @@ function countTrailingSlashUrls(lines) {
         }
     });
     return slashCount;
-}
-
-function scoreLocaleDepth(lines, depth, stripTrailingSlashes) {
-    const pageToLocales = new Map();
-    let validUrls = 0;
-
-    lines.forEach((line) => {
-        const loc = line.split('\t')[0];
-        if (!loc) return;
-        try {
-            const { segments, isDirectory } = parsePathname(loc, stripTrailingSlashes);
-            if (depth > 0 && segments.length < depth) return;
-            if (depth > 0 && !localeSegmentsValid(segments, depth)) return;
-            validUrls += 1;
-            const locale = depth === 0 ? DEFAULT_LOCALE_KEY : segments.slice(0, depth).join('/');
-            const pageSegments = depth === 0 ? segments : segments.slice(depth);
-            const pageKey = pageKeyFromSegments(pageSegments, isDirectory);
-            if (!pageToLocales.has(pageKey)) pageToLocales.set(pageKey, new Set());
-            pageToLocales.get(pageKey).add(locale);
-        } catch {
-            /* ignore */
-        }
-    });
-
-    let multiLocalePages = 0;
-    const locales = new Set();
-    pageToLocales.forEach((localeSet, pageKey) => {
-        localeSet.forEach((locale) => locales.add(locale));
-        if (pageKey && localeSet.size >= 2) multiLocalePages += 1;
-    });
-
-    return {
-        depth,
-        multiLocalePages,
-        localeCount: locales.size,
-        validUrls,
-        pageCount: pageToLocales.size,
-    };
-}
-
-function hasUniformNestedLocalePrefix(lines, depth, stripTrailingSlashes) {
-    let common = null;
-    let matchedUrls = 0;
-
-    lines.forEach((line) => {
-        const loc = line.split('\t')[0];
-        if (!loc) return;
-        try {
-            const { segments } = parsePathname(loc, stripTrailingSlashes);
-            if (segments.length <= depth) return;
-            if (!localeSegmentsValid(segments, depth)) return;
-            const pageSegments = segments.slice(depth);
-            if (!pageSegments.length) return;
-            const first = pageSegments[0];
-            if (!isLocaleSegment(first)) return;
-            matchedUrls += 1;
-            if (common === null) common = first;
-            else if (common !== first) common = false;
-        } catch {
-            /* ignore */
-        }
-    });
-
-    return Boolean(common) && matchedUrls > 0;
-}
-
-function pickBestMultiLocaleDepth(scores) {
-    return scores.reduce((best, score) => {
-        if (score.multiLocalePages > best.multiLocalePages) return score;
-        if (
-            score.multiLocalePages === best.multiLocalePages
-            && score.multiLocalePages > 0
-            && score.localeCount > best.localeCount
-            && score.validUrls >= best.validUrls * 0.5
-        ) {
-            return score;
-        }
-        return best;
-    });
-}
-
-function detectLocaleDepth(lines, stripTrailingSlashes) {
-    const one = scoreLocaleDepth(lines, 1, stripTrailingSlashes);
-    const two = scoreLocaleDepth(lines, 2, stripTrailingSlashes);
-    const three = scoreLocaleDepth(lines, 3, stripTrailingSlashes);
-
-    const bestMulti = pickBestMultiLocaleDepth([one, two, three]);
-    if (bestMulti.multiLocalePages > 0) return bestMulti.depth;
-
-    if (one.localeCount === 1) {
-        if (
-            two.localeCount === 1
-            && two.validUrls >= one.validUrls * 0.5
-            && hasUniformNestedLocalePrefix(lines, 1, stripTrailingSlashes)
-        ) {
-            if (
-                three.localeCount === 1
-                && three.validUrls >= two.validUrls * 0.5
-                && hasUniformNestedLocalePrefix(lines, 2, stripTrailingSlashes)
-            ) {
-                return 3;
-            }
-            return 2;
-        }
-        return 1;
-    }
-
-    return 0;
 }
 
 function addPageToIndex(index, pageSegments, isDirectory) {
@@ -906,8 +811,6 @@ function addPageToIndex(index, pageSegments, isDirectory) {
 function rebuildSiteModel() {
     siteData.pageRegistry = new Map();
     siteData.index = createIndexNode();
-    siteData.detectedLocaleDepth = detectLocaleDepth(siteData.lines, siteData.stripTrailingSlashes);
-    siteData.localeDepth = siteData.localePrefixOverride ?? siteData.detectedLocaleDepth;
 
     const localeSet = new Set();
     siteData.lines.forEach((line) => {
@@ -977,8 +880,8 @@ function updateDiffOnlyToggle() {
 
 function updateLocalePrefixControl() {
     const select = document.getElementById('locale-prefix');
-    select.disabled = !siteData.lines.length || siteData.loading;
-    select.value = siteData.localePrefixOverride === null ? 'auto' : String(siteData.localePrefixOverride);
+    select.disabled = siteData.loading;
+    select.value = String(siteData.localeDepth);
 }
 
 function setLoadUrlCount(count) {
@@ -997,9 +900,8 @@ function updateLocaleMeta() {
     }
     const prefixLabel = (() => {
         const depth = siteData.localeDepth;
-        const suffix = siteData.localePrefixOverride !== null ? 'override' : 'auto';
-        if (depth === 0) return `no locale prefix (${suffix})`;
-        return `${depth}-segment prefix (${suffix})`;
+        if (depth === 0) return 'no locale prefix';
+        return `${depth}-segment prefix`;
     })();
     const parts = [
         `${siteData.locales.length} locale${siteData.locales.length === 1 ? '' : 's'}`,
@@ -1071,13 +973,13 @@ document.getElementById('input-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const url = new URL(normalizeSitemapUrl(document.getElementById('url').value));
     siteData.sourceUrl = url.href;
-    updateMsmUrl({ url: url.href, diffOnly: siteData.diffOnly, localePrefix: siteData.localePrefixOverride });
+    siteData.localeDepth = readLocaleDepthFromControl();
+    updateMsmUrl({ url: url.href, diffOnly: siteData.diffOnly, localePrefix: siteData.localeDepth });
     siteData.lines = [];
     siteData.index = createIndexNode();
     siteData.pageRegistry = new Map();
     siteData.locales = [];
     siteData.localeTotals = new Map();
-    siteData.localeDepth = 1;
     siteData.stripTrailingSlashes = false;
     siteData.daConnected = false;
     siteData.daTarget = null;
@@ -1422,8 +1324,8 @@ document.getElementById('diff-only').addEventListener('change', (e) => {
 });
 
 document.getElementById('locale-prefix').addEventListener('change', (e) => {
-    siteData.localePrefixOverride = e.target.value === 'auto' ? null : Number(e.target.value);
-    updateMsmUrl({ localePrefix: siteData.localePrefixOverride });
+    siteData.localeDepth = Number(e.target.value);
+    updateMsmUrl({ localePrefix: siteData.localeDepth });
     if (!siteData.lines.length) return;
     rebuildSiteModel();
     updateTotalPathsDisplay();
@@ -1435,7 +1337,7 @@ document.getElementById('locale-prefix').addEventListener('change', (e) => {
 function syncMsmStateFromUrl() {
     siteData.diffOnly = readDiffOnlyFromUrl();
     siteData.openFolder = readFolderFromUrl();
-    siteData.localePrefixOverride = readLocalePrefixFromUrl();
+    siteData.localeDepth = readLocaleDepthFromUrl();
     document.getElementById('diff-only').checked = siteData.diffOnly;
     updateLocalePrefixControl();
     if (siteData.lines.length) {
@@ -1454,7 +1356,7 @@ window.addEventListener('popstate', () => {
 siteData.index = createIndexNode();
 siteData.diffOnly = readDiffOnlyFromUrl();
 siteData.openFolder = readFolderFromUrl();
-siteData.localePrefixOverride = readLocalePrefixFromUrl();
+siteData.localeDepth = readLocaleDepthFromUrl();
 document.getElementById('diff-only').checked = siteData.diffOnly;
 updateLocalePrefixControl();
 const params = new URLSearchParams(window.location.search);
