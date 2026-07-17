@@ -720,12 +720,6 @@ function localePrefixUsesFolderSegments(segments, depth, isDirectory) {
     return isDirectory && segments.length === depth;
 }
 
-function isDirectLocaleFileUrl(pageSegments, isDirectory) {
-    return pageSegments.length === 1
-        && looksLikeFileSegment(pageSegments[0])
-        && !isDirectory;
-}
-
 function parsePageUrl(line) {
     const loc = line.split('\t')[0];
     if (!loc) return null;
@@ -744,7 +738,6 @@ function parsePageUrl(line) {
         if (!localePrefixUsesFolderSegments(segments, siteData.localeDepth, isDirectory)) return null;
         const locale = segments.slice(0, siteData.localeDepth).join('/');
         const pageSegments = segments.slice(siteData.localeDepth);
-        if (isDirectLocaleFileUrl(pageSegments, isDirectory)) return null;
         return {
             loc,
             locale,
