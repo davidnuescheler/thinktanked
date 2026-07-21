@@ -864,7 +864,7 @@ function updateDiffOnlyToggle() {
     const toggle = document.getElementById('diff-only');
     const enabled = siteData.locales.length >= 2 && siteData.lines.length > 0;
     toggle.disabled = !enabled;
-    if (!enabled && siteData.diffOnly) {
+    if (!enabled && siteData.diffOnly && !siteData.loading) {
         siteData.diffOnly = false;
         toggle.checked = false;
         updateMsmUrl({ diffOnly: false });
@@ -923,7 +923,7 @@ async function loadSitemap(sitemapURL, callbacks) {
     try {
         const normalizedSitemapURL = normalizeSitemapUrl(sitemapURL);
         callbacks.onFileStart(normalizedSitemapURL);
-        const resp = await fetch(fcorsUrl(normalizedSitemapURL));
+        const resp = await fetch(fcorsUrl(normalizedSitemapURL), { cache: 'no-store' });
         const xml = await resp.text();
         const sitemap = new DOMParser().parseFromString(xml, 'text/xml');
         const subSitemaps = [...sitemap.querySelectorAll('sitemap loc')];
@@ -950,7 +950,7 @@ async function loadSitemap(sitemapURL, callbacks) {
 }
 
 async function getRootSitemaps(url) {
-    const resp = await fetch(fcorsUrl(`${url}robots.txt`));
+    const resp = await fetch(fcorsUrl(`${url}robots.txt`), { cache: 'no-store' });
     const txt = await resp.text();
     const sitemapURLs = [];
     txt.split('\n').forEach((line) => {
@@ -981,8 +981,8 @@ document.getElementById('input-form').addEventListener('submit', async (e) => {
     setTotalPaths(0);
     setLoadUrlCount(0);
     updateLocaleMeta();
-    renderTree();
     setLoading(true);
+    renderTree();
     updateLoadStatus('Starting…');
 
     const callbacks = {
