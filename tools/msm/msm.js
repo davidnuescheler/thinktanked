@@ -1072,6 +1072,15 @@ function createLocaleCells(pageKey) {
                 link.href = daEditUrl(entry.daPaths.get(locale));
                 link.title = `DA only\n${entry.daPaths.get(locale)}`;
             }
+
+            const daPath = entry.daPaths.get(locale);
+            if (daPath && presence !== 'da') {
+                link.addEventListener('click', (e) => {
+                    if (!e.shiftKey) return;
+                    e.preventDefault();
+                    window.open(daEditUrl(daPath), '_blank', 'noopener');
+                });
+            }
         }
 
         cell.appendChild(link);
