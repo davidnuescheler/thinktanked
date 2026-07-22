@@ -1,4 +1,3 @@
-const TRAILING_SLASH_MAJORITY = 0.8;
 const DEFAULT_LOCALE_DEPTH = 1;
 const DEFAULT_LOCALE_KEY = '';
 const DEFAULT_LOCALE_LABEL = 'default';
@@ -14,7 +13,6 @@ const siteData = {
     lines: [],
     index: null,
     loading: false,
-    stripTrailingSlashes: false,
     localeDepth: DEFAULT_LOCALE_DEPTH,
     locales: [],
     localeTotals: new Map(),
@@ -25,6 +23,7 @@ const siteData = {
     presenceStats: null,
     diffOnly: false,
     openFolder: [],
+    daLinkMode: false,
 };
 
 let daSdkPromise = null;
@@ -130,7 +129,7 @@ function createTreeCheckbox(key, row, kind) {
         const pathLabel = pathSegments.length ? `/${pathSegments.join('/')}` : '/';
         cb.setAttribute('aria-label', `Select folder ${pathLabel}`);
     } else {
-        cb.setAttribute('aria-label', `Select page ${key || '(locale root)'}`);
+        cb.setAttribute('aria-label', `Select page ${key ? key : '(locale root)'}`);
     }
     cb.addEventListener('click', (e) => e.stopPropagation());
     cb.addEventListener('change', () => {
@@ -246,6 +245,10 @@ function readDiffOnlyFromUrl(search = window.location.search) {
     return value === '1' || value === 'true';
 }
 
+function readDaLinkModeFromUrl(search = window.location.search) {
+    return new URLSearchParams(search).get('dalinkmode') === 'on';
+}
+
 function folderPathToParam(pathSegments) {
     return pathSegments.map((seg) => encodeURIComponent(seg)).join('/');
 }
@@ -275,6 +278,7 @@ function updateMsmUrl({ url, diffOnly, folder, localePrefix } = {}) {
     if (folderPath?.length) params.set('folder', folderPathToParam(folderPath));
     const prefix = localePrefix !== undefined ? localePrefix : siteData.localeDepth;
     params.set('prefix', String(prefix));
+    if (siteData.daLinkMode) params.set('dalinkmode', 'on');
     const query = params.toString();
     const next = query ? `${window.location.pathname}?${query}` : window.location.pathname;
     history.pushState({}, '', next);
@@ -351,9 +355,38 @@ async function loadDaSdkOptional(timeoutMs = DA_SDK_TIMEOUT_MS) {
     }
 }
 
+function normalizePageSegments(segments, isDirectory) {
+    if (!segments.length) return { segments: [], isDirectory };
+    const last = segments[segments.length - 1];
+    if (last !== 'index') return { segments, isDirectory };
+
+    if (segments.length === 1) {
+        return { segments: [], isDirectory: true };
+    }
+
+    if (isDirectory) {
+        return { segments, isDirectory };
+    }
+
+    if (segments[segments.length - 2] === 'index') {
+        return { segments: segments.slice(0, -1), isDirectory: true };
+    }
+
+    return { segments: segments.slice(0, -1), isDirectory: true };
+}
+
 function daHtmlToPageKey(relativePath) {
-    if (!relativePath || relativePath === 'index') return '';
-    return relativePath;
+    if (!relativePath) return '';
+    return pageKeyFromSegments(relativePath.split('/').filter(Boolean), false);
+}
+
+function daRelativePathForPage(pageKey) {
+    if (!pageKey) return 'index';
+    if (pageKey.endsWith('/')) {
+        const folder = pageKey.slice(0, -1);
+        return folder ? `${folder}/index` : 'index';
+    }
+    return pageKey;
 }
 
 function daItemToPageKey(itemPath, org, repo, locale) {
@@ -362,6 +395,12 @@ function daItemToPageKey(itemPath, org, repo, locale) {
     let relative = itemPath.slice(prefix.length);
     if (relative.endsWith('.html')) relative = relative.slice(0, -5);
     return daHtmlToPageKey(relative);
+}
+
+function daEditUrlForPage(pageKey, locale) {
+    if (!siteData.daTarget?.org || !siteData.daTarget?.repo) return null;
+    const { org, repo } = siteData.daTarget;
+    return daEditUrl(`/${org}/${repo}/${locale}/${daRelativePathForPage(pageKey)}`);
 }
 
 function daEditUrl(itemPath) {
@@ -401,10 +440,16 @@ function pageHasLocaleDiff(pageKey) {
 }
 
 function folderHasLocaleDiff(pathSegments) {
+    if (!pathSegments.length) return false;
     let found = false;
     siteData.pageRegistry.forEach((entry, pageKey) => {
         if (found) return;
-        if (!pageKeyUnderFolderPath(pageKey, pathSegments)) return;
+        if (isFolderIndexPageKey(pageKey)) return;
+        if (isDirectoryPageKeyAtPath(pageKey, pathSegments)) {
+            if (pageHasLocaleDiff(pageKey)) found = true;
+            return;
+        }
+        if (!isStrictDescendantPageKey(pageKey, pathSegments)) return;
         if (pageHasLocaleDiff(pageKey)) found = true;
     });
     return found;
@@ -413,6 +458,7 @@ function folderHasLocaleDiff(pathSegments) {
 function countDiffPages() {
     let count = 0;
     siteData.pageRegistry.forEach((entry, pageKey) => {
+        if (isFolderIndexPageKey(pageKey)) return;
         if (pageHasLocaleDiff(pageKey)) count += 1;
     });
     return count;
@@ -506,7 +552,11 @@ function rebuildIndexFromPageRegistry() {
     siteData.index = createIndexNode();
     siteData.pageRegistry.forEach((entry, pageKey) => {
         const { segments, isDirectory } = pageKeySegments(pageKey);
-        addPageToIndex(siteData.index, segments, isDirectory);
+        if (isDirectory) {
+            ensureFolderPath(siteData.index, segments);
+        } else {
+            addPageToIndex(siteData.index, segments, false);
+        }
     });
 }
 
@@ -624,21 +674,18 @@ function createIndexNode() {
     return { leafCount: 0, urlCount: 0, folders: new Map() };
 }
 
-function parsePathname(loc, stripTrailingSlashes) {
-    let pathname = new URL(loc).pathname;
-    if (stripTrailingSlashes && pathname.length > 1 && pathname.endsWith('/')) {
-        pathname = pathname.slice(0, -1);
-    }
+function parsePathname(loc) {
+    const pathname = new URL(loc).pathname;
     const isDirectory = pathname.length > 1 && pathname.endsWith('/');
     const segments = pathname.split('/').filter(Boolean);
     return { segments, isDirectory };
 }
 
 function pageKeyFromSegments(segments, isDirectory) {
-    if (!segments.length) return '';
-    const tail = segments[segments.length - 1];
-    const path = segments.join('/');
-    return isDirectory ? `${path}/` : path;
+    const normalized = normalizePageSegments(segments, isDirectory);
+    if (!normalized.segments.length) return '';
+    const path = normalized.segments.join('/');
+    return normalized.isDirectory ? `${path}/` : path;
 }
 
 function pageKeySegments(pageKey) {
@@ -654,21 +701,48 @@ function pageKeyUnderFolderPath(pageKey, pathSegments) {
     return pathSegments.every((seg, i) => segments[i] === seg);
 }
 
-function isLeafInPagesBucket(pageKey, pathSegments) {
+function isStrictDescendantPageKey(pageKey, folderPathSegments) {
+    const { segments } = pageKeySegments(pageKey);
+    if (segments.length <= folderPathSegments.length) return false;
+    return folderPathSegments.every((seg, i) => segments[i] === seg);
+}
+
+function isDirectoryPageKeyAtPath(pageKey, pathSegments) {
     const { segments, isDirectory } = pageKeySegments(pageKey);
-    if (isDirectory) return false;
-    const parent = segments.length <= 1 ? [] : segments.slice(0, -1);
-    if (parent.length !== pathSegments.length) return false;
-    return pathSegments.every((seg, i) => parent[i] === seg);
+    if (!isDirectory) return false;
+    if (segments.length !== pathSegments.length) return false;
+    return pathSegments.every((seg, i) => segments[i] === seg);
+}
+
+function isFolderIndexPageKey(pageKey) {
+    if (!pageKey) return false;
+    const { segments, isDirectory } = pageKeySegments(pageKey);
+    if (isDirectory || !segments.length) return false;
+    return segments[segments.length - 1] === 'index';
+}
+
+function isLeafInPagesBucket(pageKey, pathSegments) {
+    if (!pageKey) return pathSegments.length === 0;
+    const { segments, isDirectory } = pageKeySegments(pageKey);
+    if (isDirectory) {
+        return isDirectoryPageKeyAtPath(pageKey, pathSegments);
+    }
+    if (segments.length !== pathSegments.length + 1) return false;
+    return pathSegments.every((seg, i) => segments[i] === seg);
 }
 
 function getDistinctPathsUnderPath(pathSegments, pagesOnly = false) {
     const keys = [];
     siteData.pageRegistry.forEach((entry, pageKey) => {
         if (siteData.diffOnly && !pageHasLocaleDiff(pageKey)) return;
+        if (isFolderIndexPageKey(pageKey)) return;
         if (pagesOnly) {
             if (isLeafInPagesBucket(pageKey, pathSegments)) keys.push(pageKey);
-        } else if (pageKeyUnderFolderPath(pageKey, pathSegments)) {
+        } else if (pathSegments.length === 0) {
+            if (pageKeyUnderFolderPath(pageKey, pathSegments)) keys.push(pageKey);
+        } else if (isStrictDescendantPageKey(pageKey, pathSegments)) {
+            keys.push(pageKey);
+        } else if (isDirectoryPageKeyAtPath(pageKey, pathSegments)) {
             keys.push(pageKey);
         }
     });
@@ -687,8 +761,8 @@ function countPathsForLocale(pathSegments, locale, pagesOnly = false) {
 function getPageLabelFromKey(pageKey) {
     const { segments, isDirectory } = pageKeySegments(pageKey);
     if (!segments.length) return '(locale root)';
-    const name = segments[segments.length - 1];
-    return isDirectory ? `${name}/` : name;
+    if (isDirectory) return '(index)';
+    return segments[segments.length - 1];
 }
 
 function sortLocalesByPageCount(localeSet) {
@@ -720,49 +794,33 @@ function localePrefixUsesFolderSegments(segments, depth, isDirectory) {
     return isDirectory && segments.length === depth;
 }
 
+function buildParsedPage(loc, locale, pageSegments, isDirectory) {
+    const normalized = normalizePageSegments(pageSegments, isDirectory);
+    return {
+        loc,
+        locale,
+        pageSegments: normalized.segments,
+        isDirectory: normalized.isDirectory,
+        pageKey: pageKeyFromSegments(pageSegments, isDirectory),
+    };
+}
+
 function parsePageUrl(line) {
     const loc = line.split('\t')[0];
     if (!loc) return null;
     try {
-        const { segments, isDirectory } = parsePathname(loc, siteData.stripTrailingSlashes);
+        const { segments, isDirectory } = parsePathname(loc);
         if (siteData.localeDepth === 0) {
-            return {
-                loc,
-                locale: DEFAULT_LOCALE_KEY,
-                pageSegments: segments,
-                isDirectory,
-                pageKey: pageKeyFromSegments(segments, isDirectory),
-            };
+            return buildParsedPage(loc, DEFAULT_LOCALE_KEY, segments, isDirectory);
         }
         if (segments.length < siteData.localeDepth) return null;
         if (!localePrefixUsesFolderSegments(segments, siteData.localeDepth, isDirectory)) return null;
         const locale = segments.slice(0, siteData.localeDepth).join('/');
         const pageSegments = segments.slice(siteData.localeDepth);
-        return {
-            loc,
-            locale,
-            pageSegments,
-            isDirectory,
-            pageKey: pageKeyFromSegments(pageSegments, isDirectory),
-        };
+        return buildParsedPage(loc, locale, pageSegments, isDirectory);
     } catch {
         return null;
     }
-}
-
-function countTrailingSlashUrls(lines) {
-    let slashCount = 0;
-    lines.forEach((line) => {
-        const loc = line.split('\t')[0];
-        if (!loc) return;
-        try {
-            const { pathname } = new URL(loc);
-            if (pathname.length > 1 && pathname.endsWith('/')) slashCount += 1;
-        } catch {
-            /* ignore */
-        }
-    });
-    return slashCount;
 }
 
 function addPageToIndex(index, pageSegments, isDirectory) {
@@ -801,6 +859,18 @@ function addPageToIndex(index, pageSegments, isDirectory) {
     node.leafCount += 1;
 }
 
+function ensureFolderPath(index, pageSegments) {
+    if (!pageSegments.length) return;
+    let node = index;
+    for (let i = 0; i < pageSegments.length; i += 1) {
+        const folder = pageSegments[i];
+        if (!node.folders.has(folder)) {
+            node.folders.set(folder, createIndexNode());
+        }
+        node = node.folders.get(folder);
+    }
+}
+
 function rebuildSiteModel() {
     siteData.pageRegistry = new Map();
     siteData.index = createIndexNode();
@@ -810,24 +880,17 @@ function rebuildSiteModel() {
         const parsed = parsePageUrl(line);
         if (!parsed) return;
         localeSet.add(parsed.locale);
-        addPageToIndex(siteData.index, parsed.pageSegments, parsed.isDirectory);
+        if (parsed.isDirectory) {
+            ensureFolderPath(siteData.index, parsed.pageSegments);
+        } else {
+            addPageToIndex(siteData.index, parsed.pageSegments, false);
+        }
         ensurePageEntry(parsed.pageKey).sitemapUrls.set(parsed.locale, resolvePreviewUrl(parsed.loc));
     });
 
     siteData.locales = sortLocalesByPageCount(localeSet)
         .filter((locale) => locale !== DEFAULT_LOCALE_KEY);
     computePresenceStats();
-}
-
-function applyTrailingSlashPolicy() {
-    const { lines } = siteData;
-    if (!lines.length) {
-        siteData.stripTrailingSlashes = false;
-        return;
-    }
-    const slashCount = countTrailingSlashUrls(lines);
-    siteData.stripTrailingSlashes = slashCount / lines.length >= TRAILING_SLASH_MAJORITY;
-    rebuildSiteModel();
 }
 
 function getIndexAtPath(pathSegments) {
@@ -973,9 +1036,8 @@ document.getElementById('input-form').addEventListener('submit', async (e) => {
     siteData.pageRegistry = new Map();
     siteData.locales = [];
     siteData.localeTotals = new Map();
-    siteData.stripTrailingSlashes = false;
     siteData.daConnected = false;
-    siteData.daTarget = null;
+    siteData.daTarget = parseAemDaTarget(url.href);
     siteData.presenceStats = null;
     clearSelection();
     setTotalPaths(0);
@@ -1000,7 +1062,7 @@ document.getElementById('input-form').addEventListener('submit', async (e) => {
         } else {
             await loadSitemap(url.href, callbacks);
         }
-        applyTrailingSlashPolicy();
+        rebuildSiteModel();
         updateTotalPathsDisplay();
 
         const sdk = await loadDaSdkOptional();
@@ -1056,30 +1118,25 @@ function createLocaleCells(pageKey) {
         link.rel = 'noopener noreferrer';
         link.textContent = '✓';
 
-        if (!siteData.daConnected) {
+        const daPath = entry.daPaths.get(locale);
+        const guessedDaUrl = siteData.daLinkMode ? daEditUrlForPage(pageKey, locale) : null;
+
+        if (guessedDaUrl) {
+            cell.classList.add(siteData.daConnected ? `present-${presence}` : 'present-both');
+            link.href = guessedDaUrl;
+            link.title = `DA\n${guessedDaUrl}`;
+        } else if (!siteData.daConnected) {
             cell.classList.add('present-both');
             link.href = entry.sitemapUrls.get(locale);
             link.title = entry.sitemapUrls.get(locale);
         } else {
             cell.classList.add(`present-${presence}`);
-            if (presence === 'both') {
+            if (presence === 'both' || presence === 'sitemap') {
                 link.href = entry.sitemapUrls.get(locale);
-                link.title = `Sitemap and DA\n${entry.sitemapUrls.get(locale)}`;
-            } else if (presence === 'sitemap') {
-                link.href = entry.sitemapUrls.get(locale);
-                link.title = `Sitemap only\n${entry.sitemapUrls.get(locale)}`;
+                link.title = `${presence === 'both' ? 'Sitemap and DA' : 'Sitemap only'}\n${entry.sitemapUrls.get(locale)}`;
             } else {
-                link.href = daEditUrl(entry.daPaths.get(locale));
-                link.title = `DA only\n${entry.daPaths.get(locale)}`;
-            }
-
-            const daPath = entry.daPaths.get(locale);
-            if (daPath && presence !== 'da') {
-                link.addEventListener('click', (e) => {
-                    if (!e.shiftKey) return;
-                    e.preventDefault();
-                    window.open(daEditUrl(daPath), '_blank', 'noopener');
-                });
+                link.href = daEditUrl(daPath);
+                link.title = `DA only\n${daPath}`;
             }
         }
 
@@ -1340,6 +1397,7 @@ function syncMsmStateFromUrl() {
     siteData.diffOnly = readDiffOnlyFromUrl();
     siteData.openFolder = readFolderFromUrl();
     siteData.localeDepth = readLocaleDepthFromUrl();
+    siteData.daLinkMode = readDaLinkModeFromUrl();
     document.getElementById('diff-only').checked = siteData.diffOnly;
     updateLocalePrefixControl();
     if (siteData.lines.length) {
@@ -1359,6 +1417,7 @@ siteData.index = createIndexNode();
 siteData.diffOnly = readDiffOnlyFromUrl();
 siteData.openFolder = readFolderFromUrl();
 siteData.localeDepth = readLocaleDepthFromUrl();
+siteData.daLinkMode = readDaLinkModeFromUrl();
 document.getElementById('diff-only').checked = siteData.diffOnly;
 updateLocalePrefixControl();
 const params = new URLSearchParams(window.location.search);
