@@ -24,6 +24,7 @@ const siteData = {
     diffOnly: false,
     openFolder: [],
     daLinkMode: false,
+    fetchDirect: false,
 };
 
 let daSdkPromise = null;
@@ -249,6 +250,10 @@ function readDaLinkModeFromUrl(search = window.location.search) {
     return new URLSearchParams(search).get('dalinkmode') === 'on';
 }
 
+function readFetchDirectFromUrl(search = window.location.search) {
+    return new URLSearchParams(search).get('fetch') === 'direct';
+}
+
 function folderPathToParam(pathSegments) {
     return pathSegments.map((seg) => encodeURIComponent(seg)).join('/');
 }
@@ -279,6 +284,7 @@ function updateMsmUrl({ url, diffOnly, folder, localePrefix } = {}) {
     const prefix = localePrefix !== undefined ? localePrefix : siteData.localeDepth;
     params.set('prefix', String(prefix));
     if (siteData.daLinkMode) params.set('dalinkmode', 'on');
+    if (siteData.fetchDirect) params.set('fetch', 'direct');
     const query = params.toString();
     const next = query ? `${window.location.pathname}?${query}` : window.location.pathname;
     history.pushState({}, '', next);
@@ -316,6 +322,10 @@ function fcorsUrl(targetUrl) {
         key: FCORS_API_KEY,
     });
     return `${FCORS_BASE}?${params.toString()}`;
+}
+
+function sitemapFetchUrl(targetUrl) {
+    return siteData.fetchDirect ? targetUrl : fcorsUrl(targetUrl);
 }
 
 function isStandaloneDevHost() {
@@ -986,7 +996,7 @@ async function loadSitemap(sitemapURL, callbacks) {
     try {
         const normalizedSitemapURL = normalizeSitemapUrl(sitemapURL);
         callbacks.onFileStart(normalizedSitemapURL);
-        const resp = await fetch(fcorsUrl(normalizedSitemapURL), { cache: 'no-store' });
+        const resp = await fetch(sitemapFetchUrl(normalizedSitemapURL), { cache: 'no-store' });
         const xml = await resp.text();
         const sitemap = new DOMParser().parseFromString(xml, 'text/xml');
         const subSitemaps = [...sitemap.querySelectorAll('sitemap loc')];
@@ -1013,7 +1023,7 @@ async function loadSitemap(sitemapURL, callbacks) {
 }
 
 async function getRootSitemaps(url) {
-    const resp = await fetch(fcorsUrl(`${url}robots.txt`), { cache: 'no-store' });
+    const resp = await fetch(sitemapFetchUrl(`${url}robots.txt`), { cache: 'no-store' });
     const txt = await resp.text();
     const sitemapURLs = [];
     txt.split('\n').forEach((line) => {
@@ -1398,6 +1408,7 @@ function syncMsmStateFromUrl() {
     siteData.openFolder = readFolderFromUrl();
     siteData.localeDepth = readLocaleDepthFromUrl();
     siteData.daLinkMode = readDaLinkModeFromUrl();
+    siteData.fetchDirect = readFetchDirectFromUrl();
     document.getElementById('diff-only').checked = siteData.diffOnly;
     updateLocalePrefixControl();
     if (siteData.lines.length) {
@@ -1418,6 +1429,7 @@ siteData.diffOnly = readDiffOnlyFromUrl();
 siteData.openFolder = readFolderFromUrl();
 siteData.localeDepth = readLocaleDepthFromUrl();
 siteData.daLinkMode = readDaLinkModeFromUrl();
+siteData.fetchDirect = readFetchDirectFromUrl();
 document.getElementById('diff-only').checked = siteData.diffOnly;
 updateLocalePrefixControl();
 const params = new URLSearchParams(window.location.search);
