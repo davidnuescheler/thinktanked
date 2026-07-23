@@ -25,6 +25,7 @@ const siteData = {
     openFolder: [],
     daLinkMode: false,
     fetchDirect: false,
+    daSiteOverride: null,
 };
 
 let daSdkPromise = null;
@@ -254,6 +255,17 @@ function readFetchDirectFromUrl(search = window.location.search) {
     return new URLSearchParams(search).get('fetch') === 'direct';
 }
 
+function readDaSiteFromUrl(search = window.location.search) {
+    const value = new URLSearchParams(search).get('daSite');
+    if (!value) return null;
+    const slash = value.indexOf('/');
+    if (slash <= 0 || slash === value.length - 1) return null;
+    const org = decodeURIComponent(value.slice(0, slash));
+    const repo = decodeURIComponent(value.slice(slash + 1));
+    if (!org || !repo) return null;
+    return { org, repo };
+}
+
 function folderPathToParam(pathSegments) {
     return pathSegments.map((seg) => encodeURIComponent(seg)).join('/');
 }
@@ -285,6 +297,9 @@ function updateMsmUrl({ url, diffOnly, folder, localePrefix } = {}) {
     params.set('prefix', String(prefix));
     if (siteData.daLinkMode) params.set('dalinkmode', 'on');
     if (siteData.fetchDirect) params.set('fetch', 'direct');
+    if (siteData.daSiteOverride) {
+        params.set('daSite', `${siteData.daSiteOverride.org}/${siteData.daSiteOverride.repo}`);
+    }
     const query = params.toString();
     const next = query ? `${window.location.pathname}?${query}` : window.location.pathname;
     history.pushState({}, '', next);
@@ -303,17 +318,15 @@ function parseAemDaTarget(urlString) {
     }
 }
 
-function resolveDaTarget(sdk) {
-    const fromUrl = parseAemDaTarget(siteData.sourceUrl);
-    const fromSdk = sdk?.context ? { org: sdk.context.org, repo: sdk.context.repo, branch: sdk.context.branch ?? null } : null;
-    logDa('resolve target', {
-        sourceUrl: siteData.sourceUrl,
-        fromUrl,
-        fromSdk,
-    });
-    if (fromUrl) return fromUrl;
-    if (fromSdk?.org && fromSdk?.repo) return { org: fromSdk.org, repo: fromSdk.repo, branch: fromSdk.branch };
-    return null;
+function resolveDaTarget() {
+    if (siteData.daSiteOverride) {
+        return {
+            org: siteData.daSiteOverride.org,
+            repo: siteData.daSiteOverride.repo,
+            branch: null,
+        };
+    }
+    return parseAemDaTarget(siteData.sourceUrl);
 }
 
 function fcorsUrl(targetUrl) {
@@ -615,7 +628,12 @@ async function augmentFromDa(sdk) {
         return false;
     }
 
-    const target = resolveDaTarget(sdk);
+    const target = resolveDaTarget();
+    logDa('resolve target', {
+        sourceUrl: siteData.sourceUrl,
+        daSiteOverride: siteData.daSiteOverride,
+        target,
+    });
     if (!target?.org || !target?.repo) {
         logDa('augment skipped', {
             reason: 'could not resolve org/repo',
@@ -1047,7 +1065,7 @@ document.getElementById('input-form').addEventListener('submit', async (e) => {
     siteData.locales = [];
     siteData.localeTotals = new Map();
     siteData.daConnected = false;
-    siteData.daTarget = parseAemDaTarget(url.href);
+    siteData.daTarget = resolveDaTarget();
     siteData.presenceStats = null;
     clearSelection();
     setTotalPaths(0);
@@ -1409,9 +1427,11 @@ function syncMsmStateFromUrl() {
     siteData.localeDepth = readLocaleDepthFromUrl();
     siteData.daLinkMode = readDaLinkModeFromUrl();
     siteData.fetchDirect = readFetchDirectFromUrl();
+    siteData.daSiteOverride = readDaSiteFromUrl();
     document.getElementById('diff-only').checked = siteData.diffOnly;
     updateLocalePrefixControl();
     if (siteData.lines.length) {
+        siteData.daTarget = resolveDaTarget();
         rebuildSiteModel();
         updateTotalPathsDisplay();
         updateLocaleMeta();
@@ -1430,6 +1450,7 @@ siteData.openFolder = readFolderFromUrl();
 siteData.localeDepth = readLocaleDepthFromUrl();
 siteData.daLinkMode = readDaLinkModeFromUrl();
 siteData.fetchDirect = readFetchDirectFromUrl();
+siteData.daSiteOverride = readDaSiteFromUrl();
 document.getElementById('diff-only').checked = siteData.diffOnly;
 updateLocalePrefixControl();
 const params = new URLSearchParams(window.location.search);
